@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle } from 'lucide-react'
 
-export default function SuccessPage() {
+function SuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [countdown, setCountdown] = useState(2)
@@ -59,5 +59,22 @@ export default function SuccessPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
+        <div className="text-center px-8 max-w-md mx-auto">
+          <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto animate-pulse">
+            <CheckCircle className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Loading...</h1>
+        </div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   )
 }

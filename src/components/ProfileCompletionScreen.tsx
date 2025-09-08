@@ -81,7 +81,7 @@ export default function ProfileCompletionScreen({ onComplete, onBack, socialData
           
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Complete Your Profile</h1>
           <p className="text-gray-600 text-sm">
-            We've pre-filled some information from your {socialData.socialProvider} account
+            We&apos;ve pre-filled some information from your {socialData.socialProvider} account
           </p>
         </div>
 

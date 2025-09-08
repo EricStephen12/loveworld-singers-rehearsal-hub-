@@ -473,7 +473,7 @@ function CollapsibleSection({ title, children, songId, sectionType, icon: Icon, 
   children: React.ReactNode; 
   songId: string; 
   sectionType: string; 
-  icon: React.ComponentType<any>; 
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; 
   defaultOpen?: boolean 
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);

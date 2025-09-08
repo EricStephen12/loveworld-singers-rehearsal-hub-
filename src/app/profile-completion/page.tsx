@@ -76,7 +76,7 @@ export default function ProfileCompletionPage() {
             Profile
           </h1>
           <p className="text-gray-300 text-sm">
-            We've pre-filled some information from your {formData.socialProvider} account
+            We&apos;ve pre-filled some information from your {formData.socialProvider} account
           </p>
         </div>
       </div>
