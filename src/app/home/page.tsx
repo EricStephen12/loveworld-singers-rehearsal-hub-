@@ -13,6 +13,33 @@ export default function HomePage() {
   const [openAbout, setOpenAbout] = useState<number | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
+  // Carousel images array
+  const carouselImages = [
+    '/images/home.jpg',
+    '/images/DSC_6155_scaled.jpg',
+    '/images/DSC_6303_scaled.jpg',
+    '/images/DSC_6446_scaled.jpg',
+    '/images/DSC_6506_scaled.jpg',
+    '/images/DSC_6516_scaled.jpg',
+    '/images/DSC_6636_1_scaled.jpg',
+    '/images/DSC_6638_scaled.jpg',
+    '/images/DSC_6644_scaled.jpg',
+    '/images/DSC_6658_1_scaled.jpg',
+    '/images/DSC_6676_scaled.jpg'
+  ]
+
+  // Auto-slide carousel every 2 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => 
+        prevIndex === carouselImages.length - 1 ? 0 : prevIndex + 1
+      )
+    }, 2000)
+
+    return () => clearInterval(interval)
+  }, [carouselImages.length])
 
   useEffect(() => {
     // Check if user is authenticated
@@ -141,17 +168,25 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
 
-      {/* Hero Banner */}
+      {/* Hero Banner - Carousel */}
       <div className="px-4 py-6">
         <div className="relative h-[30vh] rounded-3xl overflow-hidden shadow-lg">
-          <img 
-            src="/images/home.jpg" 
-            alt="LoveWorld Singers Rehearsal Hub" 
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
+          {/* Carousel Images */}
+          <div className="relative w-full h-full">
+            {carouselImages.map((image, index) => (
+              <img 
+                key={index}
+                src={image} 
+                alt={`LoveWorld Singers Rehearsal Hub ${index + 1}`} 
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                  index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                }`}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ))}
+          </div>
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
           

@@ -26,17 +26,28 @@ function SuccessContent() {
   useEffect(() => {
     // Countdown timer
     const timer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          router.push('/home')
-          return 0
-        }
-        return prev - 1
-      })
+      setCountdown(prev => prev - 1)
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [router])
+  }, [])
+
+  // Separate effect for navigation when countdown reaches 0
+  useEffect(() => {
+    if (countdown <= 0) {
+      const navigateTimer = setTimeout(() => {
+        try {
+          router.push('/home')
+        } catch (error) {
+          console.error('Navigation error:', error)
+          // Fallback to window.location if router fails
+          window.location.href = '/home'
+        }
+      }, 100)
+
+      return () => clearTimeout(navigateTimer)
+    }
+  }, [countdown, router])
 
   return (
     <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
