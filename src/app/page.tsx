@@ -51,7 +51,7 @@ export default function SplashPage() {
             animationTimingFunction: 'ease-in-out'
           }}
         />
-      </div>
+        </div>
     </div>
   )
 }

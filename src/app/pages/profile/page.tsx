@@ -1,12 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, Share2, Download } from 'lucide-react'
+import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, Share2, Download, LogOut } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function ProfilePage() {
   const [showQRCode, setShowQRCode] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const router = useRouter()
+
+  const handleLogout = () => {
+    // Clear all authentication data from localStorage
+    localStorage.removeItem('isAuthenticated')
+    localStorage.removeItem('hasCompletedProfile')
+    localStorage.removeItem('hasSubscribed')
+    
+    // Redirect to auth screen
+    router.push('/auth')
+  }
 
   // Mock user data - in real app this would come from API/context
   const userProfile = {
@@ -62,14 +74,19 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <Link href="/" className="flex items-center space-x-2">
+        <Link href="/home" className="flex items-center space-x-2">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
           <span className="text-gray-600">Back</span>
         </Link>
         <h1 className="text-lg font-semibold text-gray-800">Profile</h1>
-        <button onClick={() => setIsEditing(!isEditing)} className="p-2">
-          <Edit className="w-5 h-5 text-gray-600" />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button onClick={() => setIsEditing(!isEditing)} className="p-2">
+            <Edit className="w-5 h-5 text-gray-600" />
+          </button>
+          <button onClick={handleLogout} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Profile Header */}
