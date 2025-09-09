@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause } from "lucide-react";
+import { ChevronRight, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, Song, PraiseNight } from "@/data/songs";
 
@@ -723,6 +724,16 @@ function TOC({ grouped, activeId, onJump }: {
       <style jsx global>{`
         html { scroll-behavior: smooth; }
       `}</style>
+
+      {/* Header with Back Arrow */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+        <Link href="/home" className="flex items-center space-x-2">
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+          <span className="text-gray-600">Back</span>
+        </Link>
+        <h1 className="text-lg font-semibold text-gray-800">Praise Night</h1>
+        <div className="w-16"></div> {/* Spacer for center alignment */}
+      </div>
       
       <div className="mx-auto max-w-7xl p-4 md:p-6 relative">
         <Header />

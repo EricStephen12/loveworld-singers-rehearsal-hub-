@@ -106,7 +106,7 @@ export default function HomePage() {
     {
       icon: Calendar,
       title: 'Rehearsals',
-      href: '#',
+      href: '/pages/praise-night',
       badge: null,
     },
     {
