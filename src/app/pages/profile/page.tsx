@@ -1,13 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, Share2, Download, LogOut } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, Share2, Download, LogOut, Menu, X, Bell, Music, BarChart3, HelpCircle, Home, Play } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import ScreenHeader from '@/components/ScreenHeader'
 
 export default function ProfilePage() {
-  const [showQRCode, setShowQRCode] = useState(false)
+  const [showQRCode, setShowQRCode] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [qrCode, setQrCode] = useState('')
+  const [timeLeft, setTimeLeft] = useState(60)
   const router = useRouter()
 
   const handleLogout = () => {
@@ -61,33 +65,122 @@ export default function ProfilePage() {
     { date: "2024-01-05", event: "Friday Practice", status: "Absent", time: "-" },
   ]
 
+  // Generate a new QR code
   const generateQRCode = () => {
-    setShowQRCode(true)
+    const timestamp = Math.floor(Date.now() / 60000) // Changes every minute
+    const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+    const newCode = `LW-USER-${timestamp}-${randomCode}`
+    setQrCode(newCode)
+    setTimeLeft(60)
   }
+
+  // Auto-generate QR code every minute
+  useEffect(() => {
+    // Generate initial QR code
+    generateQRCode()
+
+    // Set up interval to regenerate every minute
+    const interval = setInterval(() => {
+      generateQRCode()
+    }, 60000) // 60 seconds
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Countdown timer
+  useEffect(() => {
+    if (timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [timeLeft])
 
   const downloadQRCode = () => {
     // In real app, this would download the QR code image
     console.log("Downloading QR code...")
   }
 
+  const features = [
+    {
+      icon: Home,
+      title: 'Home',
+      href: '/home',
+      badge: null,
+    },
+    {
+      icon: User,
+      title: 'Profile',
+      href: '/pages/profile',
+      badge: null,
+    },
+    {
+      icon: Bell,
+      title: 'Push Notifications',
+      href: '#',
+      badge: 164,
+    },
+    {
+      icon: Users,
+      title: 'Groups',
+      href: '#',
+      badge: 2,
+    },
+    {
+      icon: Music,
+      title: 'AudioLabs',
+      href: '#',
+      badge: 5,
+    },
+    {
+      icon: Calendar,
+      title: 'Rehearsals',
+      href: '/pages/praise-night',
+      badge: null,
+    },
+    {
+      icon: Play,
+      title: 'Media',
+      href: '#',
+      badge: 3,
+    },
+    {
+      icon: Calendar,
+      title: 'Ministy Calendar',
+      href: '#',
+      badge: null,
+    },
+    {
+      icon: BarChart3,
+      title: 'Our Marketplace',
+      href: '#',
+      badge: null,
+    },
+    {
+      icon: HelpCircle,
+      title: 'Support',
+      href: '#',
+      badge: null,
+    },
+    {
+      icon: LogOut,
+      title: 'Logout',
+      href: '#',
+      badge: null,
+      onClick: handleLogout,
+    },
+  ]
+
+  const rightButtons = null
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <Link href="/home" className="flex items-center space-x-2">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-          <span className="text-gray-600">Back</span>
-        </Link>
-        <h1 className="text-lg font-semibold text-gray-800">Profile</h1>
-        <div className="flex items-center space-x-2">
-          <button onClick={() => setIsEditing(!isEditing)} className="p-2">
-            <Edit className="w-5 h-5 text-gray-600" />
-          </button>
-          <button onClick={handleLogout} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+      {/* Animated Header */}
+      <ScreenHeader 
+        title="Profile" 
+        onMenuClick={() => setIsMenuOpen(!isMenuOpen)}
+        rightButtons={rightButtons}
+        rightImageSrc="/logo.png"
+      />
 
       {/* Profile Header */}
       <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
@@ -96,11 +189,12 @@ export default function ProfilePage() {
             <div className="w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mx-auto">
               <User className="w-12 h-12 text-white" />
             </div>
-            {isEditing && (
-              <button className="absolute -bottom-1 -right-1 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                <Camera className="w-4 h-4 text-white" />
-              </button>
-            )}
+            <button 
+              onClick={() => setIsEditing(!isEditing)}
+              className="absolute -bottom-1 -right-1 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition-colors"
+            >
+              <Edit className="w-4 h-4 text-white" />
+            </button>
           </div>
           
           <h2 className="text-2xl font-bold text-gray-800 mb-2">{userProfile.fullName}</h2>
@@ -285,44 +379,37 @@ export default function ProfilePage() {
       {/* QR Code Check-in */}
       <div className="px-4 py-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-800 mb-3">Attendance Check-in</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800">Attendance Check-in</h3>
+            <div className="flex items-center space-x-1 text-xs text-gray-500">
+              <Clock className="w-3 h-3" />
+              <span>Expires in {timeLeft}s</span>
+            </div>
+          </div>
           
           <div className="text-center">
             <div className="w-32 h-32 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
-              {showQRCode ? (
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-black rounded-lg mx-auto mb-2 flex items-center justify-center">
-                    <QrCode className="w-16 h-16 text-white" />
-                  </div>
-                  <p className="text-xs text-gray-600">{userProfile.qrCode}</p>
+              <div className="text-center">
+                <div className="w-24 h-24 bg-black rounded-lg mx-auto mb-2 flex items-center justify-center">
+                  <QrCode className="w-16 h-16 text-white" />
                 </div>
-              ) : (
-                <QrCode className="w-16 h-16 text-gray-400" />
-              )}
+                <p className="text-xs text-gray-600 font-mono">{qrCode || 'Loading...'}</p>
+              </div>
             </div>
             
-            <button 
-              onClick={generateQRCode}
-              className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium mb-2"
-            >
-              {showQRCode ? 'Hide QR Code' : 'Generate QR Code'}
-            </button>
-            
-            {showQRCode && (
-              <div className="flex space-x-2 justify-center">
-                <button 
-                  onClick={downloadQRCode}
-                  className="flex items-center space-x-1 text-purple-600 text-sm"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download</span>
-                </button>
-                <button className="flex items-center space-x-1 text-purple-600 text-sm">
-                  <Share2 className="w-4 h-4" />
-                  <span>Share</span>
-                </button>
-              </div>
-            )}
+            <div className="flex space-x-2 justify-center">
+              <button 
+                onClick={downloadQRCode}
+                className="flex items-center space-x-1 text-purple-600 text-sm hover:text-purple-700 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download</span>
+              </button>
+              <button className="flex items-center space-x-1 text-purple-600 text-sm hover:text-purple-700 transition-colors">
+                <Share2 className="w-4 h-4" />
+                <span>Share</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -372,6 +459,61 @@ export default function ProfilePage() {
                 <span className="text-sm text-gray-700">{achievement}</span>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Menu Drawer */}
+      <div className={`fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out ${
+        isMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        {/* Backdrop */}
+        <div 
+          className="absolute inset-0 bg-black bg-opacity-50"
+          onClick={() => setIsMenuOpen(false)}
+        />
+        
+        {/* Drawer Content */}
+        <div className="relative w-80 max-w-sm h-full bg-white shadow-xl border-r border-gray-200">
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
+            <button 
+              onClick={() => setIsMenuOpen(false)}
+              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Menu Items */}
+          <div className="py-2">
+            {features.map((feature, index) => {
+              const MenuItem = feature.onClick ? 'button' : Link;
+              const menuProps = feature.onClick 
+                ? { onClick: () => { feature.onClick?.(); setIsMenuOpen(false); } }
+                : { href: feature.href, onClick: () => setIsMenuOpen(false) };
+              
+              return (
+                <MenuItem
+                  key={index}
+                  {...menuProps}
+                  className={`flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 w-full text-left ${feature.title === 'Logout' ? 'text-red-600 hover:bg-red-50' : ''}`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${feature.title === 'Logout' ? 'bg-red-100' : 'bg-purple-100'}`}>
+                      <feature.icon className={`w-4 h-4 ${feature.title === 'Logout' ? 'text-red-600' : 'text-purple-600'}`} />
+                    </div>
+                    <span className="text-sm font-medium">{feature.title}</span>
+                  </div>
+                  {feature.badge && (
+                    <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                      {feature.badge}
+                    </div>
+                  )}
+                </MenuItem>
+              );
+            })}
           </div>
         </div>
       </div>

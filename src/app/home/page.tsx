@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -9,6 +9,8 @@ export default function HomePage() {
   const router = useRouter()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
   const [openAbout, setOpenAbout] = useState<number | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -78,6 +80,15 @@ export default function HomePage() {
     setOpenAbout(openAbout === index ? null : index)
   }
 
+  // Focus the input when search opens
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      // slight delay to allow element to mount before focusing
+      const id = setTimeout(() => searchInputRef.current?.focus(), 50)
+      return () => clearTimeout(id)
+    }
+  }, [isSearchOpen])
+
   const features = [
     {
       icon: User,
@@ -99,7 +110,7 @@ export default function HomePage() {
     },
     {
       icon: Music,
-      title: 'AudioLabs',
+      title: 'Submit Song',
       href: '#',
       badge: 5,
     },
@@ -123,13 +134,13 @@ export default function HomePage() {
     },
     {
       icon: BarChart3,
-      title: 'Our Marketplace',
+      title: 'Link',
       href: '#',
       badge: null,
     },
     {
       icon: HelpCircle,
-      title: 'Support',
+      title: 'Admin Support',
       href: '#',
       badge: null,
     },
@@ -167,6 +178,64 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
+      {/* iOS Style Header */}
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Logo */}
+          <div className="flex items-center">
+            <img 
+              src="/logo.png" 
+              alt="LoveWorld Logo" 
+              className="w-10 h-10 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </div>
+          
+          {/* Right Section */}
+          <div className="flex items-center space-x-2">
+            {/* Animated Search with iOS-style underline */}
+            <div className={`relative transition-all duration-300 ease-out ${isSearchOpen ? 'w-48 sm:w-64 opacity-100' : 'w-0 opacity-0'} overflow-hidden`}>
+              <input
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onBlur={() => setIsSearchOpen(false)}
+                onFocus={() => setIsSearchOpen(true)}
+                type="text"
+                placeholder="Search"
+                inputMode="search"
+                aria-label="Search"
+                className="w-full text-sm bg-transparent px-0 py-1.5 text-gray-800 placeholder-gray-400 border-0 outline-none appearance-none shadow-none ring-0 focus:outline-none focus:ring-0"
+              />
+              {/* Base line */}
+              <div className="absolute left-0 right-0 bottom-0 h-px bg-gray-300/80" />
+              {/* Active animated line */}
+              <div className={`absolute left-0 bottom-0 h-0.5 bg-purple-600 transition-all duration-700 ease-out ${isSearchOpen ? 'w-full' : 'w-0'}`} />
+            </div>
+            <button
+              onClick={() => setIsSearchOpen((v) => !v)}
+              aria-label="Toggle search"
+              className={`p-2 rounded-full transition-colors focus:outline-none focus:ring-0 ${isSearchOpen ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+            >
+              {isSearchOpen ? <X className="w-5 h-5 text-gray-700" /> : <Search className="w-5 h-5 text-gray-600" />}
+            </button>
+
+            {/* Profile Picture */}
+            <Link href="#" className="w-10 h-10 rounded-full overflow-hidden focus:outline-none focus:ring-0">
+              <img
+                src="/lmm.png"
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {/* Hero Banner - Carousel */}
       <div className="px-4 py-6">
@@ -189,18 +258,7 @@ export default function HomePage() {
           </div>
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-          
-          {/* Logo at Top Center */}
-          <div className="absolute top-4 left-0 right-0 flex justify-center">
-            <img 
-              src="/logo.png" 
-              alt="LoveWorld Logo" 
-              className="w-12 h-12 object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          </div>
+        
         </div>
       </div>
 

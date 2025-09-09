@@ -7,18 +7,87 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, ArrowLeft } from "lucide-react";
+import { ChevronRight, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home } from "lucide-react";
 import Link from "next/link";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, Song, PraiseNight } from "@/data/songs";
+import ScreenHeader from "@/components/ScreenHeader";
 
 export default function PraiseNightPage() {
   const [currentPraiseNight, setCurrentPraiseNightState] = useState(getCurrentPraiseNight());
   const [allPraiseNights] = useState(getAllPraiseNights());
   const [showDropdown, setShowDropdown] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<{[key: string]: {[key: string]: boolean}}>({});
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const songs = currentPraiseNight.songs;
+
+  const features = [
+    {
+      icon: Home,
+      title: 'Home',
+      href: '/home',
+      badge: null,
+    },
+    {
+      icon: User,
+      title: 'Profile',
+      href: '/pages/profile',
+      badge: null,
+    },
+    {
+      icon: Bell,
+      title: 'Push Notifications',
+      href: '#',
+      badge: 164,
+    },
+    {
+      icon: Users,
+      title: 'Groups',
+      href: '#',
+      badge: 2,
+    },
+    {
+      icon: Music,
+      title: 'AudioLabs',
+      href: '#',
+      badge: 5,
+    },
+    {
+      icon: Calendar,
+      title: 'Rehearsals',
+      href: '/pages/praise-night',
+      badge: null,
+    },
+    {
+      icon: Play,
+      title: 'Media',
+      href: '#',
+      badge: 3,
+    },
+    {
+      icon: Calendar,
+      title: 'Ministy Calendar',
+      href: '#',
+      badge: null,
+    },
+    {
+      icon: BarChart3,
+      title: 'Our Marketplace',
+      href: '#',
+      badge: null,
+    },
+    {
+      icon: HelpCircle,
+      title: 'Support',
+      href: '#',
+      badge: null,
+    },
+  ]
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen)
+  }
 
 const groupSongs = (list: Song[]) => {
   const map = new Map();
@@ -723,17 +792,55 @@ function TOC({ grouped, activeId, onJump }: {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
+        
+        @keyframes fadeInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fadeInRight {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        .animate-fade-in-left {
+          animation: fadeInLeft 0.6s ease-out;
+        }
+        
+        .animate-fade-in-up {
+          animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+        
+        .animate-fade-in-right {
+          animation: fadeInRight 0.6s ease-out 0.4s both;
+        }
       `}</style>
 
-      {/* Header with Back Arrow */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-        <Link href="/home" className="flex items-center space-x-2">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-          <span className="text-gray-600">Back</span>
-        </Link>
-        <h1 className="text-lg font-semibold text-gray-800">Praise Night</h1>
-        <div className="w-16"></div> {/* Spacer for center alignment */}
-      </div>
+      {/* Shared Screen Header */}
+      <ScreenHeader title="Praise Night" onMenuClick={toggleMenu} rightImageSrc="/logo.png" />
       
       <div className="mx-auto max-w-7xl p-4 md:p-6 relative">
         <Header />
@@ -799,6 +906,55 @@ function TOC({ grouped, activeId, onJump }: {
                   </div>
                 ))}
               </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Menu Drawer */}
+      <div className={`fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out ${
+        isMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        {/* Backdrop */}
+        <div 
+          className="absolute inset-0 bg-black bg-opacity-50"
+          onClick={toggleMenu}
+        />
+        
+        {/* Drawer Content */}
+        <div className="relative w-80 max-w-sm h-full bg-white shadow-xl border-r border-gray-200">
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
+            <button 
+              onClick={toggleMenu}
+              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Menu Items */}
+          <div className="py-2">
+            {features.map((feature, index) => (
+              <Link
+                key={index}
+                href={feature.href}
+                onClick={toggleMenu}
+                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <feature.icon className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-800">{feature.title}</span>
+                </div>
+                {feature.badge && (
+                  <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                    {feature.badge}
+                  </div>
+                )}
+              </Link>
             ))}
           </div>
         </div>
