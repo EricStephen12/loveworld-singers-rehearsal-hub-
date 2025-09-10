@@ -799,7 +799,8 @@ function TopCarousel() {
         }
         
         .animate-scroll {
-          animation: scroll 15s linear infinite;
+          animation: scroll 20s linear infinite;
+          width: 200%;
         }
         
         .animate-scroll:hover {
@@ -926,8 +927,8 @@ function TopCarousel() {
 
         {/* Pills under timer */}
         <div className="mb-4 sm:mb-6">
-          <div className="-mx-3 px-3 overflow-x-auto">
-            <div className="flex items-center gap-2 sm:gap-3 snap-x snap-mandatory animate-scroll">
+          <div className="-mx-3 px-3 overflow-hidden">
+            <div className="flex items-center gap-2 sm:gap-3 animate-scroll">
               {/* First set of pills */}
               <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100">
