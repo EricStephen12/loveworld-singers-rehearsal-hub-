@@ -142,69 +142,27 @@ function useActiveId(ids: string[]) {
     const unheardSongs = songs.filter(s => s.status === "NOT_HEARD").length;
     
     return (
-      <div className="mb-6 sm:mb-8">
-        {/* Beautiful Mobile Header */}
-        <div className="relative bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 rounded-2xl sm:rounded-3xl p-6 sm:p-8 mb-6 shadow-2xl" style={{overflow: 'visible'}}>
-          {/* Background Pattern */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent rounded-2xl sm:rounded-3xl"></div>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 -z-10"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12 -z-10"></div>
-          
-          <div className="relative z-10">
-            {/* Header Content */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <Image
-                      src="/Untitled.jpeg"
-                      alt="Praise Night Header"
-                      width={70}
-                      height={52}
-                      className="rounded-xl shadow-lg object-cover sm:w-20 sm:h-15 ring-2 ring-white/20"
-                    />
-                    <div className="absolute -bottom-2 -right-2 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                      <Music className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    </div>
-                  </div>
-                </div>
-                <div className="text-left">
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight mb-1">
+      <div className="mb-4 sm:mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
                     {currentPraiseNight.name}
                   </h1>
-                  <div className="flex items-center gap-2 text-white/80 text-sm sm:text-base">
-                    <div className="w-1.5 h-1.5 bg-white/60 rounded-full"></div>
-                    <span>{currentPraiseNight.location}</span>
-                    <div className="w-1.5 h-1.5 bg-white/60 rounded-full"></div>
+            <div className="mt-1 flex items-center gap-2 text-slate-600 text-xs sm:text-sm">
+              <span className="truncate max-w-[60vw] sm:max-w-none">{currentPraiseNight.location}</span>
+              <span className="hidden sm:inline">•</span>
                     <span>{currentPraiseNight.date}</span>
                   </div>
-                  
-                  {/* Progress Indicator */}
-                  <div className="mt-3 flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <span className="text-white/90 text-xs font-medium">{heardSongs}/{totalSongs} Songs Heard</span>
                     </div>
-                    <div className="flex-1 max-w-24 bg-white/20 rounded-full h-1.5 overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500"
-                        style={{ width: `${(heardSongs/totalSongs)*100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
               {/* Praise Night Selector */}
               <div className="relative w-full sm:w-auto z-50">
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center sm:justify-start gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 hover:bg-white/20 transition-all duration-200 text-white"
+              className="w-full sm:w-auto inline-flex items-center justify-center sm:justify-start gap-2 bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 text-white rounded-lg px-3 py-2 shadow-md hover:shadow-lg active:scale-95 transition-all duration-200"
                 >
                   <span className="text-sm font-medium">Switch Praise Night</span>
-                  <ChevronDown className="w-4 h-4 text-white/70" />
+              <ChevronDown className="w-4 h-4 text-white/90" />
                 </button>
-                
                 {showDropdown && (
                   <>
                     {/* Mobile backdrop */}
@@ -212,26 +170,23 @@ function useActiveId(ids: string[]) {
                       className="fixed inset-0 bg-black/20 z-[60] sm:hidden"
                       onClick={() => setShowDropdown(false)}
                     />
-                    
                     {/* Dropdown */}
-                    <div className="fixed left-4 right-4 top-32 sm:absolute sm:top-full sm:left-0 sm:right-0 sm:left-auto mt-2 w-auto sm:w-64 bg-white rounded-xl shadow-2xl border border-slate-200 z-[70] overflow-hidden max-h-64 overflow-y-auto">
+                <div className="fixed left-3 right-3 top-28 sm:absolute sm:top-full sm:left-0 sm:right-0 sm:left-auto mt-2 w-auto sm:w-64 bg-white rounded-xl shadow-2xl border border-slate-200 z-[70] overflow-hidden max-h-64 overflow-y-auto">
                       {allPraiseNights.map((praiseNight) => (
                         <button
                           key={praiseNight.id}
                           onClick={() => switchPraiseNight(praiseNight)}
-                          className={`w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors ${
+                      className={`w-full px-3 sm:px-4 py-2 sm:py-3 text-left hover:bg-slate-50 transition-colors ${
                             praiseNight.id === currentPraiseNight.id ? 'bg-purple-50 text-purple-700 border-l-4 border-purple-500' : ''
                           }`}
                         >
-                          <div className="font-semibold">{praiseNight.name}</div>
-                          <div className="text-sm text-slate-600">{praiseNight.location} • {praiseNight.date}</div>
+                      <div className="font-semibold text-sm sm:text-base">{praiseNight.name}</div>
+                      <div className="text-xs sm:text-sm text-slate-600">{praiseNight.location} • {praiseNight.date}</div>
                         </button>
                       ))}
                     </div>
                   </>
                 )}
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -243,12 +198,12 @@ function RehearsalBadge({ count, extra }: { count: number; extra: number }) {
   return (
     <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-1 sm:gap-2">
       <div className="flex items-center gap-1 sm:gap-2">
-        <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
-          <Clock size={10} className="sm:w-3 sm:h-3"/>
+        <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium">
+          <Clock size={8} className="sm:w-3 sm:h-3"/>
           {count ?? 0}×
         </div>
         {extra ? (
-          <div className="bg-purple-50 text-purple-700 px-2 py-1 rounded-full text-xs font-medium">
+          <div className="bg-purple-50 text-purple-700 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium">
             +{extra}
           </div>
         ) : null}
@@ -274,18 +229,18 @@ function RehearsalBadge({ count, extra }: { count: number; extra: number }) {
 function RemarksTable({ remarks }: { remarks: Array<{date: string; text: string}> }) {
   if (!remarks?.length) {
     return (
-      <div className="text-center py-8 text-slate-500">
-        <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">No pastor remarks yet</p>
+      <div className="text-center py-6 sm:py-8 text-slate-500">
+        <Clock className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 opacity-50" />
+        <p className="text-xs sm:text-sm">No pastor remarks yet</p>
       </div>
     );
   }
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {remarks.map((r: {date: string; text: string}, i: number) => (
-        <div key={i} className="border-l-4 border-l-purple-400 bg-purple-50 p-4 rounded-r-lg">
+        <div key={i} className="border-l-4 border-l-purple-400 bg-purple-50 p-3 sm:p-4 rounded-r-lg">
           <div className="text-xs font-medium text-purple-700 mb-1">{r.date}</div>
-          <p className="text-sm text-slate-700">{r.text}</p>
+          <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">{r.text}</p>
         </div>
       ))}
     </div>
@@ -509,29 +464,29 @@ function AudioLinks({ phases }: { phases: Array<{name: string; fullMix?: string;
 function Lyrics({ lyrics }: { lyrics: {start: string; continue: string} }) {
   if (!lyrics?.start && !lyrics?.continue) {
     return (
-      <div className="text-center py-8 text-slate-500">
-        <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">No lyrics available</p>
+      <div className="text-center py-6 sm:py-8 text-slate-500">
+        <BookOpen className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 opacity-50" />
+        <p className="text-xs sm:text-sm">No lyrics available</p>
       </div>
     );
   }
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-3 md:p-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+      <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
         <div className="font-semibold text-green-800 mb-2 flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          Start
+          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></div>
+          <span className="text-sm sm:text-base">Start</span>
         </div>
-        <p className="text-base md:text-[15px] text-slate-800 whitespace-pre-wrap leading-relaxed">
+        <p className="text-sm sm:text-base md:text-[15px] text-slate-800 whitespace-pre-wrap leading-relaxed">
           {lyrics.start || "No start lyrics available"}
         </p>
       </div>
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 md:p-4">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
         <div className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
-          <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-          Continue
+          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-amber-500 rounded-full"></div>
+          <span className="text-sm sm:text-base">Continue</span>
         </div>
-        <p className="text-base md:text-[15px] text-slate-800 whitespace-pre-wrap leading-relaxed">
+        <p className="text-sm sm:text-base md:text-[15px] text-slate-800 whitespace-pre-wrap leading-relaxed">
           {lyrics.continue || "No continuation lyrics available"}
         </p>
       </div>
@@ -542,28 +497,28 @@ function Lyrics({ lyrics }: { lyrics: {start: string; continue: string} }) {
 function SongCard({ song }: { song: Song }) {
   const [activeTab, setActiveTab] = useState<string>('');
   return (
-    <Card id={`song-${song.sn}`} className="scroll-mt-24 border-l-4 border-l-purple-400 shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="pb-4 bg-gradient-to-r from-slate-50 to-purple-50">
+    <Card id={`song-${song.sn}`} className="scroll-mt-20 sm:scroll-mt-24 border-l-4 border-l-purple-400 shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3 sm:pb-4 bg-gradient-to-r from-slate-50 to-purple-50">
         <CardTitle className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
-          <div className="space-y-2">
+          <div className="space-y-1 sm:space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-lg sm:text-2xl font-bold text-slate-800">{song.sn}.</span>
-              <h3 className="text-lg sm:text-2xl font-bold text-slate-800">{song.title}</h3>
+              <span className="text-base sm:text-lg md:text-2xl font-bold text-slate-800">{song.sn}.</span>
+              <h3 className="text-base sm:text-lg md:text-2xl font-bold text-slate-800 leading-tight">{song.title}</h3>
             </div>
           </div>
           
         </CardTitle>
       </CardHeader>
       
-      <CardContent className="pt-4">
+      <CardContent className="pt-3 sm:pt-4">
         {/* Tabs on all screen sizes */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex items-center justify-between">
             <TabsList className="grid grid-cols-2 bg-slate-100 h-auto">
-              <TabsTrigger value="lyrics" className="data-[state=active]:bg-green-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-3">
+              <TabsTrigger value="lyrics" className="data-[state=active]:bg-green-500 data-[state=active]:text-white text-xs sm:text-sm py-1.5 sm:py-2 px-2 sm:px-3">
                 Lyrics
               </TabsTrigger>
-              <TabsTrigger value="remarks" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-3">
+              <TabsTrigger value="remarks" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-xs sm:text-sm py-1.5 sm:py-2 px-2 sm:px-3">
                 Pastor Remarks
               </TabsTrigger>
             </TabsList>
@@ -571,19 +526,19 @@ function SongCard({ song }: { song: Song }) {
               <button
                 aria-label="Collapse content"
                 onClick={() => setActiveTab('')}
-                className="ml-3 p-2 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition"
+                className="ml-2 sm:ml-3 p-1.5 sm:p-2 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition"
               >
-                <ChevronUp className="w-4 h-4" />
+                <ChevronUp className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             )}
           </div>
-          <TabsContent value="lyrics" className="mt-6">
+          <TabsContent value="lyrics" className="mt-4 sm:mt-6">
             <Lyrics lyrics={song.lyrics || { start: '', continue: '' }} />
-          </TabsContent>
-          <TabsContent value="remarks" className="mt-6">
+            </TabsContent>
+          <TabsContent value="remarks" className="mt-4 sm:mt-6">
             <RemarksTable remarks={song.remarks || []} />
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+          </Tabs>
       </CardContent>
     </Card>
   );
@@ -663,6 +618,81 @@ function TOC({ grouped, activeId, onJump }: {
   );
 }
 
+function TopCarousel() {
+  const baseImages = useMemo(() => [
+    "/Ecards/1000876785.png",
+  ], []);
+  const images = useMemo(() => (
+    baseImages.length
+      ? Array.from({ length: Math.max(8, baseImages.length) }, (_, i) => baseImages[i % baseImages.length])
+      : []
+  ), [baseImages]);
+
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    const getStep = () => {
+      const firstCard = el.querySelector<HTMLElement>("[data-card]");
+      const gap = parseFloat(window.getComputedStyle(el).gap || "12");
+      const width = firstCard?.offsetWidth || 260;
+      return width + gap;
+    };
+
+    const auto = window.setInterval(() => {
+      if (!el) return;
+      const step = getStep();
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+      if (atEnd) {
+        el.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        el.scrollBy({ left: step, behavior: "smooth" });
+      }
+    }, 2200);
+
+    const onResize = () => {
+      // Recalculate step implicitly by reading sizes on next tick
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.clearInterval(auto);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+
+  if (!images.length) return null;
+
+  return (
+    <div className="mb-4 sm:mb-6">
+      <div
+        ref={scrollerRef}
+        className="flex gap-2 sm:gap-3 overflow-x-auto snap-x snap-mandatory px-1 sm:px-0"
+        style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
+      >
+        {images.map((src, i) => (
+          <div
+            key={`${src}-${i}`}
+            data-card
+            className="relative flex-shrink-0 w-36 sm:w-44 md:w-52 h-16 sm:h-20 md:h-24 overflow-hidden shadow-md bg-slate-200 snap-start"
+          >
+            <Image
+              src={src}
+              alt="Rehearsal highlight"
+              fill
+              sizes="(max-width: 640px) 160px, (max-width: 768px) 192px, 224px"
+              className="object-contain object-center"
+              priority={false}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
   const [q, setQ] = useState("");
   const grouped = useMemo(() => groupSongs(
     songs.filter((s) => {
@@ -678,6 +708,22 @@ function TOC({ grouped, activeId, onJump }: {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     history.replaceState(null, "", `#${id}`);
+  };
+
+  // Search input focus from header search button
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const onHeaderSearchClick = () => {
+    setIsSearchOpen(true);
+    const el = searchInputRef.current;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Focus after scroll animation
+      setTimeout(() => el.focus(), 300);
+    }
+  };
+  const onCloseSearch = () => {
+    setIsSearchOpen(false);
   };
 
   // Set the target date for the countdown (next Friday at 6 PM)
@@ -698,7 +744,7 @@ function TOC({ grouped, activeId, onJump }: {
   const nextPraiseNight = getNextPraiseNight();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 overflow-x-hidden">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         
@@ -747,20 +793,59 @@ function TOC({ grouped, activeId, onJump }: {
           animation: fadeInRight 0.6s ease-out 0.4s both;
         }
       `}</style>
-
-      {/* Shared Screen Header */}
-      <ScreenHeader title="Praise Night" onMenuClick={toggleMenu} rightImageSrc="/logo.png" />
       
-      <div className="mx-auto max-w-7xl p-4 md:p-6 relative">
+      {/* Shared Screen Header with Search Button */}
+      <ScreenHeader 
+        title="Praise Night" 
+        onMenuClick={toggleMenu} 
+        rightImageSrc="/logo.png"
+        rightButtons={
+          <button
+            aria-label="Search"
+            onClick={onHeaderSearchClick}
+            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+        }
+      />
+
+      {/* Animated iOS-style Search Bar (slides from top) */}
+      <div className={`fixed left-0 right-0 top-0 z-40 transition-transform duration-300 ${isSearchOpen ? 'translate-y-0' : '-translate-y-full'}`}>
+        <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200">
+          <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 py-3 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                ref={searchInputRef}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search songs, writer, lead singer…"
+                className="pl-10 h-10 text-sm border-0 ring-0 focus:ring-0 focus:border-0 bg-white/70 backdrop-blur rounded-xl shadow-sm"
+              />
+              <div className="absolute left-3 right-3 -bottom-0.5 h-px bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"></div>
+            </div>
+            <button
+              onClick={onCloseSearch}
+              className="px-2 py-1 text-sm text-purple-600 font-medium active:scale-95"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 py-2 sm:py-4 relative">
+        {/* Top Rectangular Auto-Scrolling Carousel */}
+        <TopCarousel />
         <Header />
 
-        {/* Countdown Timer */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
-         
+        {/* Countdown Timer - Mobile Optimized */}
+        <div className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4 md:p-6 mb-4 sm:mb-6 md:mb-8">
           <CountdownTimer 
             targetDate={nextPraiseNight} 
           />
-          <p className="text-center text-xs text-slate-500 mt-2">
+          <p className="text-center text-xs sm:text-sm text-slate-500 mt-2 px-2">
             {nextPraiseNight.toLocaleDateString('en-US', { 
               weekday: 'long', 
               year: 'numeric', 
@@ -772,42 +857,71 @@ function TOC({ grouped, activeId, onJump }: {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="mb-6 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search songs, writer, lead singer, section…"
-            className="pl-12 h-12 text-base border-slate-300 rounded-xl bg-white shadow-sm focus:border-purple-400 focus:ring-purple-400"
-          />
+        {/* Pills under timer */}
+        <div className="mb-4 sm:mb-6">
+          <div className="-mx-3 px-3 overflow-x-auto">
+            <div className="flex items-center gap-2 sm:gap-3 snap-x snap-mandatory">
+              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100">
+                <Music className="w-3.5 h-3.5 text-purple-600" />
+              </span>
+                <span className="text-xs sm:text-sm font-medium">Songs</span>
+              </button>
+              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100">
+                <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              </span>
+                <span className="text-xs sm:text-sm font-medium">Schedule</span>
+              </button>
+              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100">
+                <Mic className="w-3.5 h-3.5 text-rose-600" />
+              </span>
+                <span className="text-xs sm:text-sm font-medium">Audio Lab</span>
+              </button>
+              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100">
+                <Users className="w-3.5 h-3.5 text-amber-600" />
+              </span>
+                <span className="text-xs sm:text-sm font-medium">Conductor's Guide</span>
+              </button>
+              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100">
+                <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+              </span>
+                <span className="text-xs sm:text-sm font-medium">Sheet Music</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
+        {/* Search input moved to animated header bar */}
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           {/* TOC - Hidden on mobile, shown as sidebar on desktop */}
           <div className="hidden lg:block lg:col-span-1">
             <TOC grouped={grouped} activeId={activeId} onJump={onJump} />
           </div>
 
-          {/* Content */}
-          <div className="lg:col-span-3 space-y-6 lg:space-y-8">
+          {/* Content - Mobile Optimized */}
+          <div className="lg:col-span-3 space-y-4 sm:space-y-6 lg:space-y-8">
             {[...grouped.entries()].map(([section, byStatus]) => (
-              <div key={section} className="space-y-6">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2">{section}</h2>
-                  <div className="w-24 h-1 bg-gradient-to-r from-purple-400 to-blue-400 rounded-full mx-auto"></div>
+              <div key={section} className="space-y-3 sm:space-y-4 md:space-y-6">
+                <div className="text-center px-2">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 mb-2 leading-tight">{section}</h2>
+                  <div className="w-16 sm:w-20 md:w-24 h-0.5 sm:h-1 bg-gradient-to-r from-purple-400 to-blue-400 rounded-full mx-auto"></div>
                 </div>
                 
                 {[...byStatus.entries()].map(([status, list]) => (
-                  <div key={status} className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Badge className={`${status === "HEARD" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"} px-3 py-1`}>
+                  <div key={status} className="space-y-3 sm:space-y-4">
+                    <div className="flex items-center gap-2 sm:gap-3 px-1">
+                      <Badge className={`${status === "HEARD" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"} px-2 sm:px-3 py-1 text-xs sm:text-sm`}>
                         {status}
                       </Badge>
                       <div className="flex-1 h-px bg-slate-200"></div>
-                      <span className="text-sm text-slate-500">{list.length} songs</span>
+                      <span className="text-xs sm:text-sm text-slate-500">{list.length} songs</span>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {list.map((song: Song) => (
                         <SongCard key={song.sn} song={song} />
                       ))}
