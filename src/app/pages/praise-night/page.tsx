@@ -59,44 +59,51 @@ export default function PraiseNightPage() {
     seconds: 0,
   })
 
-  // Set the target date for the countdown (next Friday at 6 PM) - memoized to prevent recalculation
-  const nextPraiseNight = useMemo(() => {
-    const now = new Date()
-    const nextFriday = new Date(now)
-    
-    // Set to next Friday (5 is Friday, 0 is Sunday)
-    const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7
-    nextFriday.setDate(now.getDate() + daysUntilFriday)
-    
-    // Set time to 6 PM
-    nextFriday.setHours(18, 0, 0, 0)
-    
-    return nextFriday
-  }, [])
-
+  // Initialize countdown and make it count down
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const difference = nextPraiseNight.getTime() - new Date().getTime()
+    // Set initial countdown values: 11d 7h 48m 00s
+    let currentTime = {
+      days: 11,
+      hours: 7,
+      minutes: 48,
+      seconds: 0,
+    };
+    
+    setTimeLeft(currentTime);
+    
+    // Update countdown every second
+    const timer = setInterval(() => {
+      // Decrease seconds
+      currentTime.seconds--;
       
-      if (difference > 0) {
-        setTimeLeft({
-          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-          minutes: Math.floor((difference / 1000 / 60) % 60),
-          seconds: Math.floor((difference / 1000) % 60),
-        })
+      // Handle time rollover
+      if (currentTime.seconds < 0) {
+        currentTime.seconds = 59;
+        currentTime.minutes--;
+        
+        if (currentTime.minutes < 0) {
+          currentTime.minutes = 59;
+          currentTime.hours--;
+          
+          if (currentTime.hours < 0) {
+            currentTime.hours = 23;
+            currentTime.days--;
+            
+            // Stop countdown when it reaches zero
+            if (currentTime.days < 0) {
+              currentTime = { days: 0, hours: 0, minutes: 0, seconds: 0 };
+              clearInterval(timer);
+            }
+          }
+        }
       }
-    }
-
-    // Calculate immediately
-    calculateTimeLeft()
+      
+      setTimeLeft({ ...currentTime });
+    }, 1000);
     
-    // Then update every second
-    const timer = setInterval(calculateTimeLeft, 1000)
-    
-    // Cleanup
-    return () => clearInterval(timer)
-  }, [nextPraiseNight])
+    // Cleanup interval on unmount
+    return () => clearInterval(timer);
+  }, [])
 
   // Format single digit numbers with leading zero
   const formatNumber = (num: number) => (num < 10 ? `0${num}` : num)
@@ -504,11 +511,34 @@ function SongCard({ song }: { song: Song }) {
     <Card id={`song-${song.sn}`} className="scroll-mt-20 sm:scroll-mt-24 border-l-4 border-l-purple-400 shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-3 sm:pb-4 bg-gradient-to-r from-slate-50 to-purple-50">
         <CardTitle className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
-          <div className="space-y-1 sm:space-y-2">
+          <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2">
+              <span className="text-sm font-outfit-semibold text-slate-700">{song.sn}.</span>
+              <h3 className="text-sm font-poppins-medium text-slate-800 leading-tight">{song.title}</h3>
+        </div>
+            
+            {/* Good marks (rehearsal count) and duration */}
             <div className="flex items-center gap-2">
-              <span className="text-base sm:text-lg md:text-2xl font-bold text-slate-800">{song.sn}.</span>
-              <h3 className="text-base sm:text-lg md:text-2xl font-bold text-slate-800 leading-tight">{song.title}</h3>
-            </div>
+              {/* Rehearsal progress checkmarks */}
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: Math.min(song.rehearsals?.count || 0, 6) }, (_, i) => (
+                  <span key={i} className="text-green-500 text-xs">✅</span>
+                ))}
+                {Array.from({ length: Math.max(0, 6 - (song.rehearsals?.count || 0)) }, (_, i) => (
+                  <span key={i} className="text-gray-300 text-xs">⬜</span>
+                ))}
+                {(song.rehearsals?.extra || 0) > 0 && (
+                  <span className="text-xs text-purple-500 font-poppins-semibold ml-1">+{song.rehearsals?.extra}</span>
+                )}
+        </div>
+              
+              {/* Duration */}
+              {song.duration && (
+                <span className="text-xs text-gray-500 font-poppins-medium px-2 py-1 bg-gray-50 rounded-full">
+                  {song.duration}
+                </span>
+      )}
+    </div>
           </div>
           
         </CardTitle>
@@ -516,33 +546,144 @@ function SongCard({ song }: { song: Song }) {
       
       <CardContent className="pt-3 sm:pt-4">
         {/* Tabs on all screen sizes */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex items-center justify-between">
-            <TabsList className="grid grid-cols-2 bg-slate-100 h-auto">
-              <TabsTrigger value="lyrics" className="data-[state=active]:bg-green-500 data-[state=active]:text-white text-xs sm:text-sm py-1.5 sm:py-2 px-2 sm:px-3">
-                Lyrics
-              </TabsTrigger>
-              <TabsTrigger value="remarks" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-xs sm:text-sm py-1.5 sm:py-2 px-2 sm:px-3">
-                Pastor Remarks
-              </TabsTrigger>
-            </TabsList>
-            {activeTab && (
-              <button
-                aria-label="Collapse content"
-                onClick={() => setActiveTab('')}
-                className="ml-2 sm:ml-3 p-1.5 sm:p-2 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition"
+        <div className="w-full">
+          <div className="flex items-center justify-center">
+            <div className="grid grid-cols-3 bg-slate-50 h-auto rounded-xl border border-slate-200 p-1">
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  if (activeTab === 'lyrics') {
+                    setActiveTab('');
+                  } else {
+                    setActiveTab('lyrics');
+                  }
+                }}
+                className={`text-xs sm:text-sm py-2 px-3 rounded-lg font-poppins-medium transition-all duration-200 ${
+                  activeTab === 'lyrics' 
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
               >
-                <ChevronUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                Lyrics
               </button>
-            )}
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  if (activeTab === 'comments') {
+                    setActiveTab('');
+                  } else {
+                    setActiveTab('comments');
+                  }
+                }}
+                className={`text-xs sm:text-sm py-2 px-3 rounded-lg font-poppins-medium transition-all duration-200 ${
+                  activeTab === 'comments' 
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                Pastor Comments
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  if (activeTab === 'history') {
+                    setActiveTab('');
+                  } else {
+                    setActiveTab('history');
+                  }
+                }}
+                className={`text-xs sm:text-sm py-2 px-3 rounded-lg font-poppins-medium transition-all duration-200 ${
+                  activeTab === 'history' 
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                Songs History
+              </button>
+            </div>
           </div>
-          <TabsContent value="lyrics" className="mt-4 sm:mt-6">
-            <Lyrics lyrics={song.lyrics || { start: '', continue: '' }} />
-            </TabsContent>
-          <TabsContent value="remarks" className="mt-4 sm:mt-6">
-            <RemarksTable remarks={song.remarks || []} />
-            </TabsContent>
-          </Tabs>
+          
+          {/* Conditional content rendering */}
+          {activeTab === 'lyrics' && (
+            <div className="mt-4 sm:mt-6 animate-in fade-in-50 slide-in-from-bottom-3 duration-500 ease-out">
+              <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm rounded-xl overflow-hidden">
+                <CardContent className="p-4">
+                  <Lyrics lyrics={song.lyrics || { start: '', continue: '' }} />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
+          {activeTab === 'comments' && (
+            <div className="mt-4 sm:mt-6 animate-in fade-in-50 slide-in-from-bottom-3 duration-500 ease-out">
+              <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm rounded-xl overflow-hidden">
+                <CardContent className="p-4">
+                  <RemarksTable remarks={song.remarks || []} />
+                </CardContent>
+              </Card>
+              </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="mt-4 sm:mt-6 animate-in fade-in-50 slide-in-from-bottom-3 duration-500 ease-out">
+              <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm rounded-xl overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    <h4 className="font-poppins-semibold text-sm text-slate-800">Song Details</h4>
+                    <div className="space-y-2">
+                      {song.writer && (
+                        <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                          <span className="text-xs font-poppins-medium text-slate-600">Writer</span>
+                          <span className="text-sm font-poppins-semibold text-slate-800">{song.writer}</span>
+              </div>
+                      )}
+                      {song.leadSinger && (
+                        <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                          <span className="text-xs font-poppins-medium text-slate-600">Lead Singer</span>
+                          <span className="text-sm font-poppins-semibold text-slate-800">{song.leadSinger}</span>
+              </div>
+                      )}
+                      {song.conductor && (
+                        <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                          <span className="text-xs font-poppins-medium text-slate-600">Conductor</span>
+                          <span className="text-sm font-poppins-semibold text-slate-800">{song.conductor}</span>
+              </div>
+                      )}
+              {song.key && (
+                        <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                          <span className="text-xs font-poppins-medium text-slate-600">Key</span>
+                          <span className="text-sm font-poppins-semibold text-slate-800">{song.key}</span>
+                </div>
+              )}
+                      {song.instrumentation && (
+                        <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                          <span className="text-xs font-poppins-medium text-slate-600">Instrumentation</span>
+                          <span className="text-sm font-poppins-semibold text-slate-800">{song.instrumentation}</span>
+            </div>
+                      )}
+                      <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                        <span className="text-xs font-poppins-medium text-slate-600">Status</span>
+                        <span className={`text-xs font-poppins-semibold px-2 py-1 rounded-full ${song.status === 'HEARD' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {song.status === 'HEARD' ? 'Heard' : 'Not Heard'}
+                        </span>
+          </div>
+                      <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                        <span className="text-xs font-poppins-medium text-slate-600">Total Rehearsals</span>
+                        <span className="text-sm font-poppins-semibold text-slate-800">{(song.rehearsals?.count || 0) + (song.rehearsals?.extra || 0)}</span>
+        </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -806,6 +947,20 @@ function TopCarousel() {
         .animate-scroll:hover {
           animation-play-state: paused;
         }
+        
+        /* Custom scrollbar styling */
+        .scrollbar-thin::-webkit-scrollbar {
+          height: 4px;
+        }
+        
+        .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+          background-color: #d1d5db;
+          border-radius: 2px;
+        }
+        
+        .scrollbar-track-transparent::-webkit-scrollbar-track {
+          background: transparent;
+        }
       `}</style>
       
       {/* Shared Screen Header with Search Button */}
@@ -927,7 +1082,17 @@ function TopCarousel() {
 
         {/* Pills under timer */}
         <div className="mb-4 sm:mb-6">
-          <div className="-mx-3 px-3 overflow-hidden">
+          <div 
+            className="-mx-3 px-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+            onScroll={(e) => {
+              const target = e.target as HTMLDivElement;
+              target.style.animationPlayState = 'paused';
+              clearTimeout((target as any).scrollTimeout);
+              (target as any).scrollTimeout = setTimeout(() => {
+                target.style.animationPlayState = 'running';
+              }, 2000);
+            }}
+          >
             <div className="flex items-center gap-2 sm:gap-3 animate-scroll">
               {/* First set of pills */}
               <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
