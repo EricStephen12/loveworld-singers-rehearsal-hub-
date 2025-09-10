@@ -792,6 +792,19 @@ function TopCarousel() {
         .breathe-animation {
           animation: breathe 2s ease-in-out infinite;
         }
+        
+        @keyframes scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        
+        .animate-scroll {
+          animation: scroll 15s linear infinite;
+        }
+        
+        .animate-scroll:hover {
+          animation-play-state: paused;
+        }
       `}</style>
       
       {/* Shared Screen Header with Search Button */}
@@ -914,7 +927,35 @@ function TopCarousel() {
         {/* Pills under timer */}
         <div className="mb-4 sm:mb-6">
           <div className="-mx-3 px-3 overflow-x-auto">
-            <div className="flex items-center gap-2 sm:gap-3 snap-x snap-mandatory">
+            <div className="flex items-center gap-2 sm:gap-3 snap-x snap-mandatory animate-scroll">
+              {/* First set of pills */}
+              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100">
+                <Music className="w-3.5 h-3.5 text-purple-600" />
+              </span>
+                <span className="text-xs sm:text-sm font-medium">Songs Schedule</span>
+              </button>
+             
+              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100">
+                <Mic className="w-3.5 h-3.5 text-rose-600" />
+              </span>
+                <span className="text-xs sm:text-sm font-medium">Audio Lab</span>
+              </button>
+              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100">
+                <Users className="w-3.5 h-3.5 text-amber-600" />
+              </span>
+                <span className="text-xs sm:text-sm font-medium">Conductor's Guide</span>
+              </button>
+              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100">
+                <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+              </span>
+                <span className="text-xs sm:text-sm font-medium">Sheet Music</span>
+              </button>
+
+              {/* Duplicate set for seamless scrolling */}
               <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100">
                 <Music className="w-3.5 h-3.5 text-purple-600" />
@@ -997,11 +1038,7 @@ function TopCarousel() {
                 {[...byStatus.entries()].map(([status, list]) => (
                   <div key={status} className="space-y-3 sm:space-y-4">
                     <div className="flex items-center gap-2 sm:gap-3 px-1">
-                      <Badge className={`${status === "HEARD" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"} px-2 sm:px-3 py-1 text-xs sm:text-sm`}>
-                        {status}
-                      </Badge>
                       <div className="flex-1 h-px bg-slate-200"></div>
-                      <span className="text-xs sm:text-sm text-slate-500">{list.length} songs</span>
                     </div>
                     <div className="space-y-3 sm:space-y-4">
                       {list.map((song: Song) => (
