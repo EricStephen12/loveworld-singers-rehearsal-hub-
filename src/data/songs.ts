@@ -139,16 +139,16 @@ if (typeof window !== 'undefined') {
 // Praise Nights data
 export const praiseNights: PraiseNight[] = [
   {
-    id: 16,
-    name: "Praise Night 16",
-    date: "9th September 2023",
+    id: 25,
+    name: "Praise Night 25",
+    date: "21st September 2025",
     location: "Oasis Studio",
     songs: songs
   },
   {
-    id: 17,
-    name: "Praise Night 17",
-    date: "23rd September 2023", 
+    id: 26,
+    name: "Your Loveworld Special",
+    date: "21st September 2025", 
     location: "Oasis Studio",
     songs: [
       {

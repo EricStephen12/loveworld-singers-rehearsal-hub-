@@ -9,10 +9,10 @@ import Image from "next/image";
 
 import { ChevronRight, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home } from "lucide-react";
 import Link from "next/link";
-import { CountdownTimer } from "@/components/countdown-timer";
 import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, Song, PraiseNight } from "@/data/songs";
 import ScreenHeader from "@/components/ScreenHeader";
 import SharedDrawer from "@/components/SharedDrawer";
+import { getMenuItems } from "@/config/menuItems";
 
 export default function PraiseNightPage() {
   const [currentPraiseNight, setCurrentPraiseNightState] = useState(getCurrentPraiseNight());
@@ -23,72 +23,86 @@ export default function PraiseNightPage() {
   
   const songs = currentPraiseNight.songs;
 
-  const features = [
-    {
-      icon: Home,
-      title: 'Home',
-      href: '/home',
-      badge: null,
-    },
-    {
-      icon: User,
-      title: 'Profile',
-      href: '/pages/profile',
-      badge: null,
-    },
-    {
-      icon: Bell,
-      title: 'Push Notifications',
-      href: '#',
-      badge: 164,
-    },
-    {
-      icon: Users,
-      title: 'Groups',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: Music,
-      title: 'Submit Song',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: Calendar,
-      title: 'Rehearsals',
-      href: '/pages/praise-night',
-      badge: null,
-    },
-    {
-      icon: Play,
-      title: 'Media',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: Calendar,
-      title: 'Ministy Calendar',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: BarChart3,
-      title: 'Link',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: HelpCircle,
-      title: 'Admin Support',
-      href: '#',
-      badge: null,
-    },
-  ]
+  // Map selected Praise Night to its e-card image (fallback to a default)
+  const ecardSrc = useMemo(() => {
+    switch (currentPraiseNight.id) {
+      case 16:
+        return "/Ecards/1000876785.png";
+      case 17:
+        return "/Ecards/1000876785.png"; // TODO: replace with PN17 e-card when available
+      default:
+        return "/Ecards/1000876785.png";
+    }
+  }, [currentPraiseNight.id]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
   }
+
+  const handleLogout = () => {
+    // Clear localStorage
+    localStorage.removeItem('isAuthenticated')
+    localStorage.removeItem('hasCompletedProfile')
+    localStorage.removeItem('hasSubscribed')
+    
+    // Redirect to auth screen - using window.location for full page refresh
+    window.location.href = '/auth'
+  }
+
+  const menuItems = getMenuItems(handleLogout)
+
+  // iOS-style mini countdown timer
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  })
+
+  // Set the target date for the countdown (next Friday at 6 PM) - memoized to prevent recalculation
+  const nextPraiseNight = useMemo(() => {
+    const now = new Date()
+    const nextFriday = new Date(now)
+    
+    // Set to next Friday (5 is Friday, 0 is Sunday)
+    const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7
+    nextFriday.setDate(now.getDate() + daysUntilFriday)
+    
+    // Set time to 6 PM
+    nextFriday.setHours(18, 0, 0, 0)
+    
+    return nextFriday
+  }, [])
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = nextPraiseNight.getTime() - new Date().getTime()
+      
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60),
+        })
+      }
+    }
+
+    // Calculate immediately
+    calculateTimeLeft()
+    
+    // Then update every second
+    const timer = setInterval(calculateTimeLeft, 1000)
+    
+    // Cleanup
+    return () => clearInterval(timer)
+  }, [nextPraiseNight])
+
+  // Format single digit numbers with leading zero
+  const formatNumber = (num: number) => (num < 10 ? `0${num}` : num)
+
+  // Filter state for heard/unheard songs
+  const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard')
 
 const groupSongs = (list: Song[]) => {
   const map = new Map();
@@ -144,16 +158,6 @@ function useActiveId(ids: string[]) {
     return (
       <div className="mb-4 sm:mb-6 md:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
-                    {currentPraiseNight.name}
-                  </h1>
-            <div className="mt-1 flex items-center gap-2 text-slate-600 text-xs sm:text-sm">
-              <span className="truncate max-w-[60vw] sm:max-w-none">{currentPraiseNight.location}</span>
-              <span className="hidden sm:inline">•</span>
-                    <span>{currentPraiseNight.date}</span>
-                  </div>
-                    </div>
               {/* Praise Night Selector */}
               <div className="relative w-full sm:w-auto z-50">
                 <button
@@ -570,11 +574,14 @@ function TOC({ grouped, activeId, onJump }: {
         <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {[...grouped.entries()].map(([section, byStatus]) => {
             const colorClass = sectionColors[section as keyof typeof sectionColors] || "border-l-slate-400 bg-slate-50";
+            const hideSectionTitle = section === "Previous Praise Songs Rehearsed But Not Ministered";
             return (
               <div key={section} className={`border-l-4 ${colorClass} rounded-r-lg p-3`}>
+                {!hideSectionTitle && (
                 <div className="font-medium text-slate-800 text-sm mb-3 leading-tight">
                   {section}
                 </div>
+                )}
                 {[...byStatus.entries()].map(([status, list]) => (
                   <div key={status} className="mb-3 last:mb-0">
                     <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
@@ -726,22 +733,6 @@ function TopCarousel() {
     setIsSearchOpen(false);
   };
 
-  // Set the target date for the countdown (next Friday at 6 PM)
-  const getNextPraiseNight = () => {
-    const now = new Date();
-    const nextFriday = new Date(now);
-    
-    // Set to next Friday (5 is Friday, 0 is Sunday)
-    const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7;
-    nextFriday.setDate(now.getDate() + daysUntilFriday);
-    
-    // Set time to 6 PM
-    nextFriday.setHours(18, 0, 0, 0);
-    
-    return nextFriday;
-  };
-
-  const nextPraiseNight = getNextPraiseNight();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 overflow-x-hidden">
@@ -792,23 +783,65 @@ function TopCarousel() {
         .animate-fade-in-right {
           animation: fadeInRight 0.6s ease-out 0.4s both;
         }
+        
+        @keyframes breathe {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(0.95); }
+        }
+        
+        .breathe-animation {
+          animation: breathe 2s ease-in-out infinite;
+        }
       `}</style>
       
       {/* Shared Screen Header with Search Button */}
       <ScreenHeader 
-        title="Praise Night" 
+        title={currentPraiseNight.name} 
         onMenuClick={toggleMenu} 
         rightImageSrc="/logo.png"
         rightButtons={
-          <button
-            aria-label="Search"
-            onClick={onHeaderSearchClick}
-            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition"
-          >
-            <Search className="w-5 h-5" />
-          </button>
+          <>
+            <button
+              aria-label="Switch Praise Night"
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 active:scale-95 transition"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            <button
+              aria-label="Search"
+              onClick={onHeaderSearchClick}
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </>
         }
       />
+
+      {/* Header-level Praise Night Dropdown */}
+      {showDropdown && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/20 z-[60]"
+            onClick={() => setShowDropdown(false)}
+          />
+          <div className="fixed right-3 left-3 sm:right-4 sm:left-auto top-16 sm:top-16 z-[70] w-auto sm:w-64 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden max-h-64 overflow-y-auto">
+            {allPraiseNights.map((praiseNight) => (
+              <button
+                key={praiseNight.id}
+                onClick={() => switchPraiseNight(praiseNight)}
+                className={`w-full px-3 sm:px-4 py-2 sm:py-3 text-left hover:bg-slate-50 transition-colors ${
+                  praiseNight.id === currentPraiseNight.id ? 'bg-purple-50 text-purple-700 border-l-4 border-purple-500' : ''
+                }`}
+              >
+                <div className="font-semibold text-sm sm:text-base">{praiseNight.name}</div>
+                <div className="text-xs sm:text-sm text-slate-600">{praiseNight.location} • {praiseNight.date}</div>
+              </button>
+            ))}
+        </div>
+        </>
+      )}
 
       {/* Animated iOS-style Search Bar (slides from top) */}
       <div className={`fixed left-0 right-0 top-0 z-40 transition-transform duration-300 ${isSearchOpen ? 'translate-y-0' : '-translate-y-full'}`}>
@@ -816,10 +849,10 @@ function TopCarousel() {
           <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 py-3 flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
+          <Input
                 ref={searchInputRef}
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
                 placeholder="Search songs, writer, lead singer…"
                 className="pl-10 h-10 text-sm border-0 ring-0 focus:ring-0 focus:border-0 bg-white/70 backdrop-blur rounded-xl shadow-sm"
               />
@@ -833,29 +866,50 @@ function TopCarousel() {
             </button>
           </div>
         </div>
-      </div>
-      
-      <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 py-2 sm:py-4 relative">
-        {/* Top Rectangular Auto-Scrolling Carousel */}
-        <TopCarousel />
-        <Header />
-
-        {/* Countdown Timer - Mobile Optimized */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4 md:p-6 mb-4 sm:mb-6 md:mb-8">
-          <CountdownTimer 
-            targetDate={nextPraiseNight} 
-          />
-          <p className="text-center text-xs sm:text-sm text-slate-500 mt-2 px-2">
-            {nextPraiseNight.toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </p>
         </div>
+
+      <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 py-2 sm:py-4 relative">
+        {/* E-card with embedded switcher below (single image, no slide) */}
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-2 sm:mb-3 max-w-md sm:max-w-lg mx-auto shadow-2xl shadow-black/20 ring-1 ring-black/5 breathe-animation">
+          <div className="relative h-35 sm:h-43 md:h-51">
+            <Image
+              src={ecardSrc}
+              alt="Praise Night E-card"
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
+              className="object-cover object-center"
+              priority={false}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+          </div>
+        </div>
+
+        {/* iOS-style Mini Countdown Timer - Under the card on background */}
+        <div className="mb-4 sm:mb-6 flex justify-center">
+          <div className="flex items-center justify-center gap-1 px-4 py-1 rounded-full">
+            <div className="flex items-center gap-0.5">
+              <span className="text-lg font-medium text-gray-700">{formatNumber(timeLeft.days)}</span>
+              <span className="text-xs text-gray-500 font-medium">d</span>
+            </div>
+            <span className="text-gray-400 mx-0.5">:</span>
+            <div className="flex items-center gap-0.5">
+              <span className="text-lg font-medium text-gray-700">{formatNumber(timeLeft.hours)}</span>
+              <span className="text-xs text-gray-500 font-medium">h</span>
+            </div>
+            <span className="text-gray-400 mx-0.5">:</span>
+            <div className="flex items-center gap-0.5">
+              <span className="text-lg font-medium text-gray-700">{formatNumber(timeLeft.minutes)}</span>
+              <span className="text-xs text-gray-500 font-medium">m</span>
+            </div>
+            <span className="text-gray-400 mx-0.5">:</span>
+            <div className="flex items-center gap-0.5">
+              <span className="text-lg font-medium text-gray-700">{formatNumber(timeLeft.seconds)}</span>
+              <span className="text-xs text-gray-500 font-medium">s</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Removed separate timer card; timer is now inside the top e-card container */}
 
         {/* Pills under timer */}
         <div className="mb-4 sm:mb-6">
@@ -865,14 +919,9 @@ function TopCarousel() {
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100">
                 <Music className="w-3.5 h-3.5 text-purple-600" />
               </span>
-                <span className="text-xs sm:text-sm font-medium">Songs</span>
+                <span className="text-xs sm:text-sm font-medium">Songs Schedule</span>
               </button>
-              <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100">
-                <Calendar className="w-3.5 h-3.5 text-blue-600" />
-              </span>
-                <span className="text-xs sm:text-sm font-medium">Schedule</span>
-              </button>
+             
               <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100">
                 <Mic className="w-3.5 h-3.5 text-rose-600" />
@@ -895,6 +944,37 @@ function TopCarousel() {
           </div>
         </div>
 
+        {/* Filter buttons/pills with total songs count in center */}
+        <div className="mb-4 sm:mb-6 flex items-center justify-between px-4">
+          <button 
+            onClick={() => setActiveFilter('heard')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 shadow-sm border ${
+              activeFilter === 'heard' 
+                ? 'bg-green-100 hover:bg-green-200 text-green-800 border-green-300' 
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
+            }`}
+          >
+            Heard
+          </button>
+          
+          <div className="text-center">
+            <span className="text-xs text-gray-500 font-medium">
+              {songs.length} Songs Total
+            </span>
+          </div>
+          
+          <button 
+            onClick={() => setActiveFilter('unheard')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 shadow-sm border ${
+              activeFilter === 'unheard' 
+                ? 'bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300' 
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
+            }`}
+          >
+            Unheard
+          </button>
+        </div>
+
         {/* Search input moved to animated header bar */}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
@@ -907,10 +987,12 @@ function TopCarousel() {
           <div className="lg:col-span-3 space-y-4 sm:space-y-6 lg:space-y-8">
             {[...grouped.entries()].map(([section, byStatus]) => (
               <div key={section} className="space-y-3 sm:space-y-4 md:space-y-6">
-                <div className="text-center px-2">
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 mb-2 leading-tight">{section}</h2>
-                  <div className="w-16 sm:w-20 md:w-24 h-0.5 sm:h-1 bg-gradient-to-r from-purple-400 to-blue-400 rounded-full mx-auto"></div>
+                {section !== "Previous Praise Songs Rehearsed But Not Ministered" && (
+                  <div className="text-center px-2">
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 mb-2 leading-tight">{section}</h2>
+                    <div className="w-16 sm:w-20 md:w-24 h-0.5 sm:h-1 bg-gradient-to-r from-purple-400 to-blue-400 rounded-full mx-auto"></div>
                 </div>
+                )}
                 
                 {[...byStatus.entries()].map(([status, list]) => (
                   <div key={status} className="space-y-3 sm:space-y-4">
@@ -934,7 +1016,7 @@ function TopCarousel() {
         </div>
       </div>
 
-      <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={features} />
+      <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
     </div>
   );
 }

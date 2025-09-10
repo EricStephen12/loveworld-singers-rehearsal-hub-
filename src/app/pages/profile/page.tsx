@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
+import { getMenuItems } from '@/config/menuItems'
 
 export default function ProfilePage() {
   const [showQRCode, setShowQRCode] = useState(true)
@@ -101,75 +102,7 @@ export default function ProfilePage() {
     console.log("Downloading QR code...")
   }
 
-  const features = [
-    {
-      icon: Home,
-      title: 'Home',
-      href: '/home',
-      badge: null,
-    },
-    {
-      icon: User,
-      title: 'Profile',
-      href: '/pages/profile',
-      badge: null,
-    },
-    {
-      icon: Bell,
-      title: 'Push Notifications',
-      href: '#',
-      badge: 164,
-    },
-    {
-      icon: Users,
-      title: 'Groups',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: Music,
-      title: 'Submit Song',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: Calendar,
-      title: 'Rehearsals',
-      href: '/pages/praise-night',
-      badge: null,
-    },
-    {
-      icon: Play,
-      title: 'Media',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: Calendar,
-      title: 'Ministy Calendar',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: BarChart3,
-      title: 'Link',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: HelpCircle,
-      title: 'Admin Support',
-      href: '#',
-      badge: null,
-    },
-    {
-      icon: LogOut,
-      title: 'Logout',
-      href: '#',
-      badge: null,
-      onClick: handleLogout,
-    },
-  ]
+  const menuItems = getMenuItems(handleLogout)
 
   const rightButtons = null
 
@@ -465,7 +398,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <SharedDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Menu" items={features} />
+      <SharedDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Menu" items={menuItems} />
     </div>
   )
 }

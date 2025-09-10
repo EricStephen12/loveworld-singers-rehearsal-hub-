@@ -32,7 +32,14 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items }: S
       <div className="relative w-80 max-w-sm h-full bg-white/95 backdrop-blur-xl shadow-2xl border-r border-gray-200/50">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100/80">
-          <h2 className="text-xl font-outfit-semibold text-gray-900">{title}</h2>
+          <button 
+            onClick={onClose}
+            className="text-xl font-outfit-semibold text-gray-900 hover:text-gray-700 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0"
+            style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+            aria-label="Close menu"
+          >
+            {title}
+          </button>
           <button 
             onClick={onClose}
             className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100/80 rounded-full transition-all duration-200 active:scale-95 focus:outline-none focus:ring-0 focus:border-0"

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Menu } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 type ScreenHeaderProps = {
   title: string
@@ -9,15 +10,21 @@ type ScreenHeaderProps = {
   rightImageSrc?: string
   showDivider?: boolean
   rightButtons?: React.ReactNode
+  onTitleClick?: () => void
 }
 
-export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', showDivider = true, rightButtons }: ScreenHeaderProps) {
+export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', showDivider = true, rightButtons, onTitleClick }: ScreenHeaderProps) {
   const [mounted, setMounted] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const id = window.setTimeout(() => setMounted(true), 200)
     return () => window.clearTimeout(id)
   }, [])
+
+  const handleLogoClick = () => {
+    router.push('/home')
+  }
 
   return (
     <div className={`flex items-center justify-between p-4 bg-white ${showDivider ? 'border-b border-gray-200' : ''}`}>
@@ -29,19 +36,29 @@ export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', 
       >
         <Menu className="w-5 h-5 text-gray-600" />
       </button>
-      <h1 className={`text-lg font-outfit-semibold text-gray-800 transition-all duration-1000 ease-out delay-200 ${mounted ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-3 scale-90'}`}>
+      <button 
+        onClick={onTitleClick}
+        className={`text-base sm:text-lg font-outfit-semibold text-gray-800 transition-all duration-1000 ease-out delay-200 ${mounted ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-3 scale-90'} ${onTitleClick ? 'hover:text-gray-900 active:scale-95' : 'cursor-default'}`}
+        disabled={!onTitleClick}
+      >
         {title}
-      </h1>
+      </button>
       <div className={`flex items-center space-x-2 transition-all duration-1000 ease-out delay-400 ${mounted ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 translate-x-4 scale-75'}`}>
         {rightButtons}
-        <img 
-          src={rightImageSrc} 
-          alt="Logo" 
-          className="w-8 h-8 object-contain"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = 'none'
-          }}
-        />
+        <button
+          onClick={handleLogoClick}
+          className="hover:scale-105 active:scale-95 transition-transform duration-200"
+          aria-label="Go to home"
+        >
+          <img 
+            src={rightImageSrc} 
+            alt="Logo" 
+            className="w-8 h-8 object-contain"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none'
+            }}
+          />
+        </button>
       </div>
     </div>
   )

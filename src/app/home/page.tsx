@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp } from 'lucide-react'
+import { getMenuItems } from '@/config/menuItems'
 
 export default function HomePage() {
   const router = useRouter()
@@ -89,6 +90,16 @@ export default function HomePage() {
     }
   }, [isSearchOpen])
 
+  const handleLogout = () => {
+    // Clear localStorage
+    localStorage.removeItem('isAuthenticated')
+    localStorage.removeItem('hasCompletedProfile')
+    localStorage.removeItem('hasSubscribed')
+    
+    // Redirect to auth screen
+    router.push('/auth')
+  }
+
   const features = [
     {
       icon: User,
@@ -117,7 +128,7 @@ export default function HomePage() {
     {
       icon: Calendar,
       title: 'Rehearsals',
-      href: '/pages/praise-night',
+      href: '/pages/rehearsals',
       badge: null,
     },
     {
@@ -185,34 +196,8 @@ export default function HomePage() {
           <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
             isSearchOpen ? 'opacity-0' : 'opacity-100'
           }`}>
-            {/* Logo with subtle animation */}
+            {/* Left Section - Profile Picture */}
             <div className="flex items-center">
-              <div className="relative">
-                <img 
-                  src="/logo.png" 
-                  alt="LoveWorld Logo" 
-                  className="w-10 h-10 object-contain transition-transform duration-200 hover:scale-105"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-                {/* Subtle glow effect */}
-                <div className="absolute inset-0 w-10 h-10 bg-purple-500/10 rounded-full blur-sm -z-10"></div>
-              </div>
-            </div>
-            
-            {/* Right Section with iOS-style spacing */}
-            <div className="flex items-center space-x-1">
-              {/* iOS-style Search Button */}
-              <button
-                onClick={() => setIsSearchOpen((v) => !v)}
-                aria-label="Toggle search"
-                className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90"
-                style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
-              >
-                <Search className="w-5 h-5 text-gray-600 transition-all duration-200" />
-              </button>
-
               {/* Enhanced Profile Picture with iOS-style border */}
               <Link href="#" className="w-10 h-10 rounded-full overflow-hidden focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 active:scale-95">
                 <div className="relative">
@@ -228,6 +213,35 @@ export default function HomePage() {
                   <div className="absolute inset-0 rounded-full border border-gray-200/50"></div>
                 </div>
               </Link>
+            </div>
+            
+            {/* Right Section with iOS-style spacing */}
+            <div className="flex items-center space-x-1">
+              {/* iOS-style Search Button */}
+              <button
+                onClick={() => setIsSearchOpen((v) => !v)}
+                aria-label="Toggle search"
+                className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90"
+                style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+              >
+                <Search className="w-5 h-5 text-gray-600 transition-all duration-200" />
+              </button>
+
+              {/* Logo with subtle animation */}
+              <div className="flex items-center">
+                <div className="relative">
+                  <img 
+                    src="/logo.png" 
+                    alt="LoveWorld Logo" 
+                    className="w-10 h-10 object-contain transition-transform duration-200 hover:scale-105"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  {/* Subtle glow effect */}
+                  <div className="absolute inset-0 w-10 h-10 bg-purple-500/10 rounded-full blur-sm -z-10"></div>
+                </div>
+              </div>
             </div>
           </div>
 
