@@ -106,13 +106,13 @@ export default function HomePage() {
       icon: Users,
       title: 'Groups',
       href: '#',
-      badge: 2,
+      badge: null,
     },
     {
       icon: Music,
       title: 'Submit Song',
       href: '#',
-      badge: 5,
+      badge: null,
     },
     {
       icon: Calendar,
@@ -124,7 +124,7 @@ export default function HomePage() {
       icon: Play,
       title: 'Media',
       href: '#',
-      badge: 3,
+      badge: null,
     },
     {
       icon: Calendar,
@@ -178,61 +178,96 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
-      {/* iOS Style Header */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md">
-        <div className="flex items-center justify-between px-4 py-3">
-          {/* Logo */}
-          <div className="flex items-center">
-            <img 
-              src="/logo.png" 
-              alt="LoveWorld Logo" 
-              className="w-10 h-10 object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          </div>
-          
-          {/* Right Section */}
-          <div className="flex items-center space-x-2">
-            {/* Animated Search with iOS-style underline */}
-            <div className={`relative transition-all duration-300 ease-out ${isSearchOpen ? 'w-48 sm:w-64 opacity-100' : 'w-0 opacity-0'} overflow-hidden`}>
-              <input
-                ref={searchInputRef}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onBlur={() => setIsSearchOpen(false)}
-                onFocus={() => setIsSearchOpen(true)}
-                type="text"
-                placeholder="Search"
-                inputMode="search"
-                aria-label="Search"
-                className="w-full text-sm bg-transparent px-0 py-1.5 text-gray-800 placeholder-gray-400 border-0 outline-none appearance-none shadow-none ring-0 focus:outline-none focus:ring-0"
-              />
-              {/* Base line */}
-              <div className="absolute left-0 right-0 bottom-0 h-px bg-gray-300/80" />
-              {/* Active animated line */}
-              <div className={`absolute left-0 bottom-0 h-0.5 bg-purple-600 transition-all duration-700 ease-out ${isSearchOpen ? 'w-full' : 'w-0'}`} />
+      {/* Enhanced iOS Style Header */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
+        <div className="relative">
+          {/* Normal Header Content */}
+          <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
+            isSearchOpen ? 'opacity-0' : 'opacity-100'
+          }`}>
+            {/* Logo with subtle animation */}
+            <div className="flex items-center">
+              <div className="relative">
+                <img 
+                  src="/logo.png" 
+                  alt="LoveWorld Logo" 
+                  className="w-10 h-10 object-contain transition-transform duration-200 hover:scale-105"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                {/* Subtle glow effect */}
+                <div className="absolute inset-0 w-10 h-10 bg-purple-500/10 rounded-full blur-sm -z-10"></div>
+              </div>
             </div>
-            <button
-              onClick={() => setIsSearchOpen((v) => !v)}
-              aria-label="Toggle search"
-              className={`p-2 rounded-full transition-colors focus:outline-none focus:ring-0 ${isSearchOpen ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
-            >
-              {isSearchOpen ? <X className="w-5 h-5 text-gray-700" /> : <Search className="w-5 h-5 text-gray-600" />}
-            </button>
+            
+            {/* Right Section with iOS-style spacing */}
+            <div className="flex items-center space-x-1">
+              {/* iOS-style Search Button */}
+              <button
+                onClick={() => setIsSearchOpen((v) => !v)}
+                aria-label="Toggle search"
+                className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90"
+                style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+              >
+                <Search className="w-5 h-5 text-gray-600 transition-all duration-200" />
+              </button>
 
-            {/* Profile Picture */}
-            <Link href="#" className="w-10 h-10 rounded-full overflow-hidden focus:outline-none focus:ring-0">
-              <img
-                src="/lmm.png"
-                alt="Profile"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </Link>
+              {/* Enhanced Profile Picture with iOS-style border */}
+              <Link href="#" className="w-10 h-10 rounded-full overflow-hidden focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 active:scale-95">
+                <div className="relative">
+                  <img
+                    src="/lmm.png"
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  {/* iOS-style subtle border */}
+                  <div className="absolute inset-0 rounded-full border border-gray-200/50"></div>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Header Search Overlay */}
+          <div className={`absolute inset-0 bg-white/95 backdrop-blur-xl transition-all duration-300 ease-out ${
+            isSearchOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
+          }`}>
+            <div className="flex items-center justify-between px-4 py-3 h-full">
+              {/* Search Input */}
+              <div className="flex-1 relative">
+                <input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  type="text"
+                  placeholder="Search"
+                  inputMode="search"
+                  aria-label="Search"
+                  className="w-full text-lg bg-transparent px-0 py-3 text-gray-800 placeholder-gray-400 border-0 outline-none appearance-none shadow-none ring-0 focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none font-poppins-medium"
+                  style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+                />
+                
+                {/* iOS-style search underline */}
+                <div className="absolute left-0 right-0 bottom-0 h-px bg-gray-300/40" />
+                
+                {/* iOS-style active underline */}
+                <div className="absolute left-0 bottom-0 h-0.5 bg-purple-500 w-full shadow-sm" 
+                     style={{ boxShadow: '0 0 8px rgba(147, 51, 234, 0.4)' }} />
+              </div>
+              
+              {/* Close Button */}
+              <button
+                onClick={() => setIsSearchOpen(false)}
+                aria-label="Close search"
+                className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90 ml-4"
+                style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+              >
+                <X className="w-6 h-6 text-gray-700 transition-all duration-200" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -289,7 +324,7 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-              <span className="text-xs font-medium text-gray-800 text-center leading-tight">{feature.title}</span>
+              <span className="text-xs font-poppins-medium text-gray-800 text-center leading-tight">{feature.title}</span>
             </Link>
           ))}
         </div>
@@ -297,7 +332,7 @@ export default function HomePage() {
 
       {/* About Section */}
       <div className="px-4 pb-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">ABOUT</h2>
+        <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
         <div className="space-y-2">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <button 
@@ -320,7 +355,7 @@ export default function HomePage() {
 
       {/* FAQ Section */}
       <div className="px-4 pb-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">FAQ</h2>
+        <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">FAQ</h2>
         <div className="space-y-2">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <button 

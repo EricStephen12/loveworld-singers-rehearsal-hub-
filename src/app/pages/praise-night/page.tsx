@@ -12,6 +12,7 @@ import Link from "next/link";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, Song, PraiseNight } from "@/data/songs";
 import ScreenHeader from "@/components/ScreenHeader";
+import SharedDrawer from "@/components/SharedDrawer";
 
 export default function PraiseNightPage() {
   const [currentPraiseNight, setCurrentPraiseNightState] = useState(getCurrentPraiseNight());
@@ -45,13 +46,13 @@ export default function PraiseNightPage() {
       icon: Users,
       title: 'Groups',
       href: '#',
-      badge: 2,
+      badge: null,
     },
     {
       icon: Music,
-      title: 'AudioLabs',
+      title: 'Submit Song',
       href: '#',
-      badge: 5,
+      badge: null,
     },
     {
       icon: Calendar,
@@ -63,7 +64,7 @@ export default function PraiseNightPage() {
       icon: Play,
       title: 'Media',
       href: '#',
-      badge: 3,
+      badge: null,
     },
     {
       icon: Calendar,
@@ -73,13 +74,13 @@ export default function PraiseNightPage() {
     },
     {
       icon: BarChart3,
-      title: 'Our Marketplace',
+      title: 'Link',
       href: '#',
       badge: null,
     },
     {
       icon: HelpCircle,
-      title: 'Support',
+      title: 'Admin Support',
       href: '#',
       badge: null,
     },
@@ -515,22 +516,22 @@ function Lyrics({ lyrics }: { lyrics: {start: string; continue: string} }) {
     );
   }
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
-        <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-3 md:p-4">
+        <div className="font-semibold text-green-800 mb-2 flex items-center gap-2">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           Start
         </div>
-        <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+        <p className="text-base md:text-[15px] text-slate-800 whitespace-pre-wrap leading-relaxed">
           {lyrics.start || "No start lyrics available"}
         </p>
       </div>
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
-        <div className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 md:p-4">
+        <div className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
           <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
           Continue
         </div>
-        <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+        <p className="text-base md:text-[15px] text-slate-800 whitespace-pre-wrap leading-relaxed">
           {lyrics.continue || "No continuation lyrics available"}
         </p>
       </div>
@@ -538,38 +539,8 @@ function Lyrics({ lyrics }: { lyrics: {start: string; continue: string} }) {
   );
 }
 
-function CollapsibleSection({ title, children, songId, sectionType, icon: Icon, defaultOpen = false }: { 
-  title: string; 
-  children: React.ReactNode; 
-  songId: string; 
-  sectionType: string; 
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; 
-  defaultOpen?: boolean 
-}) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  
-  return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-between text-left"
-      >
-        <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4" />
-          <span className="font-medium text-sm">{title}</span>
-        </div>
-        {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-      </button>
-      {isOpen && (
-        <div className="p-4 bg-white">
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function SongCard({ song }: { song: Song }) {
+  const [activeTab, setActiveTab] = useState<string>('');
   return (
     <Card id={`song-${song.sn}`} className="scroll-mt-24 border-l-4 border-l-purple-400 shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-4 bg-gradient-to-r from-slate-50 to-purple-50">
@@ -579,102 +550,40 @@ function SongCard({ song }: { song: Song }) {
               <span className="text-lg sm:text-2xl font-bold text-slate-800">{song.sn}.</span>
               <h3 className="text-lg sm:text-2xl font-bold text-slate-800">{song.title}</h3>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:flex sm:flex-wrap sm:items-center sm:gap-3">
-              <div className="flex items-center gap-1 text-slate-600">
-                <span className="font-medium text-slate-700">Writer:</span>
-                <span className="font-semibold text-purple-600">{song.writer}</span>
-              </div>
-              <div className="flex items-center gap-1 text-slate-600">
-                <span className="font-medium text-slate-700">Lead:</span>
-                <span className="font-semibold text-blue-600">{song.leadSinger}</span>
-              </div>
-              <div className="flex items-center gap-1 text-slate-600">
-                <BookOpen size={14} className="text-blue-500 flex-shrink-0" />
-                <span>Page {song.page ?? "—"}</span>
-              </div>
-              <div className="flex items-center gap-1 text-slate-600">
-                <Clock size={14} className="text-green-500 flex-shrink-0" />
-                <span>{song.duration ?? "—"}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Badge className={`px-2 py-0.5 text-xs ${song.status === "HEARD" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
-                  {song.status}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <RehearsalBadge count={song.rehearsals?.count || 0} extra={song.rehearsals?.extra || 0} />
-              </div>
-              {song.key && (
-                <div className="flex items-center gap-1 text-slate-600 col-span-2 sm:col-span-1">
-                  <Music size={14} className="text-purple-500 flex-shrink-0" />
-                  <span className="font-semibold text-green-600">{song.key}</span>
-                </div>
-              )}
-            </div>
           </div>
           
         </CardTitle>
       </CardHeader>
       
       <CardContent className="pt-4">
-        {/* Desktop: Show tabs as before */}
-        <div className="hidden sm:block">
-          <Tabs defaultValue="remarks" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-100 h-auto">
-              <TabsTrigger value="remarks" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-xs sm:text-sm py-2">
-                Pastor Remarks
-              </TabsTrigger>
-              <TabsTrigger value="audio" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-xs sm:text-sm py-2">
-                Audio
-              </TabsTrigger>
-              <TabsTrigger value="lyrics" className="data-[state=active]:bg-green-500 data-[state=active]:text-white text-xs sm:text-sm py-2">
+        {/* Tabs on all screen sizes */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex items-center justify-between">
+            <TabsList className="grid grid-cols-2 bg-slate-100 h-auto">
+              <TabsTrigger value="lyrics" className="data-[state=active]:bg-green-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-3">
                 Lyrics
               </TabsTrigger>
+              <TabsTrigger value="remarks" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-3">
+                Pastor Remarks
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="remarks" className="mt-6">
-              <RemarksTable remarks={song.remarks || []} />
-            </TabsContent>
-            <TabsContent value="audio" className="mt-6">
-              <AudioLinks phases={song.audioLinks?.phases || []} />
-            </TabsContent>
-            <TabsContent value="lyrics" className="mt-6">
-              <Lyrics lyrics={song.lyrics || { start: '', continue: '' }} />
-            </TabsContent>
-          </Tabs>
-        </div>
-        
-        {/* Mobile: Show collapsible sections */}
-        <div className="block sm:hidden space-y-3">
-          <CollapsibleSection 
-            title="Pastor Remarks" 
-            songId={song.sn.toString()} 
-            sectionType="remarks" 
-            icon={Clock}
-            defaultOpen={false}
-          >
-            <RemarksTable remarks={song.remarks || []} />
-          </CollapsibleSection>
-          
-          <CollapsibleSection 
-            title="Audio Links" 
-            songId={song.sn.toString()} 
-            sectionType="audio" 
-            icon={Mic}
-            defaultOpen={false}
-          >
-            <AudioLinks phases={song.audioLinks?.phases || []} />
-          </CollapsibleSection>
-          
-          <CollapsibleSection 
-            title="Lyrics" 
-            songId={song.sn.toString()} 
-            sectionType="lyrics" 
-            icon={BookOpen}
-            defaultOpen={false}
-          >
+            {activeTab && (
+              <button
+                aria-label="Collapse content"
+                onClick={() => setActiveTab('')}
+                className="ml-3 p-2 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <TabsContent value="lyrics" className="mt-6">
             <Lyrics lyrics={song.lyrics || { start: '', continue: '' }} />
-          </CollapsibleSection>
-        </div>
+          </TabsContent>
+          <TabsContent value="remarks" className="mt-6">
+            <RemarksTable remarks={song.remarks || []} />
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
@@ -911,54 +820,7 @@ function TOC({ grouped, activeId, onJump }: {
         </div>
       </div>
 
-      {/* Menu Drawer */}
-      <div className={`fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out ${
-        isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        {/* Backdrop */}
-        <div 
-          className="absolute inset-0 bg-black bg-opacity-50"
-          onClick={toggleMenu}
-        />
-        
-        {/* Drawer Content */}
-        <div className="relative w-80 max-w-sm h-full bg-white shadow-xl border-r border-gray-200">
-          {/* Drawer Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
-            <button 
-              onClick={toggleMenu}
-              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Menu Items */}
-          <div className="py-2">
-            {features.map((feature, index) => (
-              <Link
-                key={index}
-                href={feature.href}
-                onClick={toggleMenu}
-                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <feature.icon className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-800">{feature.title}</span>
-                </div>
-                {feature.badge && (
-                  <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-                    {feature.badge}
-                  </div>
-                )}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
+      <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={features} />
     </div>
   );
 }

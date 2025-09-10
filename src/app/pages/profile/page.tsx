@@ -5,6 +5,7 @@ import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Se
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
+import SharedDrawer from '@/components/SharedDrawer'
 
 export default function ProfilePage() {
   const [showQRCode, setShowQRCode] = useState(true)
@@ -123,13 +124,13 @@ export default function ProfilePage() {
       icon: Users,
       title: 'Groups',
       href: '#',
-      badge: 2,
+      badge: null,
     },
     {
       icon: Music,
-      title: 'AudioLabs',
+      title: 'Submit Song',
       href: '#',
-      badge: 5,
+      badge: null,
     },
     {
       icon: Calendar,
@@ -141,7 +142,7 @@ export default function ProfilePage() {
       icon: Play,
       title: 'Media',
       href: '#',
-      badge: 3,
+      badge: null,
     },
     {
       icon: Calendar,
@@ -151,13 +152,13 @@ export default function ProfilePage() {
     },
     {
       icon: BarChart3,
-      title: 'Our Marketplace',
+      title: 'Link',
       href: '#',
       badge: null,
     },
     {
       icon: HelpCircle,
-      title: 'Support',
+      title: 'Admin Support',
       href: '#',
       badge: null,
     },
@@ -191,21 +192,22 @@ export default function ProfilePage() {
             </div>
             <button 
               onClick={() => setIsEditing(!isEditing)}
-              className="absolute -bottom-1 -right-1 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition-colors"
+              className="absolute -bottom-1 -right-1 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition-colors focus:outline-none focus:ring-0 focus:border-0"
+              style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
             >
               <Edit className="w-4 h-4 text-white" />
             </button>
           </div>
           
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">{userProfile.fullName}</h2>
+          <h2 className="text-2xl font-outfit-bold text-gray-800 mb-2">{userProfile.fullName}</h2>
           <p className="text-sm text-gray-600 mb-1">{userProfile.socialId}</p>
           <p className="text-xs text-gray-500 mb-4">{userProfile.email}</p>
           
           <div className="flex items-center justify-center space-x-2">
-            <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-medium">
+            <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-poppins-medium">
               {userProfile.designation}
             </span>
-            <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+            <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-poppins-medium">
               {userProfile.administration}
             </span>
           </div>
@@ -463,60 +465,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Menu Drawer */}
-      <div className={`fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out ${
-        isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        {/* Backdrop */}
-        <div 
-          className="absolute inset-0 bg-black bg-opacity-50"
-          onClick={() => setIsMenuOpen(false)}
-        />
-        
-        {/* Drawer Content */}
-        <div className="relative w-80 max-w-sm h-full bg-white shadow-xl border-r border-gray-200">
-          {/* Drawer Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
-            <button 
-              onClick={() => setIsMenuOpen(false)}
-              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Menu Items */}
-          <div className="py-2">
-            {features.map((feature, index) => {
-              const MenuItem = feature.onClick ? 'button' : Link;
-              const menuProps = feature.onClick 
-                ? { onClick: () => { feature.onClick?.(); setIsMenuOpen(false); } }
-                : { href: feature.href, onClick: () => setIsMenuOpen(false) };
-              
-              return (
-                <MenuItem
-                  key={index}
-                  {...menuProps}
-                  className={`flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 w-full text-left ${feature.title === 'Logout' ? 'text-red-600 hover:bg-red-50' : ''}`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${feature.title === 'Logout' ? 'bg-red-100' : 'bg-purple-100'}`}>
-                      <feature.icon className={`w-4 h-4 ${feature.title === 'Logout' ? 'text-red-600' : 'text-purple-600'}`} />
-                    </div>
-                    <span className="text-sm font-medium">{feature.title}</span>
-                  </div>
-                  {feature.badge && (
-                    <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-                      {feature.badge}
-                    </div>
-                  )}
-                </MenuItem>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <SharedDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Menu" items={features} />
     </div>
   )
 }
