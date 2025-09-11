@@ -29,16 +29,21 @@ export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', 
 
   return (
     <div className={`bg-white ${showDivider ? 'border-b border-gray-200' : ''}`}>
-      <div className="flex items-center justify-between p-4">
-        <button 
-          onClick={onMenuClick}
-          className={`flex items-center p-2 rounded-lg transition-all duration-1000 ease-out focus:outline-none focus:ring-0 focus:border-0 hover:bg-gray-100 ${mounted ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-4 scale-75'}`}
-          aria-label="Open menu"
-          style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
-        >
-          <Menu className="w-5 h-5 text-gray-600" />
-        </button>
-        <div className="flex flex-col items-center">
+      <div className="flex items-center justify-between p-4 relative">
+        {/* Left side - Menu button */}
+        <div className="flex items-center">
+          <button 
+            onClick={onMenuClick}
+            className={`flex items-center p-2 rounded-lg transition-all duration-1000 ease-out focus:outline-none focus:ring-0 focus:border-0 hover:bg-gray-100 ${mounted ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-4 scale-75'}`}
+            aria-label="Open menu"
+            style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+          >
+            <Menu className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+        
+        {/* Center - Title and Timer (centered on mobile, normal on desktop) */}
+        <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center sm:relative sm:left-auto sm:transform-none">
           <button 
             onClick={onTitleClick}
             className={`text-base sm:text-lg font-outfit-semibold text-gray-800 transition-all duration-1000 ease-out delay-200 ${mounted ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-3 scale-90'} ${onTitleClick ? 'hover:text-gray-900 active:scale-95' : 'cursor-default'}`}
@@ -52,6 +57,8 @@ export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', 
             </div>
           )}
         </div>
+        
+        {/* Right side - Buttons and Logo */}
         <div className={`flex items-center space-x-2 transition-all duration-1000 ease-out delay-400 ${mounted ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 translate-x-4 scale-75'}`}>
           {rightButtons}
           <button

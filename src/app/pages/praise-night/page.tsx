@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Maximize2, Minimize2 } from "lucide-react";
 import Link from "next/link";
-import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, Song, PraiseNight } from "@/data/songs";
+import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, PraiseNightSong, PraiseNight } from "@/data/praise-night-songs";
 import ScreenHeader from "@/components/ScreenHeader";
 import SharedDrawer from "@/components/SharedDrawer";
 import { getMenuItems } from "@/config/menuItems";
@@ -50,23 +50,24 @@ export default function PraiseNightPage() {
 
   const menuItems = getMenuItems(handleLogout)
 
-  // iOS-style mini countdown timer
+  // iOS-style mini countdown timer - now using centralized data
   const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
+    days: 11,
+    hours: 7,
+    minutes: 48,
     seconds: 0,
   })
 
   // Initialize countdown and make it count down
   useEffect(() => {
-    // Set initial countdown values: 11d 7h 48m 00s
-    let currentTime = {
+    // Get countdown from current praise night with fallback
+    const initialCountdown = currentPraiseNight.countdown || {
       days: 11,
       hours: 7,
       minutes: 48,
-      seconds: 0,
+      seconds: 0
     };
+    let currentTime = { ...initialCountdown };
     
     setTimeLeft(currentTime);
     
@@ -102,7 +103,7 @@ export default function PraiseNightPage() {
     
     // Cleanup interval on unmount
     return () => clearInterval(timer);
-  }, [])
+  }, [currentPraiseNight.id])
 
   // Handle category selection and close drawer
   const handleCategorySelect = (category: string) => {
@@ -148,7 +149,10 @@ export default function PraiseNightPage() {
   };
 
   // Format single digit numbers with leading zero
-  const formatNumber = (num: number) => (num < 10 ? `0${num}` : num)
+  const formatNumber = (num: number) => {
+    if (isNaN(num) || num === undefined || num === null) return '00';
+    return num < 10 ? `0${num}` : num.toString();
+  }
 
   // Song categories
   const songCategories = [
@@ -161,18 +165,101 @@ export default function PraiseNightPage() {
     "Approved Songs"
   ];
 
-  // Sample songs with categories and status
-  const songTitles = [
+  // Categories to show in horizontal bar (first 2)
+  const mainCategories = songCategories.slice(0, 2);
+  // Categories to keep in FAB (remaining ones)
+  const otherCategories = songCategories.slice(2);
+
+  // Get centralized song data from the current praise night (client-side only)
+  const [centralizedSongs, setCentralizedSongs] = useState<PraiseNightSong[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  
+  useEffect(() => {
+    // Only load data on client side to avoid hydration mismatch
+    const songs = getCurrentSongs();
+    setCentralizedSongs(songs);
+    setIsDataLoaded(true);
+  }, [currentPraiseNight]);
+  
+  // Data already matches UI format, no transformation needed
+  const songData = centralizedSongs;
+
+  // Fallback data if no centralized songs available
+  const fallbackSongData = [
     // New Praise Songs
-    { title: "Mighty God", status: "heard", category: "New Praise Songs" },
-    { title: "Victory Chant", status: "heard", category: "New Praise Songs" }, 
-    { title: "Celebrate Jesus", status: "unheard", category: "New Praise Songs" },
-    { title: "Shout to the Lord", status: "heard", category: "New Praise Songs" },
-    { title: "Amazing Love", status: "unheard", category: "New Praise Songs" },
-    { title: "Blessed Be Your Name", status: "heard", category: "New Praise Songs" },
-    { title: "Here I Am to Worship", status: "heard", category: "New Praise Songs" },
-    { title: "10,000 Reasons", status: "unheard", category: "New Praise Songs" },
-    { title: "What a Beautiful Name", status: "heard", category: "New Praise Songs" },
+    { 
+      title: "Mighty God", 
+      status: "heard", 
+      category: "New Praise Songs",
+      singer: "Sarah Johnson",
+      lyrics: {
+        verse1: "Great is Thy faithfulness, O God my Father\nThere is no shadow of turning with Thee\nThou changest not, Thy compassions they fail not\nAs Thou hast been Thou forever wilt be",
+        chorus: "Great is Thy faithfulness\nGreat is Thy faithfulness\nMorning by morning new mercies I see\nAll I have needed Thy hand hath provided",
+        verse2: "Summer and winter, and springtime and harvest\nSun, moon and stars in their courses above\nJoin with all nature in manifold witness\nTo Thy great faithfulness, mercy and love",
+        bridge: "Pardon for sin and a peace that endureth\nThine own dear presence to cheer and to guide\nStrength for today and bright hope for tomorrow\nBlessings all mine, with ten thousand beside"
+      },
+      leadSinger: "Sarah Johnson",
+      writtenBy: "Pastor Chris Oyakhilome",
+      key: "G Major",
+      tempo: "72 BPM",
+      comments: "This song should be sung with deep reverence and heartfelt emotion. Allow the congregation to really feel the weight of God's amazing grace."
+    },
+    { 
+      title: "Victory Chant", 
+      status: "heard", 
+      category: "New Praise Songs",
+      singer: "Michael David",
+      lyrics: {
+        verse1: "We have the victory in Jesus\nWe have the victory in Jesus\nWe have the victory in Jesus\nHallelujah, we have the victory",
+        chorus: "Victory, victory, victory in Jesus\nVictory, victory, victory in Jesus\nVictory, victory, victory in Jesus\nHallelujah, we have the victory",
+        verse2: "We have the power in Jesus\nWe have the power in Jesus\nWe have the power in Jesus\nHallelujah, we have the power",
+        bridge: "Greater is He that is in us\nThan he that is in the world\nGreater is He that is in us\nThan he that is in the world"
+      },
+      leadSinger: "Michael David",
+      writtenBy: "Pastor Chris Oyakhilome",
+      key: "C Major",
+      tempo: "120 BPM",
+      comments: "An energetic song perfect for celebration and victory moments in worship."
+    },
+    { 
+      title: "Celebrate Jesus", 
+      status: "unheard", 
+      category: "New Praise Songs",
+      singer: "Grace Williams",
+      lyrics: {
+        verse1: "Celebrate Jesus, celebrate\nCelebrate Jesus, celebrate\nHe is risen from the dead\nAnd He's Lord of everything",
+        chorus: "Celebrate Jesus, celebrate\nCelebrate Jesus, celebrate\nHe is risen from the dead\nAnd He's Lord of everything",
+        verse2: "Celebrate His love for us\nCelebrate His love for us\nHe has given us new life\nAnd He's Lord of everything",
+        bridge: "Hallelujah, hallelujah\nHallelujah, hallelujah\nHe is risen from the dead\nAnd He's Lord of everything"
+      },
+      leadSinger: "Grace Williams",
+      writtenBy: "Pastor Chris Oyakhilome",
+      key: "D Major",
+      tempo: "140 BPM",
+      comments: "A joyful celebration song perfect for Easter and resurrection themes."
+    },
+    { 
+      title: "Shout to the Lord", 
+      status: "heard", 
+      category: "New Praise Songs",
+      singer: "David Praise",
+      lyrics: {
+        verse1: "My Jesus, my Savior\nLord, there is none like You\nAll of my days I want to praise\nThe wonders of Your mighty love",
+        chorus: "Shout to the Lord, all the earth, let us sing\nPower and majesty, praise to the King\nMountains bow down and the seas will roar\nAt the sound of Your name",
+        verse2: "I sing for joy at the work of Your hands\nForever I'll love You, forever I'll stand\nNothing compares to the promise I have in You",
+        bridge: "My comfort, my shelter\nTower of refuge and strength\nLet every breath, all that I am\nNever cease to worship You"
+      },
+      leadSinger: "David Praise",
+      writtenBy: "Pastor Chris Oyakhilome",
+      key: "F Major",
+      tempo: "76 BPM",
+      comments: "A powerful worship anthem that builds from quiet reflection to triumphant praise."
+    },
+    { title: "Amazing Love", status: "unheard", category: "New Praise Songs", singer: "Sarah Johnson" },
+    { title: "Blessed Be Your Name", status: "heard", category: "New Praise Songs", singer: "Michael David" },
+    { title: "Here I Am to Worship", status: "heard", category: "New Praise Songs", singer: "Grace Williams" },
+    { title: "10,000 Reasons", status: "unheard", category: "New Praise Songs", singer: "David Praise" },
+    { title: "What a Beautiful Name", status: "heard", category: "New Praise Songs", singer: "Sarah Johnson" },
     { title: "Good Good Father", status: "unheard", category: "New Praise Songs" },
     { title: "Reckless Love", status: "heard", category: "New Praise Songs" },
     { title: "Great Are You Lord", status: "unheard", category: "New Praise Songs" },
@@ -251,6 +338,15 @@ export default function PraiseNightPage() {
     { title: "When I Survey", status: "unheard", category: "Approved Songs" }
   ];
 
+  // Use centralized data if available, otherwise show empty state
+  const finalSongData = (isDataLoaded && songData.length > 0) ? songData : [];
+
+  // Update data when praise night changes
+  useEffect(() => {
+    // This will trigger a re-render when currentPraiseNight changes
+    // The getCurrentSongs() call will get the new data
+  }, [currentPraiseNight]);
+
   // Filter states
   const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard');
   const [activeCategory, setActiveCategory] = useState<string>(songCategories[0]); // Default to first category
@@ -269,15 +365,16 @@ export default function PraiseNightPage() {
   const [isAudioExpanded, setIsAudioExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedSongIndex, setSelectedSongIndex] = useState<number | null>(null);
+  const [isLyricsFullscreen, setIsLyricsFullscreen] = useState(false);
 
   // Filter songs based on selected category and status
-  const filteredSongs = songTitles.filter(song => 
+  const filteredSongs = finalSongData.filter(song => 
     song.category === activeCategory && song.status === activeFilter
   );
 
   // Get counts for current category
-  const categoryHeardCount = songTitles.filter(song => song.category === activeCategory && song.status === 'heard').length;
-  const categoryUnheardCount = songTitles.filter(song => song.category === activeCategory && song.status === 'unheard').length;
+  const categoryHeardCount = finalSongData.filter(song => song.category === activeCategory && song.status === 'heard').length;
+  const categoryUnheardCount = finalSongData.filter(song => song.category === activeCategory && song.status === 'unheard').length;
   const categoryTotalCount = categoryHeardCount + categoryUnheardCount;
 
 
@@ -290,9 +387,9 @@ export default function PraiseNightPage() {
 
   function Header() {
     // Calculate total rehearsal progress
-    const totalSongs = songTitles.length;
-    const heardSongs = songTitles.filter(s => s.status === "heard").length;
-    const unheardSongs = songTitles.filter(s => s.status === "unheard").length;
+    const totalSongs = finalSongData.length;
+    const heardSongs = finalSongData.filter(s => s.status === "heard").length;
+    const unheardSongs = finalSongData.filter(s => s.status === "unheard").length;
     
     return (
       <div className="mb-4 sm:mb-6 md:mb-8">
@@ -828,13 +925,13 @@ function TopCarousel() {
         rightImageSrc="/logo.png"
         timer={
           <div className="flex items-center gap-0.5 text-xs">
-            <span className="font-medium text-gray-500">{formatNumber(timeLeft.days)}d</span>
-            <span className="text-gray-400">:</span>
-            <span className="font-medium text-gray-500">{formatNumber(timeLeft.hours)}h</span>
-            <span className="text-gray-400">:</span>
-            <span className="font-medium text-gray-500">{formatNumber(timeLeft.minutes)}m</span>
-            <span className="text-gray-400">:</span>
-            <span className="font-medium text-gray-500">{formatNumber(timeLeft.seconds)}s</span>
+            <span className="font-bold text-gray-700">{formatNumber(timeLeft.days)}d</span>
+            <span className="text-gray-500 font-bold">:</span>
+            <span className="font-bold text-gray-700">{formatNumber(timeLeft.hours)}h</span>
+            <span className="text-gray-500 font-bold">:</span>
+            <span className="font-bold text-gray-700">{formatNumber(timeLeft.minutes)}m</span>
+            <span className="text-gray-500 font-bold">:</span>
+            <span className="font-bold text-gray-700">{formatNumber(timeLeft.seconds)}s</span>
             </div>
         }
         rightButtons={
@@ -919,9 +1016,10 @@ function TopCarousel() {
               priority={false}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-            </div>
-          </div>
+              </div>
+                </div>
           
+
 
         {/* Pills under timer */}
         <div className="mb-4 sm:mb-6">
@@ -991,9 +1089,9 @@ function TopCarousel() {
                 <span className="text-xs sm:text-sm font-medium">Sheet Music</span>
               </button>
             </div>
+            </div>
           </div>
-        </div>
-        
+          
         {/* Status Filter buttons/pills with category-specific count */}
         <div className="mb-4 sm:mb-6 flex items-center justify-between px-4">
           <button 
@@ -1011,8 +1109,8 @@ function TopCarousel() {
             <span className="text-xs text-gray-600 font-medium">
               {activeCategory}
             </span>
-                </div>
-                
+        </div>
+        
           <button 
             onClick={() => setActiveFilter('unheard')}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 shadow-sm border ${
@@ -1027,7 +1125,14 @@ function TopCarousel() {
 
         {/* Song Title Cards - Scrollable */}
         <div className="px-1 py-4 max-h-96 overflow-y-auto">
-          {filteredSongs.map((song, index) => {
+          {filteredSongs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+              <Music className="w-12 h-12 mb-4 text-gray-300" />
+              <p className="text-lg font-medium">No songs available</p>
+              <p className="text-sm">Songs will appear here when data is loaded</p>
+            </div>
+          ) : (
+            filteredSongs.map((song, index) => {
   return (
               <div
                 key={index}
@@ -1051,7 +1156,7 @@ function TopCarousel() {
                        {song.title}
           </h3>
                      <p className="text-xs text-slate-500 mt-0.5 leading-tight">
-                       Singer: Sarah Johnson
+                       Singer: {song.singer || 'Sarah Johnson'}
                      </p>
         </div>
                 </div>
@@ -1063,7 +1168,8 @@ function TopCarousel() {
                               </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
         
         {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
@@ -1071,23 +1177,33 @@ function TopCarousel() {
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* Floating Action Button for Category Filter */}
-      <div className="fixed bottom-6 right-6 z-30 flex flex-col items-center">
-        <button
-          onClick={() => setIsCategoryDrawerOpen(true)}
-          className="w-14 h-14 bg-purple-700 hover:bg-purple-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 active:scale-95 flex items-center justify-center mb-2"
-          style={{
-            boxShadow: '0 0 30px #9333ea, 0 0 60px #9333ea, 0 0 90px #9333ea',
-            animation: 'fabBreathe 1.2s ease-in-out infinite',
-            filter: 'drop-shadow(0 0 10px #9333ea)'
-          }}
-          aria-label="Open category filter"
-        >
-          <Filter className="w-6 h-6" />
-        </button>
-        <span className="text-xs text-gray-800 font-semibold text-center leading-tight">
-          Other<br />Categories
-        </span>
+      {/* Bottom Bar with Categories and FAB */}
+      <div className="fixed bottom-6 left-4 right-6 z-30 flex items-center justify-between">
+        {/* All 3 buttons with equal spacing */}
+        <div className="flex items-center justify-between w-full gap-4">
+          {mainCategories.map((category) => (
+            <button
+              key={category}
+              onClick={() => handleCategorySelect(category)}
+              className={`flex-1 px-2 py-1 rounded-full text-xs font-bold transition-all duration-200 ${
+                activeCategory === category
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                  : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+          
+          {/* Other Categories Button - Same style as category buttons */}
+          <button
+            onClick={() => setIsCategoryDrawerOpen(true)}
+            className="flex-1 px-2 py-1 rounded-full text-xs font-bold transition-all duration-200 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200"
+            aria-label="Open other categories"
+          >
+            Other Categories
+          </button>
+        </div>
       </div>
 
       {/* Category Filter Drawer */}
@@ -1111,16 +1227,16 @@ function TopCarousel() {
                 >
                   <X className="w-4 h-4 text-gray-600" />
                 </button>
-                    </div>
-              
+        </div>
+        
               {/* Total Songs Count */}
               <div className="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
-                <p className="text-sm text-purple-700 font-medium">{songTitles.length} Total Scheduled Songs</p>
-              </div>
+                <p className="text-sm text-purple-700 font-medium">{finalSongData.length} Total Scheduled Songs</p>
+                </div>
               
               {/* Category Options */}
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {songCategories.map((category) => (
+                {otherCategories.map((category) => (
                             <button
                     key={category}
                     onClick={() => handleCategorySelect(category)}
@@ -1132,8 +1248,8 @@ function TopCarousel() {
                   >
                     <div className="font-medium text-slate-900 text-sm leading-tight">{category}</div>
                     <div className="text-xs text-slate-500 mt-0.5 leading-tight">
-                      {songTitles.filter(song => song.category === category).length} songs
-                              </div>
+                      {finalSongData.filter(song => song.category === category).length} songs
+                    </div>
                             </button>
                 ))}
               </div>
@@ -1147,11 +1263,11 @@ function TopCarousel() {
         <div className="fixed inset-0 bg-white z-50 flex flex-col">
           {/* Header */}
           <div className="flex-shrink-0 px-6 py-2 flex items-center justify-between">
-            <button
+                            <button
               onClick={handleCloseSongDetail}
               className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
             >
-              <ChevronDown className="w-5 h-5 text-gray-900" />
+              <ChevronLeft className="w-5 h-5 text-gray-900" />
             </button>
             <div></div>
             <div></div>
@@ -1181,7 +1297,7 @@ function TopCarousel() {
 
           {/* Tab Navigation */}
           <div className="flex-shrink-0 px-6 py-4">
-            <div className="flex justify-center space-x-6">
+            <div className="flex justify-center items-center space-x-6">
               <button
                 onClick={() => setActiveTab('lyrics')}
                 className={`text-sm font-medium transition-colors duration-200 ${
@@ -1212,6 +1328,7 @@ function TopCarousel() {
               >
                 History
               </button>
+              
             </div>
           </div>
 
@@ -1220,27 +1337,63 @@ function TopCarousel() {
             {activeTab === 'lyrics' && (
               <div className="max-w-none">
                 <div className="text-gray-900 leading-relaxed space-y-4 text-base">
-                  <div className="text-orange-600 text-sm font-medium mb-2">[Intro]</div>
-                  <p className="text-gray-700">
-                    And they wishin' and wishin'<br/>
-                    And wishin' and wishin'
-                  </p>
-                  <p className="text-gray-900 font-medium">
-                    They wishin' on me, yuh
-                  </p>
-                  
-                  <div className="text-orange-600 text-sm font-medium mb-2 mt-6">[Verse 1]</div>
-                  <div className="space-y-2">
-                    <p className="text-gray-700">I been movin' calm, don't start</p>
-                    <p className="text-gray-700">No trouble with me</p>
-                    <p className="text-gray-700">Tryna keep it peaceful is a struggle for me</p>
-                    <p className="text-gray-700">Don't pull up at 6 AM to cuddle with me</p>
-                    <p className="text-gray-700">You know how I like it when you lovin' on me</p>
-                    <p className="text-gray-700">I don't wanna die for them to miss me</p>
-                  </div>
-
-                  <div className="text-orange-600 text-sm font-medium mb-2 mt-6">[Chorus]</div>
-                  <p className="text-gray-700">God's plan, God's plan</p>
+                  {selectedSong?.lyrics ? (
+                    <>
+                      {selectedSong.lyrics.verse1 && (
+                        <>
+                          <div className="text-orange-600 text-sm font-medium mb-2">[Verse 1]</div>
+                          <div className="space-y-2">
+                            {selectedSong.lyrics.verse1.split('\n').map((line: string, index: number) => (
+                              <p key={index} className="text-gray-700">{line}</p>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      
+                      {selectedSong.lyrics.chorus && (
+                        <>
+                          <div className="text-orange-600 text-sm font-medium mb-2 mt-6">[Chorus]</div>
+                          <div className="space-y-2">
+                            {selectedSong.lyrics.chorus.split('\n').map((line: string, index: number) => (
+                              <p key={index} className="text-gray-700">{line}</p>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      
+                      {selectedSong.lyrics.verse2 && (
+                        <>
+                          <div className="text-orange-600 text-sm font-medium mb-2 mt-6">[Verse 2]</div>
+                          <div className="space-y-2">
+                            {selectedSong.lyrics.verse2.split('\n').map((line: string, index: number) => (
+                              <p key={index} className="text-gray-700">{line}</p>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      
+                      {selectedSong.lyrics.bridge && (
+                        <>
+                          <div className="text-orange-600 text-sm font-medium mb-2 mt-6">[Bridge]</div>
+                          <div className="space-y-2">
+                            {selectedSong.lyrics.bridge.split('\n').map((line: string, index: number) => (
+                              <p key={index} className="text-gray-700">{line}</p>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-orange-600 text-sm font-medium mb-2">[Verse 1]</div>
+                      <div className="space-y-2">
+                        <p className="text-gray-700">Great is Thy faithfulness, O God my Father</p>
+                        <p className="text-gray-700">There is no shadow of turning with Thee</p>
+                        <p className="text-gray-700">Thou changest not, Thy compassions they fail not</p>
+                        <p className="text-gray-700">As Thou hast been Thou forever wilt be</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -1259,8 +1412,7 @@ function TopCarousel() {
                         <span className="text-xs text-gray-500">2 days ago</span>
                       </div>
                       <p className="text-gray-700 text-sm leading-relaxed">
-                        Focus on the message of redemption and grace. Emphasize the transformation from lost to found. 
-                        Sing with conviction and personal testimony.
+                        {selectedSong?.comments || "Focus on the message of redemption and grace. Emphasize the transformation from lost to found. Sing with conviction and personal testimony."}
                       </p>
                     </div>
                   </div>
@@ -1317,7 +1469,7 @@ function TopCarousel() {
                       }`}
                     >
                       Lyrics
-                    </button>
+                            </button>
                     <button
                       onClick={() => setActiveHistorySubTab('lead-singer')}
                       className={`text-xs transition-colors duration-200 whitespace-nowrap ${
@@ -1374,7 +1526,7 @@ function TopCarousel() {
                   <div className="px-2">
                     {activeHistorySubTab === 'lyrics' && (
                       <div>
-                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">March 15, 2024 • 3:45 PM</p>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">Monday, March 15, 2024 • 3:45 PM</p>
                         <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
                           <button
                             onClick={() => setIsLyricsExpanded(!isLyricsExpanded)}
@@ -1391,37 +1543,53 @@ function TopCarousel() {
                           {isLyricsExpanded && (
                             <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
                               <div className="space-y-4">
-                                <div>
-                                  <p className="font-semibold text-purple-600 mb-2">[Verse 1]</p>
-                                  <p>Amazing grace, how sweet the sound</p>
-                                  <p>That saved a wretch like me</p>
-                                  <p>I once was lost, but now I'm found</p>
-                                  <p>Was blind but now I see</p>
-                                </div>
-                                
-                                <div>
-                                  <p className="font-semibold text-purple-600 mb-2">[Chorus]</p>
-                                  <p>Mighty God, You reign forever</p>
-                                  <p>Your love will never end</p>
-                                  <p>In Your presence we find shelter</p>
-                                  <p>You're our closest friend</p>
-                                </div>
-                                
-                                <div>
-                                  <p className="font-semibold text-purple-600 mb-2">[Verse 2]</p>
-                                  <p>Through many dangers, toils and snares</p>
-                                  <p>I have already come</p>
-                                  <p>'Tis grace that brought me safe thus far</p>
-                                  <p>And grace will lead me home</p>
-                                </div>
-                                
-                                <div>
-                                  <p className="font-semibold text-purple-600 mb-2">[Bridge]</p>
-                                  <p>Holy, holy, holy Lord</p>
-                                  <p>God of power and might</p>
-                                  <p>Heaven and earth are full of glory</p>
-                                  <p>Hosanna in the highest</p>
-                                </div>
+                                {selectedSong?.lyrics ? (
+                                  <>
+                                    {selectedSong.lyrics.verse1 && (
+                                      <div>
+                                        <p className="font-semibold text-purple-600 mb-2">[Verse 1]</p>
+                                        {selectedSong.lyrics.verse1.split('\n').map((line: string, index: number) => (
+                                          <p key={index}>{line}</p>
+                ))}
+              </div>
+                                    )}
+                                    
+                                    {selectedSong.lyrics.chorus && (
+                                      <div>
+                                        <p className="font-semibold text-purple-600 mb-2">[Chorus]</p>
+                                        {selectedSong.lyrics.chorus.split('\n').map((line: string, index: number) => (
+                                          <p key={index}>{line}</p>
+                                        ))}
+        </div>
+                                    )}
+                                    
+                                    {selectedSong.lyrics.verse2 && (
+                                      <div>
+                                        <p className="font-semibold text-purple-600 mb-2">[Verse 2]</p>
+                                        {selectedSong.lyrics.verse2.split('\n').map((line: string, index: number) => (
+                                          <p key={index}>{line}</p>
+                                        ))}
+      </div>
+                                    )}
+                                    
+                                    {selectedSong.lyrics.bridge && (
+                                      <div>
+                                        <p className="font-semibold text-purple-600 mb-2">[Bridge]</p>
+                                        {selectedSong.lyrics.bridge.split('\n').map((line: string, index: number) => (
+                                          <p key={index}>{line}</p>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <div>
+                                    <p className="font-semibold text-purple-600 mb-2">[Verse 1]</p>
+                                    <p>Great is Thy faithfulness, O God my Father</p>
+                                    <p>There is no shadow of turning with Thee</p>
+                                    <p>Thou changest not, Thy compassions they fail not</p>
+                                    <p>As Thou hast been Thou forever wilt be</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
@@ -1431,7 +1599,7 @@ function TopCarousel() {
 
                     {activeHistorySubTab === 'lead-singer' && (
                       <div>
-                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">April 8, 2024 • 2:20 PM</p>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">Monday, April 8, 2024 • 2:20 PM</p>
                         <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
                           <button
                             onClick={() => setIsLeadSingerExpanded(!isLeadSingerExpanded)}
@@ -1450,7 +1618,7 @@ function TopCarousel() {
                               <div className="space-y-3">
                                 <div>
                                   <p className="font-semibold text-blue-600 mb-1">Name:</p>
-                                  <p>Sarah Johnson</p>
+                                  <p>{selectedSong?.leadSinger || 'Sarah Johnson'}</p>
                                 </div>
                                 
                                 <div>
@@ -1481,7 +1649,7 @@ function TopCarousel() {
 
                     {activeHistorySubTab === 'written-by' && (
                       <div>
-                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">January 12, 2023 • 10:15 AM</p>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">Thursday, January 12, 2023 • 10:15 AM</p>
                         <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
                           <button
                             onClick={() => setIsWrittenByExpanded(!isWrittenByExpanded)}
@@ -1500,7 +1668,7 @@ function TopCarousel() {
                               <div className="space-y-3">
                                 <div>
                                   <p className="font-semibold text-green-600 mb-1">Composer:</p>
-                                  <p>Pastor Chris Oyakhilome</p>
+                                  <p>{selectedSong?.writtenBy || 'Pastor Chris Oyakhilome'}</p>
                                 </div>
                                 
                                 <div>
@@ -1516,17 +1684,17 @@ function TopCarousel() {
                                 <div>
                                   <p className="font-semibold text-green-600 mb-1">Inspiration:</p>
                                   <p>Written during a time of deep worship and revelation about God's amazing grace</p>
-                                </div>
-                                
+        </div>
+
                                 <div>
                                   <p className="font-semibold text-green-600 mb-1">Musical Style:</p>
                                   <p>Contemporary worship with gospel influences</p>
-                                </div>
-                                
+        </div>
+
                                 <div>
                                   <p className="font-semibold text-green-600 mb-1">Copyright:</p>
                                   <p>© 2023 LoveWorld Publishing</p>
-                                </div>
+          </div>
                               </div>
                             </div>
                           )}
@@ -1536,7 +1704,7 @@ function TopCarousel() {
 
                     {activeHistorySubTab === 'key' && (
                       <div>
-                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">March 20, 2024 • 11:30 AM</p>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">Wednesday, March 20, 2024 • 11:30 AM</p>
                         <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
                           <button
                             onClick={() => setIsKeyExpanded(!isKeyExpanded)}
@@ -1555,17 +1723,17 @@ function TopCarousel() {
                               <div className="space-y-3">
                                 <div>
                                   <p className="font-semibold text-orange-600 mb-1">Original Key:</p>
-                                  <p>G Major</p>
-                                </div>
-                                
+                                  <p>{selectedSong?.key || 'G Major'}</p>
+                </div>
+                
                                 <div>
                                   <p className="font-semibold text-orange-600 mb-1">Alternative Keys:</p>
                                   <p>F Major (for lower voices), A Major (for higher voices)</p>
-                                </div>
+                    </div>
                                 
                                 <div>
                                   <p className="font-semibold text-orange-600 mb-1">Tempo:</p>
-                                  <p>72 BPM (Moderately slow, worship tempo)</p>
+                                  <p>{selectedSong?.tempo || '72 BPM'} (Moderately slow, worship tempo)</p>
                                 </div>
                                 
                                 <div>
@@ -1596,7 +1764,7 @@ function TopCarousel() {
 
                     {activeHistorySubTab === 'comments' && (
                       <div>
-                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">May 5, 2024 • 4:10 PM</p>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">Sunday, May 5, 2024 • 4:10 PM</p>
                         <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
                           <button
                             onClick={() => setIsCommentsExpanded(!isCommentsExpanded)}
@@ -1612,32 +1780,32 @@ function TopCarousel() {
                           
                           {isCommentsExpanded && (
                             <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
-                              <div className="space-y-4">
+                    <div className="space-y-4">
                                 <div>
                                   <p className="font-semibold text-pink-600 mb-2">Performance Guidelines:</p>
-                                  <p>"This song should be sung with deep reverence and heartfelt emotion. Allow the congregation to really feel the weight of God's amazing grace."</p>
-                                </div>
+                                  <p>"{selectedSong?.comments || 'This song should be sung with deep reverence and heartfelt emotion. Allow the congregation to really feel the weight of God\'s amazing grace.'}"</p>
+                    </div>
                                 
                                 <div>
                                   <p className="font-semibold text-pink-600 mb-2">Spiritual Significance:</p>
                                   <p>"Every time we sing this song, we're reminded of the transformative power of God's grace. It's not just a song, but a declaration of faith."</p>
-                                </div>
+                  </div>
                                 
                                 <div>
                                   <p className="font-semibold text-pink-600 mb-2">Ministry Impact:</p>
                                   <p>"This song has touched countless lives during our services. Many have testified of receiving healing and breakthrough while singing these words."</p>
-                                </div>
+              </div>
                                 
                                 <div>
                                   <p className="font-semibold text-pink-600 mb-2">Historical Context:</p>
                                   <p>"Written during our 2023 Global Day of Prayer, this song captures the heart of our ministry - spreading God's love and grace to all nations."</p>
-                                </div>
+          </div>
                                 
                                 <div>
                                   <p className="font-semibold text-pink-600 mb-2">Special Instructions:</p>
                                   <p>"During the bridge, encourage the congregation to lift their hands. This is a moment of surrender and worship."</p>
-                                </div>
-                              </div>
+        </div>
+      </div>
                             </div>
                           )}
                         </div>
@@ -1646,7 +1814,7 @@ function TopCarousel() {
 
                     {activeHistorySubTab === 'audio' && (
                       <div>
-                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">June 18, 2024 • 1:55 PM</p>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">Tuesday, June 18, 2024 • 1:55 PM</p>
                         <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
                           <button
                             onClick={() => setIsAudioExpanded(!isAudioExpanded)}
@@ -1743,6 +1911,96 @@ function TopCarousel() {
                 <div className="text-gray-900 text-sm font-medium">
                   3:24
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Fullscreen Button - Above Audio Player */}
+      {isSongDetailOpen && selectedSong && activeTab === 'lyrics' && (
+        <button
+          onClick={() => setIsLyricsFullscreen(!isLyricsFullscreen)}
+          className="fixed bottom-32 right-6 w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center z-[80]"
+          aria-label={isLyricsFullscreen ? "Close fullscreen lyrics" : "Fullscreen lyrics"}
+        >
+          {isLyricsFullscreen ? (
+            <Minimize2 className="w-4 h-4" />
+          ) : (
+            <Maximize2 className="w-4 h-4" />
+          )}
+        </button>
+      )}
+
+      {/* Fullscreen Lyrics Overlay */}
+      {isLyricsFullscreen && selectedSong && (
+        <div className="fixed top-0 left-0 right-0 bottom-20 bg-white z-[60] flex flex-col">
+          {/* Header with title only */}
+          <div className="flex-shrink-0 px-6 py-4 flex items-center justify-center border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Lyrics</h2>
+          </div>
+
+          {/* Fullscreen Lyrics Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-8">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-gray-900 leading-relaxed space-y-6 text-lg">
+                {selectedSong?.lyrics ? (
+                  <>
+                    {selectedSong.lyrics.verse1 && (
+                      <>
+                        <div className="text-orange-600 text-base font-medium mb-3">[Verse 1]</div>
+                        <div className="space-y-3">
+                          {selectedSong.lyrics.verse1.split('\n').map((line: string, index: number) => (
+                            <p key={index} className="text-gray-700 text-lg leading-relaxed">{line}</p>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    
+                    {selectedSong.lyrics.chorus && (
+                      <>
+                        <div className="text-orange-600 text-base font-medium mb-3 mt-8">[Chorus]</div>
+                        <div className="space-y-3">
+                          {selectedSong.lyrics.chorus.split('\n').map((line: string, index: number) => (
+                            <p key={index} className="text-gray-700 text-lg leading-relaxed">{line}</p>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    
+                    {selectedSong.lyrics.verse2 && (
+                      <>
+                        <div className="text-orange-600 text-base font-medium mb-3 mt-8">[Verse 2]</div>
+                        <div className="space-y-3">
+                          {selectedSong.lyrics.verse2.split('\n').map((line: string, index: number) => (
+                            <p key={index} className="text-gray-700 text-lg leading-relaxed">{line}</p>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    
+                    {selectedSong.lyrics.bridge && (
+                      <>
+                        <div className="text-orange-600 text-base font-medium mb-3 mt-8">[Bridge]</div>
+                        <div className="space-y-3">
+                          {selectedSong.lyrics.bridge.split('\n').map((line: string, index: number) => (
+                            <p key={index} className="text-gray-700 text-lg leading-relaxed">{line}</p>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="text-orange-600 text-base font-medium mb-3">[Verse 1]</div>
+                    <div className="space-y-3">
+                      <p className="text-gray-700 text-lg leading-relaxed">Great is Thy faithfulness, O God my Father</p>
+                      <p className="text-gray-700 text-lg leading-relaxed">There is no shadow of turning with Thee</p>
+                      <p className="text-gray-700 text-lg leading-relaxed">Thou changest not, Thy compassions they fail not</p>
+                      <p className="text-gray-700 text-lg leading-relaxed">As Thou hast been Thou forever wilt be</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
