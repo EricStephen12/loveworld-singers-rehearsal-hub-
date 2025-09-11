@@ -10,6 +10,7 @@ import Image from "next/image";
 import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Maximize2, Minimize2 } from "lucide-react";
 import Link from "next/link";
 import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, PraiseNightSong, PraiseNight } from "@/data/praise-night-songs";
+import { offlineManager } from "@/utils/offlineManager";
 import ScreenHeader from "@/components/ScreenHeader";
 import SharedDrawer from "@/components/SharedDrawer";
 import { getMenuItems } from "@/config/menuItems";
@@ -175,10 +176,41 @@ export default function PraiseNightPage() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   
   useEffect(() => {
-    // Only load data on client side to avoid hydration mismatch
-    const songs = getCurrentSongs();
-    setCentralizedSongs(songs);
-    setIsDataLoaded(true);
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
+    // Load data with offline support
+    const loadSongs = async () => {
+      try {
+        // Try to get data with offline fallback
+        const songs = await offlineManager.getData(
+          'praise-night-songs',
+          () => Promise.resolve(getCurrentSongs())
+        );
+        
+        if (songs) {
+          setCentralizedSongs(songs);
+          // Cache the songs for offline use
+          await offlineManager.cacheData('praise-night-songs', songs);
+        } else {
+          // Fallback to direct function call
+          const fallbackSongs = getCurrentSongs();
+          setCentralizedSongs(fallbackSongs);
+          await offlineManager.cacheData('praise-night-songs', fallbackSongs);
+        }
+        
+        setIsDataLoaded(true);
+        console.log('Songs loaded with offline support');
+      } catch (error) {
+        console.error('Failed to load songs:', error);
+        // Fallback to direct function call
+        const fallbackSongs = getCurrentSongs();
+        setCentralizedSongs(fallbackSongs);
+        setIsDataLoaded(true);
+      }
+    };
+
+    loadSongs();
   }, [currentPraiseNight]);
   
   // Data already matches UI format, no transformation needed
