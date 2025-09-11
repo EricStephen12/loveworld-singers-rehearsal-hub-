@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home } from "lucide-react";
+import { ChevronRight, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, Song, PraiseNight } from "@/data/songs";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -21,7 +21,6 @@ export default function PraiseNightPage() {
   const [collapsedSections, setCollapsedSections] = useState<{[key: string]: {[key: string]: boolean}}>({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
-  const songs = currentPraiseNight.songs;
 
   // Map selected Praise Night to its e-card image (fallback to a default)
   const ecardSrc = useMemo(() => {
@@ -105,49 +104,183 @@ export default function PraiseNightPage() {
     return () => clearInterval(timer);
   }, [])
 
+  // Handle category selection and close drawer
+  const handleCategorySelect = (category: string) => {
+    setActiveCategory(category);
+    setIsCategoryDrawerOpen(false);
+  };
+
+  // Handle song card click
+  const handleSongClick = (song: any, index: number) => {
+    setSelectedSongIndex(index); // Set the selected song index
+    setSelectedSong({...song, imageIndex: index});
+    setIsSongDetailOpen(true);
+    setActiveTab('lyrics'); // Reset to lyrics tab
+  };
+
+  // Get image for song based on index
+  const getSongImage = (index: number) => {
+    const images = [
+      "/images/DSC_6155_scaled.jpg",
+      "/images/DSC_6303_scaled.jpg", 
+      "/images/DSC_6446_scaled.jpg",
+      "/images/DSC_6506_scaled.jpg",
+      "/images/DSC_6516_scaled.jpg",
+      "/images/DSC_6636_1_scaled.jpg",
+      "/images/DSC_6638_scaled.jpg",
+      "/images/DSC_6644_scaled.jpg",
+      "/images/DSC_6658_1_scaled.jpg",
+      "/images/DSC_6676_scaled.jpg"
+    ];
+    return images[index % images.length]; // Cycle through images if more songs than images
+  };
+
+  // Handle closing song detail
+  const handleCloseSongDetail = () => {
+    setIsSongDetailOpen(false);
+    setSelectedSong(null);
+    setIsPlaying(false);
+  };
+
+  // Handle play/pause
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
+
   // Format single digit numbers with leading zero
   const formatNumber = (num: number) => (num < 10 ? `0${num}` : num)
 
-  // Filter state for heard/unheard songs
-  const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard')
+  // Song categories
+  const songCategories = [
+    "New Praise Songs",
+    "New Healing Songs", 
+    "Previously Ministered Songs",
+    "Previously Ministered Healing Songs",
+    "LoveWorld Orchestra",
+    "Praise in Languages",
+    "Approved Songs"
+  ];
 
-const groupSongs = (list: Song[]) => {
-  const map = new Map();
-  list.forEach((s: Song) => {
-    if (!map.has(s.section)) map.set(s.section, new Map());
-    const byStatus = map.get(s.section);
-    const key = s.status || "HEARD";
-    if (!byStatus.get(key)) byStatus.set(key, []);
-    byStatus.get(key).push(s);
-  });
-  for (const [, byStatus] of map) {
-    for (const [k, arr] of byStatus) {
-      arr.sort((a: Song, b: Song) => a.sn - b.sn);
-      byStatus.set(k, arr);
-    }
-  }
-  return map;
-};
+  // Sample songs with categories and status
+  const songTitles = [
+    // New Praise Songs
+    { title: "Mighty God", status: "heard", category: "New Praise Songs" },
+    { title: "Victory Chant", status: "heard", category: "New Praise Songs" }, 
+    { title: "Celebrate Jesus", status: "unheard", category: "New Praise Songs" },
+    { title: "Shout to the Lord", status: "heard", category: "New Praise Songs" },
+    { title: "Amazing Love", status: "unheard", category: "New Praise Songs" },
+    { title: "Blessed Be Your Name", status: "heard", category: "New Praise Songs" },
+    { title: "Here I Am to Worship", status: "heard", category: "New Praise Songs" },
+    { title: "10,000 Reasons", status: "unheard", category: "New Praise Songs" },
+    { title: "What a Beautiful Name", status: "heard", category: "New Praise Songs" },
+    { title: "Good Good Father", status: "unheard", category: "New Praise Songs" },
+    { title: "Reckless Love", status: "heard", category: "New Praise Songs" },
+    { title: "Great Are You Lord", status: "unheard", category: "New Praise Songs" },
+    { title: "Build My Life", status: "heard", category: "New Praise Songs" },
+    { title: "King of Kings", status: "unheard", category: "New Praise Songs" },
+    { title: "Way Maker", status: "heard", category: "New Praise Songs" },
+    { title: "Lion and the Lamb", status: "unheard", category: "New Praise Songs" },
+    { title: "Who You Say I Am", status: "heard", category: "New Praise Songs" },
+    { title: "Living Hope", status: "unheard", category: "New Praise Songs" },
+    { title: "Raise a Hallelujah", status: "heard", category: "New Praise Songs" },
+    { title: "Goodness of God", status: "unheard", category: "New Praise Songs" },
+    
+    // New Healing Songs
+    { title: "Healer of My Soul", status: "heard", category: "New Healing Songs" },
+    { title: "By His Stripes", status: "unheard", category: "New Healing Songs" },
+    { title: "Healing Power", status: "heard", category: "New Healing Songs" },
+    { title: "Jesus the Healer", status: "unheard", category: "New Healing Songs" },
+    { title: "Miracle Working God", status: "heard", category: "New Healing Songs" },
+    { title: "Healing Waters", status: "unheard", category: "New Healing Songs" },
+    { title: "Touch of the Master", status: "heard", category: "New Healing Songs" },
+    { title: "Divine Restoration", status: "unheard", category: "New Healing Songs" },
+    { title: "Wholeness in Jesus", status: "heard", category: "New Healing Songs" },
+    { title: "God of Healing", status: "unheard", category: "New Healing Songs" },
+    { title: "Miraculous Touch", status: "heard", category: "New Healing Songs" },
+    { title: "Healing Light", status: "unheard", category: "New Healing Songs" },
+    { title: "Restore and Renew", status: "heard", category: "New Healing Songs" },
+    { title: "Perfect Healing", status: "unheard", category: "New Healing Songs" },
+    { title: "Health and Strength", status: "heard", category: "New Healing Songs" },
+    
+    // Previously Ministered Songs
+    { title: "Great Is Thy Faithfulness", status: "heard", category: "Previously Ministered Songs" },
+    { title: "Holy, Holy, Holy", status: "heard", category: "Previously Ministered Songs" },
+    { title: "How Great Thou Art", status: "unheard", category: "Previously Ministered Songs" },
+    { title: "Amazing Grace", status: "heard", category: "Previously Ministered Songs" },
+    { title: "It Is Well", status: "unheard", category: "Previously Ministered Songs" },
+    { title: "Crown Him with Many Crowns", status: "heard", category: "Previously Ministered Songs" },
+    { title: "The Old Rugged Cross", status: "unheard", category: "Previously Ministered Songs" },
+    { title: "When I Survey the Wondrous Cross", status: "heard", category: "Previously Ministered Songs" },
+    { title: "Nothing But the Blood", status: "unheard", category: "Previously Ministered Songs" },
+    { title: "Jesus Paid It All", status: "heard", category: "Previously Ministered Songs" },
+    { title: "Because He Lives", status: "unheard", category: "Previously Ministered Songs" },
+    { title: "He Lives", status: "heard", category: "Previously Ministered Songs" },
+    { title: "Christ the Lord Is Risen Today", status: "unheard", category: "Previously Ministered Songs" },
+    { title: "Up from the Grave He Arose", status: "heard", category: "Previously Ministered Songs" },
+    { title: "I Know That My Redeemer Lives", status: "unheard", category: "Previously Ministered Songs" },
+    { title: "Blessed Assurance", status: "heard", category: "Previously Ministered Songs" },
+    { title: "What a Friend We Have in Jesus", status: "unheard", category: "Previously Ministered Songs" },
+    { title: "Sweet Hour of Prayer", status: "heard", category: "Previously Ministered Songs" },
+    
+    // Previously Ministered Healing Songs
+    { title: "Healing Rain", status: "heard", category: "Previously Ministered Healing Songs" },
+    { title: "Touch of Heaven", status: "unheard", category: "Previously Ministered Healing Songs" },
+    { title: "Restore My Soul", status: "heard", category: "Previously Ministered Healing Songs" },
+    { title: "God of Miracles", status: "unheard", category: "Previously Ministered Healing Songs" },
+    
+    // LoveWorld Orchestra
+    { title: "Symphony of Praise", status: "heard", category: "LoveWorld Orchestra" },
+    { title: "Orchestral Worship", status: "unheard", category: "LoveWorld Orchestra" },
+    { title: "Majestic Glory", status: "heard", category: "LoveWorld Orchestra" },
+    { title: "Divine Symphony", status: "unheard", category: "LoveWorld Orchestra" },
+    { title: "Heavenly Sounds", status: "heard", category: "LoveWorld Orchestra" },
+    
+    // Praise in Languages
+    { title: "Santo Santo Santo", status: "heard", category: "Praise in Languages" },
+    { title: "Hallelujah (French)", status: "unheard", category: "Praise in Languages" },
+    { title: "Praise Him (Swahili)", status: "heard", category: "Praise in Languages" },
+    { title: "Glory to God (Spanish)", status: "unheard", category: "Praise in Languages" },
+    { title: "Worship Song (Chinese)", status: "heard", category: "Praise in Languages" },
+    
+    // Approved Songs
+    { title: "Rock of Ages", status: "heard", category: "Approved Songs" },
+    { title: "Be Thou My Vision", status: "unheard", category: "Approved Songs" },
+    { title: "Come Thou Fount", status: "heard", category: "Approved Songs" },
+    { title: "A Mighty Fortress", status: "unheard", category: "Approved Songs" },
+    { title: "All Hail the Power", status: "heard", category: "Approved Songs" },
+    { title: "When I Survey", status: "unheard", category: "Approved Songs" }
+  ];
 
-function useActiveId(ids: string[]) {
-  const [active, setActive] = useState<string | null>(null);
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActive(entry.target.id);
-        });
-      },
-      { rootMargin: "-20% 0px -60% 0px", threshold: [0, 1] }
-    );
-    ids.forEach((id: string) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [ids]);
-  return active;
-}
+  // Filter states
+  const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard');
+  const [activeCategory, setActiveCategory] = useState<string>(songCategories[0]); // Default to first category
+  const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
+  
+  // Song detail modal states
+  const [selectedSong, setSelectedSong] = useState<any>(null);
+  const [isSongDetailOpen, setIsSongDetailOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'lyrics' | 'comments' | 'history'>('lyrics');
+  const [activeHistorySubTab, setActiveHistorySubTab] = useState<'lyrics' | 'lead-singer' | 'written-by' | 'key' | 'comments' | 'audio'>('lyrics');
+  const [isLyricsExpanded, setIsLyricsExpanded] = useState(false);
+  const [isLeadSingerExpanded, setIsLeadSingerExpanded] = useState(false);
+  const [isWrittenByExpanded, setIsWrittenByExpanded] = useState(false);
+  const [isKeyExpanded, setIsKeyExpanded] = useState(false);
+  const [isCommentsExpanded, setIsCommentsExpanded] = useState(false);
+  const [isAudioExpanded, setIsAudioExpanded] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedSongIndex, setSelectedSongIndex] = useState<number | null>(null);
+
+  // Filter songs based on selected category and status
+  const filteredSongs = songTitles.filter(song => 
+    song.category === activeCategory && song.status === activeFilter
+  );
+
+  // Get counts for current category
+  const categoryHeardCount = songTitles.filter(song => song.category === activeCategory && song.status === 'heard').length;
+  const categoryUnheardCount = songTitles.filter(song => song.category === activeCategory && song.status === 'unheard').length;
+  const categoryTotalCount = categoryHeardCount + categoryUnheardCount;
+
+
 
   const switchPraiseNight = (praiseNight: PraiseNight) => {
     setCurrentPraiseNight(praiseNight.id);
@@ -157,10 +290,9 @@ function useActiveId(ids: string[]) {
 
   function Header() {
     // Calculate total rehearsal progress
-    const totalRehearsals = songs.reduce((sum, song) => sum + (song.rehearsals?.count || 0) + (song.rehearsals?.extra || 0), 0);
-    const totalSongs = songs.length;
-    const heardSongs = songs.filter(s => s.status === "HEARD").length;
-    const unheardSongs = songs.filter(s => s.status === "NOT_HEARD").length;
+    const totalSongs = songTitles.length;
+    const heardSongs = songTitles.filter(s => s.status === "heard").length;
+    const unheardSongs = songTitles.filter(s => s.status === "unheard").length;
     
     return (
       <div className="mb-4 sm:mb-6 md:mb-8">
@@ -506,82 +638,6 @@ function Lyrics({ lyrics }: { lyrics: {start: string; continue: string} }) {
 }
 
 
-function TOC({ grouped, activeId, onJump }: { 
-  grouped: Map<string, Map<string, Song[]>>; 
-  activeId: string | null; 
-  onJump: (id: string) => void 
-}) {
-  const sectionColors = {
-    "Previous Praise Songs Rehearsed But Not Ministered": "border-l-purple-400 bg-purple-50",
-    "New Praise Songs": "border-l-blue-400 bg-blue-50",
-    "Previously Done": "border-l-green-400 bg-green-50",
-    "Solo": "border-l-amber-400 bg-amber-50",
-    "Proposed Medley": "border-l-rose-400 bg-rose-50",
-  };
-
-  return (
-    <nav className="sticky top-6 max-h-[85vh] overflow-auto">
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
-        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-purple-50">
-          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            Table of Contents
-          </h3>
-        </div>
-        
-        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
-          {[...grouped.entries()].map(([section, byStatus]) => {
-            const colorClass = sectionColors[section as keyof typeof sectionColors] || "border-l-slate-400 bg-slate-50";
-            const hideSectionTitle = section === "Previous Praise Songs Rehearsed But Not Ministered";
-            return (
-              <div key={section} className={`border-l-4 ${colorClass} rounded-r-lg p-3`}>
-                {!hideSectionTitle && (
-                <div className="font-medium text-slate-800 text-sm mb-3 leading-tight">
-                  {section}
-                </div>
-                )}
-                {[...byStatus.entries()].map(([status, list]) => (
-                  <div key={status} className="mb-3 last:mb-0">
-                    <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
-                      {status} ({list.length})
-                    </div>
-                    <ul className="space-y-1">
-                      {list.map((s: Song) => {
-                        const id = `song-${s.sn}`;
-                        const isActive = activeId === id;
-                        return (
-                          <li key={id}>
-                            <button
-                              onClick={() => onJump(id)}
-                              className={`w-full text-left text-sm rounded-lg px-3 py-2 transition-all duration-200 group ${
-                                isActive 
-                                  ? "bg-purple-500 text-white shadow-md" 
-                                  : "hover:bg-white hover:shadow-sm text-slate-700"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <ChevronRight className={`w-3 h-3 transition-transform ${isActive ? "rotate-90" : "group-hover:translate-x-1"}`} />
-                                <span className="font-medium">{s.sn}.</span>
-                                <span className="truncate">{s.title}</span>
-                              </div>
-                              <div className="text-xs opacity-75 mt-1 ml-5">
-                                {s.leadSinger || "TBD"}
-                              </div>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </nav>
-  );
-}
 
 function TopCarousel() {
   const baseImages = useMemo(() => [
@@ -628,7 +684,7 @@ function TopCarousel() {
   }, []);
 
   if (!images.length) return null;
-
+  
   return (
     <div className="mb-4 sm:mb-6">
       <div
@@ -651,29 +707,14 @@ function TopCarousel() {
               priority={false}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-          </div>
-        ))}
-      </div>
+        </div>
+                ))}
+        </div>
     </div>
   );
 }
 
   const [q, setQ] = useState("");
-  const grouped = useMemo(() => groupSongs(
-    songs.filter((s) => {
-      const hay = `${s.title} ${s.writer} ${s.leadSinger} ${s.section}`.toLowerCase();
-      return hay.includes(q.toLowerCase());
-    })
-  ), [q, songs]);
-
-  const allIds = useMemo(() => songs.map((s) => `song-${s.sn}`), [songs]);
-  const activeId = useActiveId(allIds);
-
-  const onJump = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    history.replaceState(null, "", `#${id}`);
-  };
 
   // Search input focus from header search button
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -780,14 +821,25 @@ function TopCarousel() {
         }
       `}</style>
       
-      {/* Shared Screen Header with Search Button */}
+      {/* Shared Screen Header with Search Button and Timer */}
       <ScreenHeader 
         title={currentPraiseNight.name} 
         onMenuClick={toggleMenu} 
         rightImageSrc="/logo.png"
+        timer={
+          <div className="flex items-center gap-0.5 text-xs">
+            <span className="font-medium text-gray-500">{formatNumber(timeLeft.days)}d</span>
+            <span className="text-gray-400">:</span>
+            <span className="font-medium text-gray-500">{formatNumber(timeLeft.hours)}h</span>
+            <span className="text-gray-400">:</span>
+            <span className="font-medium text-gray-500">{formatNumber(timeLeft.minutes)}m</span>
+            <span className="text-gray-400">:</span>
+            <span className="font-medium text-gray-500">{formatNumber(timeLeft.seconds)}s</span>
+            </div>
+        }
         rightButtons={
           <>
-            <button
+                            <button
               aria-label="Switch Praise Night"
               onClick={() => setShowDropdown(!showDropdown)}
               className="p-1.5 rounded-md text-slate-600 hover:bg-slate-100 active:scale-95 transition"
@@ -825,7 +877,7 @@ function TopCarousel() {
                 <div className="text-xs sm:text-sm text-slate-600">{praiseNight.location} • {praiseNight.date}</div>
               </button>
             ))}
-        </div>
+              </div>
         </>
       )}
 
@@ -843,16 +895,16 @@ function TopCarousel() {
                 className="pl-10 h-10 text-sm border-0 ring-0 focus:ring-0 focus:border-0 bg-white/70 backdrop-blur rounded-xl shadow-sm"
               />
               <div className="absolute left-3 right-3 -bottom-0.5 h-px bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"></div>
-            </div>
+              </div>
             <button
               onClick={onCloseSearch}
               className="px-2 py-1 text-sm text-purple-600 font-medium active:scale-95"
             >
               Cancel
-            </button>
-          </div>
-        </div>
-        </div>
+                            </button>
+              </div>
+              </div>
+              </div>
 
       <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 py-2 sm:py-4 relative">
         {/* E-card with embedded switcher below (single image, no slide) */}
@@ -867,35 +919,9 @@ function TopCarousel() {
               priority={false}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-          </div>
-        </div>
-
-        {/* iOS-style Mini Countdown Timer - Under the card on background */}
-        <div className="mb-4 sm:mb-6 flex justify-center">
-          <div className="flex items-center justify-center gap-1 px-4 py-1 rounded-full">
-            <div className="flex items-center gap-0.5">
-              <span className="text-lg font-medium text-gray-700">{formatNumber(timeLeft.days)}</span>
-              <span className="text-xs text-gray-500 font-medium">d</span>
-            </div>
-            <span className="text-gray-400 mx-0.5">:</span>
-            <div className="flex items-center gap-0.5">
-              <span className="text-lg font-medium text-gray-700">{formatNumber(timeLeft.hours)}</span>
-              <span className="text-xs text-gray-500 font-medium">h</span>
-            </div>
-            <span className="text-gray-400 mx-0.5">:</span>
-            <div className="flex items-center gap-0.5">
-              <span className="text-lg font-medium text-gray-700">{formatNumber(timeLeft.minutes)}</span>
-              <span className="text-xs text-gray-500 font-medium">m</span>
-            </div>
-            <span className="text-gray-400 mx-0.5">:</span>
-            <div className="flex items-center gap-0.5">
-              <span className="text-lg font-medium text-gray-700">{formatNumber(timeLeft.seconds)}</span>
-              <span className="text-xs text-gray-500 font-medium">s</span>
             </div>
           </div>
-        </div>
-
-        {/* Removed separate timer card; timer is now inside the top e-card container */}
+          
 
         {/* Pills under timer */}
         <div className="mb-4 sm:mb-6">
@@ -967,8 +993,8 @@ function TopCarousel() {
             </div>
           </div>
         </div>
-
-        {/* Filter buttons/pills with total songs count in center */}
+        
+        {/* Status Filter buttons/pills with category-specific count */}
         <div className="mb-4 sm:mb-6 flex items-center justify-between px-4">
           <button 
             onClick={() => setActiveFilter('heard')}
@@ -978,15 +1004,15 @@ function TopCarousel() {
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
             }`}
           >
-            Heard
+            Heard ({categoryHeardCount})
           </button>
           
-          <div className="text-center">
-            <span className="text-xs text-gray-500 font-medium">
-              {songs.length} Songs Total
+                <div className="text-center">
+            <span className="text-xs text-gray-600 font-medium">
+              {activeCategory}
             </span>
-          </div>
-          
+                </div>
+                
           <button 
             onClick={() => setActiveFilter('unheard')}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 shadow-sm border ${
@@ -995,43 +1021,733 @@ function TopCarousel() {
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
             }`}
           >
-            Unheard
+            Unheard ({categoryUnheardCount})
           </button>
         </div>
 
-        {/* Search input moved to animated header bar */}
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          {/* TOC - Hidden on mobile, shown as sidebar on desktop */}
-          <div className="hidden lg:block lg:col-span-1">
-            <TOC grouped={grouped} activeId={activeId} onJump={onJump} />
-          </div>
-
-          {/* Content - Mobile Optimized */}
-          <div className="lg:col-span-3 space-y-4 sm:space-y-6 lg:space-y-8">
-            {[...grouped.entries()].map(([section, byStatus]) => (
-              <div key={section} className="space-y-3 sm:space-y-4 md:space-y-6">
-                {section !== "Previous Praise Songs Rehearsed But Not Ministered" && (
-                  <div className="text-center px-2">
-                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 mb-2 leading-tight">{section}</h2>
-                    <div className="w-16 sm:w-20 md:w-24 h-0.5 sm:h-1 bg-gradient-to-r from-purple-400 to-blue-400 rounded-full mx-auto"></div>
-                </div>
-                )}
-                
-                {[...byStatus.entries()].map(([status, list]) => (
-                  <div key={status} className="space-y-3 sm:space-y-4">
-                    <div className="flex items-center gap-2 sm:gap-3 px-1">
-                      <div className="flex-1 h-px bg-slate-200"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+        {/* Song Title Cards - Scrollable */}
+        <div className="px-1 py-4 max-h-96 overflow-y-auto">
+          {filteredSongs.map((song, index) => {
+  return (
+              <div
+                key={index}
+                onClick={() => handleSongClick(song, index)}
+                className={`bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group mb-3 w-full cursor-pointer ${
+                  selectedSongIndex === index 
+                    ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-200/50 bg-purple-50/30' 
+                    : 'ring-1 ring-black/5'
+                }`}
+             >
+               {/* Song Header - Rehearsal Style */}
+               <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm">
+                     <span className="text-sm font-semibold text-purple-600">
+                       {index + 1}
+                     </span>
+                   </div>
+                   <div className="flex-1">
+                     <h3 className="font-medium text-slate-900 text-sm group-hover:text-black leading-tight">
+                       {song.title}
+          </h3>
+                     <p className="text-xs text-slate-500 mt-0.5 leading-tight">
+                       Singer: Sarah Johnson
+                     </p>
         </div>
-      </div>
+                </div>
+                 <div className="flex items-center">
+                   <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                     <ChevronRight className="w-3 h-3 text-slate-500 group-hover:translate-x-0.5 transition-all duration-200" />
+                    </div>
+                              </div>
+                              </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
+                </div>
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
+
+      {/* Floating Action Button for Category Filter */}
+      <div className="fixed bottom-6 right-6 z-30 flex flex-col items-center">
+        <button
+          onClick={() => setIsCategoryDrawerOpen(true)}
+          className="w-14 h-14 bg-purple-700 hover:bg-purple-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 active:scale-95 flex items-center justify-center mb-2"
+          style={{
+            boxShadow: '0 0 30px #9333ea, 0 0 60px #9333ea, 0 0 90px #9333ea',
+            animation: 'fabBreathe 1.2s ease-in-out infinite',
+            filter: 'drop-shadow(0 0 10px #9333ea)'
+          }}
+          aria-label="Open category filter"
+        >
+          <Filter className="w-6 h-6" />
+        </button>
+        <span className="text-xs text-gray-800 font-semibold text-center leading-tight">
+          Other<br />Categories
+        </span>
+      </div>
+
+      {/* Category Filter Drawer */}
+      {isCategoryDrawerOpen && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
+            onClick={() => setIsCategoryDrawerOpen(false)}
+          />
+          
+          {/* Drawer */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 transform transition-transform duration-300 animate-in slide-in-from-bottom">
+            <div className="px-6 py-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-outfit-semibold text-gray-900">Filter by Category</h3>
+                <button
+                  onClick={() => setIsCategoryDrawerOpen(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-600" />
+                </button>
+                    </div>
+              
+              {/* Total Songs Count */}
+              <div className="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                <p className="text-sm text-purple-700 font-medium">{songTitles.length} Total Scheduled Songs</p>
+              </div>
+              
+              {/* Category Options */}
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {songCategories.map((category) => (
+                            <button
+                    key={category}
+                    onClick={() => handleCategorySelect(category)}
+                    className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${
+                      activeCategory === category
+                        ? 'bg-purple-100 border-2 border-purple-300 text-purple-800'
+                        : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent text-gray-700'
+                    }`}
+                  >
+                    <div className="font-medium text-slate-900 text-sm leading-tight">{category}</div>
+                    <div className="text-xs text-slate-500 mt-0.5 leading-tight">
+                      {songTitles.filter(song => song.category === category).length} songs
+                              </div>
+                            </button>
+                ))}
+              </div>
+        </div>
+      </div>
+        </>
+      )}
+
+      {/* Full Screen Song Detail Modal */}
+      {isSongDetailOpen && selectedSong && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          {/* Header */}
+          <div className="flex-shrink-0 px-6 py-2 flex items-center justify-between">
+            <button
+              onClick={handleCloseSongDetail}
+              className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+            >
+              <ChevronDown className="w-5 h-5 text-gray-900" />
+            </button>
+            <div></div>
+            <div></div>
+          </div>
+
+          {/* Song Cover Art Area */}
+          <div className="flex-shrink-0 px-6 pt-0 pb-4 flex justify-center">
+            <div className="w-64 h-32 bg-gray-100 rounded-xl shadow-lg overflow-hidden relative animate-pulse-gentle">
+              <Image
+                src={getSongImage(selectedSong?.imageIndex || 0)}
+                alt="Album Cover"
+                fill
+                className="object-cover"
+                sizes="256px"
+              />
+              {/* iOS-style glow overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/20 pointer-events-none"></div>
+              <div className="absolute inset-0 shadow-inner rounded-xl pointer-events-none"></div>
+            </div>
+          </div>
+
+          {/* Song Title */}
+          <div className="flex-shrink-0 px-6 py-2 text-center">
+            <h1 className="text-gray-900 text-xl font-semibold">{selectedSong.title}</h1>
+            <p className="text-gray-600 text-sm mt-1">Sarah Johnson</p>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="flex-shrink-0 px-6 py-4">
+            <div className="flex justify-center space-x-6">
+              <button
+                onClick={() => setActiveTab('lyrics')}
+                className={`text-sm font-medium transition-colors duration-200 ${
+                  activeTab === 'lyrics'
+                    ? 'text-gray-900 border-b border-gray-900 pb-1'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Lyrics
+              </button>
+              <button
+                onClick={() => setActiveTab('comments')}
+                className={`text-sm font-medium transition-colors duration-200 ${
+                  activeTab === 'comments'
+                    ? 'text-gray-900 border-b border-gray-900 pb-1'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Comments
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`text-sm font-medium transition-colors duration-200 ${
+                  activeTab === 'history'
+                    ? 'text-gray-900 border-b border-gray-900 pb-1'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                History
+              </button>
+            </div>
+          </div>
+
+          {/* Content Area - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {activeTab === 'lyrics' && (
+              <div className="max-w-none">
+                <div className="text-gray-900 leading-relaxed space-y-4 text-base">
+                  <div className="text-orange-600 text-sm font-medium mb-2">[Intro]</div>
+                  <p className="text-gray-700">
+                    And they wishin' and wishin'<br/>
+                    And wishin' and wishin'
+                  </p>
+                  <p className="text-gray-900 font-medium">
+                    They wishin' on me, yuh
+                  </p>
+                  
+                  <div className="text-orange-600 text-sm font-medium mb-2 mt-6">[Verse 1]</div>
+                  <div className="space-y-2">
+                    <p className="text-gray-700">I been movin' calm, don't start</p>
+                    <p className="text-gray-700">No trouble with me</p>
+                    <p className="text-gray-700">Tryna keep it peaceful is a struggle for me</p>
+                    <p className="text-gray-700">Don't pull up at 6 AM to cuddle with me</p>
+                    <p className="text-gray-700">You know how I like it when you lovin' on me</p>
+                    <p className="text-gray-700">I don't wanna die for them to miss me</p>
+                  </div>
+
+                  <div className="text-orange-600 text-sm font-medium mb-2 mt-6">[Chorus]</div>
+                  <p className="text-gray-700">God's plan, God's plan</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'comments' && (
+              <div className="space-y-3">
+                {/* Pastor Comment 1 */}
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-medium">P</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h5 className="font-semibold text-gray-900 text-sm">Pastor</h5>
+                        <span className="text-xs text-gray-500">2 days ago</span>
+                      </div>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        Focus on the message of redemption and grace. Emphasize the transformation from lost to found. 
+                        Sing with conviction and personal testimony.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pastor Comment 2 */}
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-medium">P</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h5 className="font-semibold text-gray-900 text-sm">Pastor</h5>
+                        <span className="text-xs text-gray-500">1 day ago</span>
+                      </div>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        Remember to pause after "I once was lost" to let the weight of the words settle. This song should minister hope to those who feel lost or broken.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pastor Comment 3 */}
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-medium">P</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h5 className="font-semibold text-gray-900 text-sm">Pastor</h5>
+                        <span className="text-xs text-gray-500">3 hours ago</span>
+                      </div>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        The bridge should be sung with more intimacy. Lower the volume and let the Holy Spirit move through the quieter moments.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'history' && (
+                <div>
+                  {/* History Sub-tabs - Very Small Pills */}
+                  <div className="flex gap-2 justify-center flex-wrap mb-4">
+                    <button
+                      onClick={() => setActiveHistorySubTab('lyrics')}
+                      className={`text-xs transition-colors duration-200 whitespace-nowrap ${
+                        activeHistorySubTab === 'lyrics'
+                          ? 'text-purple-600 font-medium drop-shadow-[0_0_8px_rgba(147,51,234,0.6)]'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Lyrics
+                    </button>
+                    <button
+                      onClick={() => setActiveHistorySubTab('lead-singer')}
+                      className={`text-xs transition-colors duration-200 whitespace-nowrap ${
+                        activeHistorySubTab === 'lead-singer'
+                          ? 'text-purple-600 font-medium drop-shadow-[0_0_8px_rgba(147,51,234,0.6)]'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Lead Singer
+                    </button>
+                    <button
+                      onClick={() => setActiveHistorySubTab('written-by')}
+                      className={`text-xs transition-colors duration-200 whitespace-nowrap ${
+                        activeHistorySubTab === 'written-by'
+                          ? 'text-purple-600 font-medium drop-shadow-[0_0_8px_rgba(147,51,234,0.6)]'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Written By
+                    </button>
+                    <button
+                      onClick={() => setActiveHistorySubTab('key')}
+                      className={`text-xs transition-colors duration-200 whitespace-nowrap ${
+                        activeHistorySubTab === 'key'
+                          ? 'text-purple-600 font-medium drop-shadow-[0_0_8px_rgba(147,51,234,0.6)]'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Key
+                    </button>
+                    <button
+                      onClick={() => setActiveHistorySubTab('comments')}
+                      className={`text-xs transition-colors duration-200 whitespace-nowrap ${
+                        activeHistorySubTab === 'comments'
+                          ? 'text-purple-600 font-medium drop-shadow-[0_0_8px_rgba(147,51,234,0.6)]'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Comments
+                    </button>
+                    <button
+                      onClick={() => setActiveHistorySubTab('audio')}
+                      className={`px-2 py-0.5 rounded-full border text-xs transition-colors duration-200 whitespace-nowrap ${
+                        activeHistorySubTab === 'audio'
+                          ? 'text-purple-600 border-purple-600 font-medium drop-shadow-[0_0_8px_rgba(147,51,234,0.6)]'
+                          : 'text-gray-500 border-gray-300 hover:text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      Audio
+                    </button>
+                  </div>
+
+                  {/* History Sub-tab Content */}
+                  <div className="px-2">
+                    {activeHistorySubTab === 'lyrics' && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">March 15, 2024 • 3:45 PM</p>
+                        <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
+                          <button
+                            onClick={() => setIsLyricsExpanded(!isLyricsExpanded)}
+                            className="w-full p-4 flex items-center justify-between hover:bg-white/20 transition-colors duration-200 rounded-2xl"
+                          >
+                            <span className="text-sm font-medium text-slate-700">Song Lyrics</span>
+                            {isLyricsExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-500" />
+                            )}
+                          </button>
+                          
+                          {isLyricsExpanded && (
+                            <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
+                              <div className="space-y-4">
+                                <div>
+                                  <p className="font-semibold text-purple-600 mb-2">[Verse 1]</p>
+                                  <p>Amazing grace, how sweet the sound</p>
+                                  <p>That saved a wretch like me</p>
+                                  <p>I once was lost, but now I'm found</p>
+                                  <p>Was blind but now I see</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-purple-600 mb-2">[Chorus]</p>
+                                  <p>Mighty God, You reign forever</p>
+                                  <p>Your love will never end</p>
+                                  <p>In Your presence we find shelter</p>
+                                  <p>You're our closest friend</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-purple-600 mb-2">[Verse 2]</p>
+                                  <p>Through many dangers, toils and snares</p>
+                                  <p>I have already come</p>
+                                  <p>'Tis grace that brought me safe thus far</p>
+                                  <p>And grace will lead me home</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-purple-600 mb-2">[Bridge]</p>
+                                  <p>Holy, holy, holy Lord</p>
+                                  <p>God of power and might</p>
+                                  <p>Heaven and earth are full of glory</p>
+                                  <p>Hosanna in the highest</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeHistorySubTab === 'lead-singer' && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">April 8, 2024 • 2:20 PM</p>
+                        <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
+                          <button
+                            onClick={() => setIsLeadSingerExpanded(!isLeadSingerExpanded)}
+                            className="w-full p-4 flex items-center justify-between hover:bg-white/20 transition-colors duration-200 rounded-2xl"
+                          >
+                            <span className="text-sm font-medium text-slate-700">Lead Singer Information</span>
+                            {isLeadSingerExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-500" />
+                            )}
+                          </button>
+                          
+                          {isLeadSingerExpanded && (
+                            <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
+                              <div className="space-y-3">
+                                <div>
+                                  <p className="font-semibold text-blue-600 mb-1">Name:</p>
+                                  <p>Sarah Johnson</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-blue-600 mb-1">Role:</p>
+                                  <p>Lead Vocalist & Worship Leader</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-blue-600 mb-1">Experience:</p>
+                                  <p>5 years leading worship, trained in classical and contemporary styles</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-blue-600 mb-1">Vocal Range:</p>
+                                  <p>Soprano (C4 - C6)</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-blue-600 mb-1">Special Notes:</p>
+                                  <p>Excellent at leading congregational worship, strong stage presence</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeHistorySubTab === 'written-by' && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">January 12, 2023 • 10:15 AM</p>
+                        <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
+                          <button
+                            onClick={() => setIsWrittenByExpanded(!isWrittenByExpanded)}
+                            className="w-full p-4 flex items-center justify-between hover:bg-white/20 transition-colors duration-200 rounded-2xl"
+                          >
+                            <span className="text-sm font-medium text-slate-700">Songwriter Information</span>
+                            {isWrittenByExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-500" />
+                            )}
+                          </button>
+                          
+                          {isWrittenByExpanded && (
+                            <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
+                              <div className="space-y-3">
+                                <div>
+                                  <p className="font-semibold text-green-600 mb-1">Composer:</p>
+                                  <p>Pastor Chris Oyakhilome</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-green-600 mb-1">Co-writer:</p>
+                                  <p>Minister John Newton (lyrics adaptation)</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-green-600 mb-1">Original Date:</p>
+                                  <p>January 12, 2023</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-green-600 mb-1">Inspiration:</p>
+                                  <p>Written during a time of deep worship and revelation about God's amazing grace</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-green-600 mb-1">Musical Style:</p>
+                                  <p>Contemporary worship with gospel influences</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-green-600 mb-1">Copyright:</p>
+                                  <p>© 2023 LoveWorld Publishing</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeHistorySubTab === 'key' && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">March 20, 2024 • 11:30 AM</p>
+                        <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
+                          <button
+                            onClick={() => setIsKeyExpanded(!isKeyExpanded)}
+                            className="w-full p-4 flex items-center justify-between hover:bg-white/20 transition-colors duration-200 rounded-2xl"
+                          >
+                            <span className="text-sm font-medium text-slate-700">Musical Key & Details</span>
+                            {isKeyExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-500" />
+                            )}
+                          </button>
+                          
+                          {isKeyExpanded && (
+                            <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
+                              <div className="space-y-3">
+                                <div>
+                                  <p className="font-semibold text-orange-600 mb-1">Original Key:</p>
+                                  <p>G Major</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-orange-600 mb-1">Alternative Keys:</p>
+                                  <p>F Major (for lower voices), A Major (for higher voices)</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-orange-600 mb-1">Tempo:</p>
+                                  <p>72 BPM (Moderately slow, worship tempo)</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-orange-600 mb-1">Time Signature:</p>
+                                  <p>4/4 (Common time)</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-orange-600 mb-1">Chord Progression:</p>
+                                  <p>G - C - G - D - Em - C - G - D</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-orange-600 mb-1">Capo Position:</p>
+                                  <p>No capo required for original key</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-orange-600 mb-1">Difficulty Level:</p>
+                                  <p>Intermediate (suitable for most worship teams)</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeHistorySubTab === 'comments' && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">May 5, 2024 • 4:10 PM</p>
+                        <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
+                          <button
+                            onClick={() => setIsCommentsExpanded(!isCommentsExpanded)}
+                            className="w-full p-4 flex items-center justify-between hover:bg-white/20 transition-colors duration-200 rounded-2xl"
+                          >
+                            <span className="text-sm font-medium text-slate-700">Pastor's Historical Comments</span>
+                            {isCommentsExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-500" />
+                            )}
+                          </button>
+                          
+                          {isCommentsExpanded && (
+                            <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
+                              <div className="space-y-4">
+                                <div>
+                                  <p className="font-semibold text-pink-600 mb-2">Performance Guidelines:</p>
+                                  <p>"This song should be sung with deep reverence and heartfelt emotion. Allow the congregation to really feel the weight of God's amazing grace."</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-pink-600 mb-2">Spiritual Significance:</p>
+                                  <p>"Every time we sing this song, we're reminded of the transformative power of God's grace. It's not just a song, but a declaration of faith."</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-pink-600 mb-2">Ministry Impact:</p>
+                                  <p>"This song has touched countless lives during our services. Many have testified of receiving healing and breakthrough while singing these words."</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-pink-600 mb-2">Historical Context:</p>
+                                  <p>"Written during our 2023 Global Day of Prayer, this song captures the heart of our ministry - spreading God's love and grace to all nations."</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-pink-600 mb-2">Special Instructions:</p>
+                                  <p>"During the bridge, encourage the congregation to lift their hands. This is a moment of surrender and worship."</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeHistorySubTab === 'audio' && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">June 18, 2024 • 1:55 PM</p>
+                        <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
+                          <button
+                            onClick={() => setIsAudioExpanded(!isAudioExpanded)}
+                            className="w-full p-4 flex items-center justify-between hover:bg-white/20 transition-colors duration-200 rounded-2xl"
+                          >
+                            <span className="text-sm font-medium text-slate-700">Audio Recordings Archive</span>
+                            {isAudioExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-500" />
+                            )}
+                          </button>
+                          
+                          {isAudioExpanded && (
+                            <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
+                              <div className="space-y-3">
+                                <div>
+                                  <p className="font-semibold text-indigo-600 mb-1">Studio Recording:</p>
+                                  <p>High-quality studio version (320kbps MP3) - Duration: 4:32</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-indigo-600 mb-1">Live Performance:</p>
+                                  <p>Praise Night 15 live recording - March 15, 2024 (256kbps MP3)</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-indigo-600 mb-1">Rehearsal Version:</p>
+                                  <p>Practice recording with vocal guide - April 8, 2024</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-indigo-600 mb-1">Instrumental Track:</p>
+                                  <p>Backing track for live performances (WAV format)</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-indigo-600 mb-1">Acapella Version:</p>
+                                  <p>Vocals only recording for training purposes</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-indigo-600 mb-1">Multi-track Session:</p>
+                                  <p>Pro Tools session files available for remixing</p>
+                                </div>
+                                
+                                <div>
+                                  <p className="font-semibold text-indigo-600 mb-1">Total Archive Size:</p>
+                                  <p>247 MB across 12 audio files</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+          </div>
+        </div>
+            )}
+      </div>
+
+          {/* Music Player Controls */}
+          <div className="flex-shrink-0 relative">
+            {/* Fade gradient overlay */}
+            <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white/0 via-white/30 to-white/90 pointer-events-none"></div>
+            
+            <div className="bg-gray-100/95 backdrop-blur-xl px-6 py-5 relative">
+              <div className="flex items-center justify-between">
+                {/* Play/Pause Button */}
+                <button
+                  onClick={togglePlayPause}
+                  className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-5 h-5 text-white ml-0.5" />
+                  ) : (
+                    <Play className="w-5 h-5 text-white ml-0.5" />
+                  )}
+                </button>
+
+                {/* Progress Bar */}
+                <div className="w-64 mx-4">
+                  <div className="relative py-2">
+                    <div className="w-full h-1.5 bg-gray-400 rounded-full">
+                      <div className="w-1/3 h-1.5 bg-gray-900 rounded-full"></div>
+                    </div>
+                    <div className="absolute top-1/2 left-1/3 transform -translate-y-1/2 -translate-x-1/2">
+                      <div className="w-4 h-4 bg-gray-900 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Song Duration */}
+                <div className="text-gray-900 text-sm font-medium">
+                  3:24
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

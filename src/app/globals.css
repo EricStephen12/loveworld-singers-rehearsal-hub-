@@ -290,3 +290,48 @@ a {
   outline: none !important;
   text-decoration: none !important;
 }
+
+/* Album Art Breathing Animation */
+@keyframes pulse-gentle {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  50% { 
+    transform: scale(1.02);
+    box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.15), 0 15px 20px -5px rgba(0, 0, 0, 0.08), 0 0 30px rgba(147, 51, 234, 0.2);
+  }
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 3s ease-in-out infinite;
+}
+
+/* FAB Button Running Breath Animation */
+@keyframes fabBreathe {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 15px #9333ea, 0 0 30px #9333ea, 0 0 45px #9333ea;
+    filter: drop-shadow(0 0 6px #9333ea);
+  }
+  25% {
+    transform: scale(1.08);
+    box-shadow: 0 0 25px #a855f7, 0 0 50px #a855f7, 0 0 75px #a855f7;
+    filter: drop-shadow(0 0 10px #a855f7);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 0 35px #c084fc, 0 0 70px #c084fc, 0 0 105px #c084fc;
+    filter: drop-shadow(0 0 14px #c084fc);
+  }
+  75% {
+    transform: scale(1.08);
+    box-shadow: 0 0 25px #a855f7, 0 0 50px #a855f7, 0 0 75px #a855f7;
+    filter: drop-shadow(0 0 10px #a855f7);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px #9333ea, 0 0 30px #9333ea, 0 0 45px #9333ea;
+    filter: drop-shadow(0 0 6px #9333ea);
+  }
+}
