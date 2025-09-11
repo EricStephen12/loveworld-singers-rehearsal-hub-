@@ -1106,7 +1106,7 @@ function TopCarousel() {
           </button>
           
                 <div className="text-center">
-            <span className="text-xs text-gray-600 font-medium">
+            <span className="text-xs text-gray-600 font-black">
               {activeCategory}
             </span>
         </div>
@@ -1155,7 +1155,7 @@ function TopCarousel() {
                      <h3 className="font-medium text-slate-900 text-sm group-hover:text-black leading-tight">
                        {song.title}
           </h3>
-                     <p className="text-xs text-slate-500 mt-0.5 leading-tight">
+                     <p className="text-xs text-slate-500 mt-0.5 leading-tight font-bold">
                        Singer: {song.singer || 'Sarah Johnson'}
                      </p>
         </div>
@@ -1921,13 +1921,16 @@ function TopCarousel() {
       {isSongDetailOpen && selectedSong && activeTab === 'lyrics' && (
         <button
           onClick={() => setIsLyricsFullscreen(!isLyricsFullscreen)}
-          className="fixed bottom-32 right-6 w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center z-[80]"
+          className="fixed bottom-32 right-6 w-12 h-12 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center z-[80] active:scale-95"
+          style={{
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+          }}
           aria-label={isLyricsFullscreen ? "Close fullscreen lyrics" : "Fullscreen lyrics"}
         >
           {isLyricsFullscreen ? (
-            <Minimize2 className="w-4 h-4" />
+            <Minimize2 className="w-5 h-5" />
           ) : (
-            <Maximize2 className="w-4 h-4" />
+            <Maximize2 className="w-5 h-5" />
           )}
         </button>
       )}

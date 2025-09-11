@@ -102,6 +102,12 @@ export default function HomePage() {
 
   const features = [
     {
+      icon: Calendar,
+      title: 'Rehearsals',
+      href: '/pages/rehearsals',
+      badge: null,
+    },
+    {
       icon: User,
       title: 'Profile',
       href: '/pages/profile',
@@ -111,7 +117,7 @@ export default function HomePage() {
       icon: Bell,
       title: 'Push Notifications',
       href: '#',
-      badge: 164,
+      badge: true,
     },
     {
       icon: Users,
@@ -123,12 +129,6 @@ export default function HomePage() {
       icon: Music,
       title: 'Submit Song',
       href: '#',
-      badge: null,
-    },
-    {
-      icon: Calendar,
-      title: 'Rehearsals',
-      href: '/pages/rehearsals',
       badge: null,
     },
     {
@@ -323,22 +323,22 @@ export default function HomePage() {
             <Link
               key={index}
               href={feature.href}
-              className="flex flex-col items-center p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 active:scale-95 active:bg-gray-50"
+              className="group flex flex-col items-center p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 active:bg-gray-50 border border-gray-100/50 hover:border-purple-200/50"
               style={{
                 boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
               }}
             >
               <div className="relative mb-2">
-                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <feature.icon className="w-4 h-4 text-purple-600" />
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-sm">
+                  <feature.icon className="w-4 h-4 text-purple-600 group-hover:text-purple-700 transition-colors duration-300" />
                 </div>
                 {feature.badge && (
-                  <div className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-semibold text-[9px] shadow-sm">
-                    {feature.badge}
+                  <div className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 via-red-500 to-red-600 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center font-bold shadow-xl border-2 border-white animate-pulse">
+                    <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-75"></div>
                   </div>
                 )}
               </div>
-              <span className="text-xs font-poppins-medium text-gray-800 text-center leading-tight">{feature.title}</span>
+              <span className="text-xs font-medium text-gray-800 text-center leading-tight group-hover:text-purple-700 transition-colors duration-300">{feature.title}</span>
             </Link>
           ))}
         </div>

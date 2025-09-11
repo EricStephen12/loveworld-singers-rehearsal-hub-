@@ -83,6 +83,16 @@ export default function RehearsalsPage() {
 
   const rehearsalOptions = [
     {
+      id: 'ongoing-rehearsals',
+      title: 'Ongoing Rehearsals',
+      description: 'Join active rehearsal sessions',
+      icon: Users,
+      href: '/pages/praise-night',
+      gradient: 'from-emerald-600 via-green-600 to-lime-600',
+      iconBg: 'bg-emerald-100',
+      iconColor: 'text-emerald-600'
+    },
+    {
       id: 'vocal-warmups',
       title: 'Vocal Warm-ups',
       description: 'Practice vocal exercises and breathing techniques',
@@ -103,16 +113,6 @@ export default function RehearsalsPage() {
       iconColor: 'text-blue-600'
     },
     {
-      id: 'ongoing-rehearsals',
-      title: 'Ongoing Rehearsals',
-      description: 'Join active rehearsal sessions',
-      icon: Users,
-      href: '/pages/praise-night',
-      gradient: 'from-emerald-600 via-green-600 to-lime-600',
-      iconBg: 'bg-emerald-100',
-      iconColor: 'text-emerald-600'
-    },
-    {
       id: 'rehearsal-reviews',
       title: 'Rehearsal Reviews and Assessments',
       description: 'Review performance and get feedback',
@@ -123,6 +123,16 @@ export default function RehearsalsPage() {
       iconColor: 'text-amber-600'
     },
     {
+      id: 'ministry-review',
+      title: 'Ministry Review and Assessment',
+      description: 'Comprehensive ministry performance evaluation',
+      icon: Users,
+      href: '#',
+      gradient: 'from-indigo-600 via-purple-600 to-pink-600',
+      iconBg: 'bg-indigo-100',
+      iconColor: 'text-indigo-600'
+    },
+    {
       id: 'archives',
       title: 'Archives',
       description: 'Access past rehearsal recordings and materials',
@@ -131,16 +141,6 @@ export default function RehearsalsPage() {
       gradient: 'from-rose-600 via-pink-600 to-purple-600',
       iconBg: 'bg-rose-100',
       iconColor: 'text-rose-600'
-    },
-    {
-      id: 'karaoke',
-      title: 'Karaoke',
-      description: 'Practice songs with instrumental tracks',
-      icon: Bell,
-      href: '#',
-      gradient: 'from-slate-600 via-gray-600 to-zinc-600',
-      iconBg: 'bg-slate-100',
-      iconColor: 'text-slate-600'
     }
   ]
 
@@ -213,7 +213,7 @@ export default function RehearsalsPage() {
 
       </div>
 
-      <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
+      <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems as any} />
     </div>
   )
 }

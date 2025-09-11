@@ -8,7 +8,7 @@ type DrawerItem = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   title: string
   href?: string
-  badge?: number | null
+  badge?: boolean | null
   onClick?: () => void
 }
 
@@ -81,8 +81,9 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items }: S
                   <span className="text-sm font-poppins-medium">{item.title}</span>
                 </div>
                 {item.badge && (
-                  <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-poppins-semibold shadow-sm">
-                    {item.badge}
+                  <div className="relative">
+                    <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-full w-3 h-3 shadow-lg border border-white animate-pulse"></div>
+                    <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-75"></div>
                   </div>
                 )}
               </MenuItem>

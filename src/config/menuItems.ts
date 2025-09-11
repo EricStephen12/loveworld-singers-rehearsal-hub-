@@ -4,7 +4,7 @@ export type MenuItem = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   title: string
   href?: string
-  badge?: number | null
+  badge?: boolean | null
   onClick?: () => void
 }
 
@@ -26,7 +26,7 @@ export const getMenuItems = (onLogout?: () => void): MenuItem[] => [
     icon: Bell,
     title: 'Push Notifications',
     href: '#',
-    badge: 164,
+    badge: true,
   },
   {
     icon: Users,
