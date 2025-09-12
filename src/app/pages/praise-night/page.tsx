@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Maximize2, Minimize2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Maximize2, Minimize2, Heart, Sparkles, CheckCircle, Globe } from "lucide-react";
 import Link from "next/link";
 import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, PraiseNightSong, PraiseNight } from "@/data/praise-night-songs";
 import { offlineManager } from "@/utils/offlineManager";
@@ -170,6 +170,17 @@ export default function PraiseNightPage() {
   const mainCategories = songCategories.slice(0, 3);
   // Categories to keep in FAB (remaining ones)
   const otherCategories = songCategories.slice(3);
+
+  // Icon mapping for categories
+  const categoryIcons = {
+    "New Praise Songs": Music,
+    "New Healing Songs": Heart,
+    "Approved Songs": CheckCircle,
+    "Previously Ministered Songs": BookOpen,
+    "Previously Ministered Healing Songs": Sparkles,
+    "LoveWorld Orchestra": Users,
+    "Praise in Languages": Globe
+  };
 
   // Get centralized song data from the current praise night (client-side only)
   const [centralizedSongs, setCentralizedSongs] = useState<PraiseNightSong[]>([]);
@@ -400,6 +411,7 @@ export default function PraiseNightPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedSongIndex, setSelectedSongIndex] = useState<number | null>(null);
   const [isLyricsFullscreen, setIsLyricsFullscreen] = useState(false);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
   // Filter songs based on selected category and status
   const filteredSongs = finalSongData.filter(song => 
@@ -1211,36 +1223,48 @@ function TopCarousel() {
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
       {/* Bottom Bar with Categories and FAB - Same Row */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-br from-purple-100/80 to-purple-200/80 backdrop-blur-md shadow-sm">
-        <div className="mx-auto max-w-2xl w-full flex items-center justify-center py-4">
-          {/* Category buttons - smaller size */}
-          <div className="flex items-center gap-2">
-            {mainCategories.map((category) => (
-              <button
-                key={category}
-                onClick={() => handleCategorySelect(category)}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all duration-200 ${
-                  activeCategory === category
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-          
-          {/* FAB for Other Categories - Same spacing */}
-          <button
-            onClick={() => setIsCategoryDrawerOpen(true)}
-            className="ml-2 w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
-            style={{
-              boxShadow: '0 8px 20px -4px rgba(147, 51, 234, 0.3), 0 6px 8px -4px rgba(147, 51, 234, 0.1)'
-            }}
-            aria-label="Open other categories"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
+        <div className="w-full flex items-center justify-between px-6 py-4">
+          {/* All buttons spread evenly across screen */}
+          {[...mainCategories, "Other Categories"].map((category, index) => {
+            const isOtherCategories = category === "Other Categories";
+            const IconComponent = isOtherCategories ? Plus : categoryIcons[category as keyof typeof categoryIcons];
+            
+            return (
+              <div key={category} className="relative">
+                <button
+                  onClick={() => isOtherCategories ? setIsCategoryDrawerOpen(true) : handleCategorySelect(category)}
+                  onMouseEnter={() => setHoveredCategory(category)}
+                  onMouseLeave={() => setHoveredCategory(null)}
+                  className={`w-10 h-10 rounded-full transition-all duration-200 flex items-center justify-center ${
+                    isOtherCategories
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-xl active:scale-95'
+                      : activeCategory === category
+                        ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                        : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                  }`}
+                >
+                  <IconComponent className="w-5 h-5" />
+                </button>
+                
+                {/* iOS-style Tooltip */}
+                {hoveredCategory === category && (
+                  <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
+                    left: '50%',
+                    transform: 'translateX(-50%)'
+                  }}>
+                    <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
+                      {category}
+                      {/* iOS-style arrow */}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                        <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
