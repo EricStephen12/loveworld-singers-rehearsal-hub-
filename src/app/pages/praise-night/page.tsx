@@ -877,7 +877,7 @@ function TopCarousel() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         
@@ -1225,46 +1225,57 @@ function TopCarousel() {
       {/* Bottom Bar with Categories and FAB - Same Row */}
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
         <div className="w-full flex items-center justify-between px-6 py-4">
-          {/* All buttons spread evenly across screen */}
-          {[...mainCategories, "Other Categories"].map((category, index) => {
-            const isOtherCategories = category === "Other Categories";
-            const IconComponent = isOtherCategories ? Plus : categoryIcons[category as keyof typeof categoryIcons];
-            
-            return (
-              <div key={category} className="relative">
-                <button
-                  onClick={() => isOtherCategories ? setIsCategoryDrawerOpen(true) : handleCategorySelect(category)}
-                  onMouseEnter={() => setHoveredCategory(category)}
-                  onMouseLeave={() => setHoveredCategory(null)}
-                  className={`w-10 h-10 rounded-full transition-all duration-200 flex items-center justify-center ${
-                    isOtherCategories
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-xl active:scale-95'
-                      : activeCategory === category
-                        ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                        : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                  }`}
-                >
-                  <IconComponent className="w-5 h-5" />
-                </button>
-                
-                {/* iOS-style Tooltip */}
-                {hoveredCategory === category && (
-                  <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
-                    left: '50%',
-                    transform: 'translateX(-50%)'
-                  }}>
-                    <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
-                      {category}
-                      {/* iOS-style arrow */}
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-                        <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
-                      </div>
-                    </div>
-                  </div>
+          {/* Category buttons with text */}
+          {mainCategories.map((category, index) => (
+            <div key={category} className="relative">
+              <button
+                onClick={() => handleCategorySelect(category)}
+                className={`px-1 py-1 rounded-xl text-[8px] font-bold transition-all duration-200 text-center leading-tight max-w-[80px] min-h-[35px] flex items-center justify-center ${
+                  activeCategory === category
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                }`}
+              >
+                {category === "New Praise Songs" ? (
+                  <>New<br />Praise Songs</>
+                ) : category === "New Healing Songs" ? (
+                  <>New<br />Healing Songs</>
+                ) : category === "Approved Songs" ? (
+                  <>Approved<br />Songs</>
+                ) : (
+                  category
                 )}
+              </button>
+            </div>
+          ))}
+          
+          {/* FAB with Plus Icon and Tooltip */}
+          <div className="relative">
+            <button
+              onClick={() => setIsCategoryDrawerOpen(true)}
+              onMouseEnter={() => setHoveredCategory("Other Categories")}
+              onMouseLeave={() => setHoveredCategory(null)}
+              className="w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+            
+            {/* iOS-style Tooltip for FAB */}
+            {hoveredCategory === "Other Categories" && (
+              <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
+                left: '50%',
+                transform: 'translateX(-50%)'
+              }}>
+                <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
+                  Other Categories
+                  {/* iOS-style arrow */}
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                    <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
+                  </div>
+                </div>
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
       </div>
 
