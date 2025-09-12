@@ -17,10 +17,15 @@ export interface PraiseNightSong {
     verse2: string;
     bridge: string;
   };
+  // Song metadata for info sheet
   leadSinger: string;
-  writtenBy: string;
+  writer: string;
+  conductor: string;
   key: string;
   tempo: string;
+  leadKeyboardist: string;
+  leadGuitarist: string;
+  drummer: string;
   comments: Comment[];
 }
 
@@ -51,10 +56,14 @@ const praiseNight25Songs: PraiseNightSong[] = [
       verse2: "Summer and winter, and springtime and harvest\nSun, moon and stars in their courses above\nJoin with all nature in manifold witness\nTo Thy great faithfulness, mercy and love",
       bridge: "Pardon for sin and a peace that endureth\nThine own dear presence to cheer and to guide\nStrength for today and bright hope for tomorrow\nBlessings all mine, with ten thousand beside"
     },
-    leadSinger: "Sarah Johnson",
-    writtenBy: "Pastor Chris Oyakhilome",
-    key: "G Major",
-    tempo: "72 BPM",
+    leadSinger: "TREASURE, lisa, daverock, EliJ, pastor saki, maya",
+    writer: "HYCENT and KRESTHILL",
+    conductor: "UCHE",
+    key: "F",
+    tempo: "64 BPM",
+    leadKeyboardist: "XANO",
+    leadGuitarist: "-",
+    drummer: "-",
     comments: [
       {
         id: "1",

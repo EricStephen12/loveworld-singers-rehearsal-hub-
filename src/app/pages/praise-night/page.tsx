@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Maximize2, Minimize2, Heart, Sparkles, CheckCircle, Globe } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Maximize2, Minimize2, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack } from "lucide-react";
 import Link from "next/link";
 import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, PraiseNightSong, PraiseNight } from "@/data/praise-night-songs";
 import { offlineManager } from "@/utils/offlineManager";
@@ -412,6 +412,7 @@ export default function PraiseNightPage() {
   const [selectedSongIndex, setSelectedSongIndex] = useState<number | null>(null);
   const [isLyricsFullscreen, setIsLyricsFullscreen] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [isInfoSheetOpen, setIsInfoSheetOpen] = useState(false);
 
   // Filter songs based on selected category and status
   const filteredSongs = finalSongData.filter(song => 
@@ -1348,27 +1349,12 @@ function TopCarousel() {
             <div></div>
                   </div>
 
-          {/* Song Cover Art Area */}
-          <div className="flex-shrink-0 px-6 pt-0 pb-4 flex justify-center">
-            <div className="w-64 h-32 bg-gray-100 rounded-xl shadow-lg overflow-hidden relative animate-pulse-gentle">
-              <Image
-                src={getSongImage(selectedSong?.imageIndex || 0)}
-                alt="Album Cover"
-                fill
-                className="object-cover"
-                sizes="256px"
-              />
-              {/* iOS-style glow overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/20 pointer-events-none"></div>
-              <div className="absolute inset-0 shadow-inner rounded-xl pointer-events-none"></div>
-            </div>
-          </div>
 
           {/* Song Title */}
           <div className="flex-shrink-0 px-6 py-2 text-center">
             <h1 className="text-gray-900 text-xl font-semibold">{selectedSong.title}</h1>
-            <p className="text-gray-600 text-sm mt-1">Sarah Johnson</p>
           </div>
+
 
           {/* Tab Navigation */}
           <div className="flex-shrink-0 px-6 py-4">
@@ -1954,42 +1940,58 @@ function TopCarousel() {
             )}
       </div>
 
-          {/* Music Player Controls */}
-          <div className="flex-shrink-0 relative">
-            {/* Fade gradient overlay */}
-            <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white/0 via-white/30 to-white/90 pointer-events-none"></div>
-            
-            <div className="bg-gray-100/95 backdrop-blur-xl px-6 py-5 relative">
-              <div className="flex items-center justify-between">
+          {/* Music Player Controls - Minimal Height with Fade */}
+          <div className="flex-shrink-0 relative z-[90]">
+            <div className="bg-white/20 backdrop-blur-xl shadow-lg px-3 py-1 relative">
+              {/* Progress Bar */}
+              <div className="mb-0.5">
+                <div className="w-full h-0.5 bg-gray-300 rounded-full">
+                  <div className="w-1/3 h-0.5 bg-gray-600 rounded-full"></div>
+                </div>
+                <div className="flex justify-between mt-0.5">
+                  <span className="text-gray-600 text-xs">0:02</span>
+                  <span className="text-gray-600 text-xs">-3:12</span>
+                </div>
+              </div>
+
+              {/* Main Controls */}
+              <div className="flex items-center justify-between mb-0.5">
+                {/* Heart/Like Button */}
+                <button className="w-5 h-5 flex items-center justify-center">
+                  <Heart className="w-4 h-4 text-green-500 fill-green-500" />
+                </button>
+
+                {/* Previous Track */}
+                <button className="w-5 h-5 flex items-center justify-center">
+                  <SkipBack className="w-4 h-4 text-gray-500" />
+                </button>
+
                 {/* Play/Pause Button */}
                 <button
                   onClick={togglePlayPause}
-                  className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl"
+                  className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
                 >
                   {isPlaying ? (
-                    <Pause className="w-5 h-5 text-white ml-0.5" />
+                    <Pause className="w-4 h-4 text-white ml-0.5" />
                   ) : (
-                    <Play className="w-5 h-5 text-white ml-0.5" />
+                    <Play className="w-4 h-4 text-white ml-0.5" />
                   )}
                 </button>
 
-                {/* Progress Bar */}
-                <div className="w-64 mx-4">
-                  <div className="relative py-2">
-                    <div className="w-full h-1.5 bg-gray-400 rounded-full">
-                      <div className="w-1/3 h-1.5 bg-gray-900 rounded-full"></div>
-                    </div>
-                    <div className="absolute top-1/2 left-1/3 transform -translate-y-1/2 -translate-x-1/2">
-                      <div className="w-4 h-4 bg-gray-900 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"></div>
-                    </div>
-                  </div>
-                </div>
+                {/* Next Track */}
+                <button className="w-5 h-5 flex items-center justify-center">
+                  <SkipForward className="w-4 h-4 text-gray-500" />
+                </button>
 
-                {/* Song Duration */}
-                <div className="text-gray-900 text-sm font-medium">
-                  3:24
-                </div>
+                {/* Info Button */}
+                <button
+                  onClick={() => setIsInfoSheetOpen(true)}
+                  className="w-5 h-5 flex items-center justify-center"
+                >
+                  <Info className="w-4 h-4 text-gray-500" />
+                </button>
               </div>
+
             </div>
           </div>
           </div>
@@ -2016,14 +2018,21 @@ function TopCarousel() {
 
       {/* Fullscreen Lyrics Overlay */}
       {isLyricsFullscreen && selectedSong && (
-        <div className="fixed top-0 left-0 right-0 bottom-20 bg-white z-[60] flex flex-col">
-          {/* Header with title only */}
-          <div className="flex-shrink-0 px-6 py-4 flex items-center justify-center border-b border-gray-200">
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-white z-[60] flex flex-col">
+          {/* Header with existing back button */}
+          <div className="flex-shrink-0 px-6 py-4 flex items-center justify-between border-b border-gray-200">
+            <button
+              onClick={() => setIsLyricsFullscreen(false)}
+              className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
             <h2 className="text-lg font-semibold text-gray-900">Lyrics</h2>
+            <div className="w-10"></div> {/* Spacer for centering */}
           </div>
 
           {/* Fullscreen Lyrics Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="flex-1 overflow-y-auto px-6 py-8 pb-20">
             <div className="max-w-4xl mx-auto">
               <div className="text-gray-900 leading-relaxed space-y-6 text-lg">
                 {selectedSong?.lyrics ? (
@@ -2084,6 +2093,137 @@ function TopCarousel() {
                   </>
                 )}
       </div>
+            </div>
+          </div>
+
+          {/* Music Player in Fullscreen */}
+          <div className="flex-shrink-0 relative z-[90]">
+            <div className="bg-white/20 backdrop-blur-xl shadow-lg px-3 py-1 relative">
+              {/* Progress Bar */}
+              <div className="mb-0.5">
+                <div className="w-full h-0.5 bg-gray-300 rounded-full">
+                  <div className="w-1/3 h-0.5 bg-gray-600 rounded-full"></div>
+                </div>
+                <div className="flex justify-between mt-0.5">
+                  <span className="text-gray-600 text-xs">0:02</span>
+                  <span className="text-gray-600 text-xs">-3:12</span>
+                </div>
+              </div>
+
+              {/* Main Controls */}
+              <div className="flex items-center justify-between mb-0.5">
+                {/* Heart/Like Button */}
+                <button className="w-5 h-5 flex items-center justify-center">
+                  <Heart className="w-4 h-4 text-green-500 fill-green-500" />
+                </button>
+
+                {/* Previous Track */}
+                <button className="w-5 h-5 flex items-center justify-center">
+                  <SkipBack className="w-4 h-4 text-gray-500" />
+                </button>
+
+                {/* Play/Pause Button */}
+                <button
+                  onClick={togglePlayPause}
+                  className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-4 h-4 text-white ml-0.5" />
+                  ) : (
+                    <Play className="w-4 h-4 text-white ml-0.5" />
+                  )}
+                </button>
+
+                {/* Next Track */}
+                <button className="w-5 h-5 flex items-center justify-center">
+                  <SkipForward className="w-4 h-4 text-gray-500" />
+                </button>
+
+                {/* Info Button */}
+                <button
+                  onClick={() => setIsInfoSheetOpen(true)}
+                  className="w-5 h-5 flex items-center justify-center"
+                >
+                  <Info className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Song Info Bottom Sheet */}
+      {isInfoSheetOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsInfoSheetOpen(false)}
+          ></div>
+          
+          {/* Bottom Sheet */}
+          <div className="relative w-full bg-white rounded-t-3xl shadow-2xl transform transition-transform duration-300 ease-out">
+            {/* Handle */}
+            <div className="flex justify-center pt-4 pb-2">
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Header */}
+            <div className="px-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Song Information</h3>
+                <button
+                  onClick={() => setIsInfoSheetOpen(false)}
+                  className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-600" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left Column - Lead Singer, Conductor, Lead Keyboardist, Tempo */}
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Lead Singer</div>
+                    <div className="text-sm font-medium text-gray-900">{selectedSong?.leadSinger || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Conductor</div>
+                    <div className="text-sm font-medium text-gray-900">{selectedSong?.conductor || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Lead Keyboardist</div>
+                    <div className="text-sm font-medium text-gray-900">{selectedSong?.leadKeyboardist || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Tempo</div>
+                    <div className="text-sm font-medium text-gray-900">{selectedSong?.tempo || '-'}</div>
+                  </div>
+                </div>
+                
+                {/* Right Column - Writer, Key, Lead Guitarist, Drummer */}
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Writer</div>
+                    <div className="text-sm font-medium text-gray-900">{selectedSong?.writer || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Key</div>
+                    <div className="text-sm font-medium text-gray-900">{selectedSong?.key || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Lead Guitarist</div>
+                    <div className="text-sm font-medium text-gray-900">{selectedSong?.leadGuitarist || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Drummer</div>
+                    <div className="text-sm font-medium text-gray-900">{selectedSong?.drummer || '-'}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
