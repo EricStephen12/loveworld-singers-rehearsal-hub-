@@ -60,7 +60,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#9333ea',
+  themeColor: '#ffffff',
 }
 
 export default function RootLayout({
@@ -76,14 +76,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="152x152" href="/logo.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
         <link rel="apple-touch-icon" sizes="167x167" href="/logo.png" />
-        <meta name="theme-color" content="#9333ea" />
+        <meta name="theme-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="LWSRH" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-navbutton-color" content="#9333ea" />
+        <meta name="msapplication-navbutton-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="msapplication-TileColor" content="#9333ea" />
+        <meta name="msapplication-TileColor" content="#ffffff" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>
       <body className={`${inter.variable} ${poppins.variable} ${outfit.variable} font-sans`}>
