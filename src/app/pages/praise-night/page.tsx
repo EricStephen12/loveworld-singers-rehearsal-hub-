@@ -1230,7 +1230,7 @@ function TopCarousel() {
             <div key={category} className="relative">
               <button
                 onClick={() => handleCategorySelect(category)}
-                className={`px-1 py-1 rounded-xl text-[8px] font-bold transition-all duration-200 text-center leading-tight max-w-[80px] min-h-[35px] flex items-center justify-center ${
+                className={`w-[70px] h-[35px] rounded-xl text-[8px] font-black transition-all duration-200 text-center leading-tight flex items-center justify-center ${
                   activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
@@ -1241,7 +1241,7 @@ function TopCarousel() {
                 ) : category === "New Healing Songs" ? (
                   <>New<br />Healing Songs</>
                 ) : category === "Approved Songs" ? (
-                  <>Approved<br />Songs</>
+                  "Approved Songs"
                 ) : (
                   category
                 )}
