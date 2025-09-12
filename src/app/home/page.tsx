@@ -189,13 +189,15 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Enhanced iOS Style Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
-        <div className="relative">
-          {/* Normal Header Content */}
-          <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
-            isSearchOpen ? 'opacity-0' : 'opacity-100'
-          }`}>
+      {/* Main Content Container with Responsive Max Width */}
+      <div className="mx-auto max-w-2xl">
+        {/* Enhanced iOS Style Header */}
+        <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
+          <div className="relative">
+            {/* Normal Header Content */}
+            <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
+              isSearchOpen ? 'opacity-0' : 'opacity-100'
+            }`}>
             {/* Left Section - Profile Picture */}
             <div className="flex items-center">
               {/* Enhanced Profile Picture with iOS-style border */}
@@ -311,13 +313,13 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Main Title */}
-      <div className="text-center py-6">
-        <h1 className="text-1xl font-bold text-gray-800">LoveWorld Singers Rehearsal Hub Portal</h1>
-      </div>
+        {/* Main Title */}
+        <div className="text-center py-6">
+          <h1 className="text-1xl font-bold text-gray-800">LoveWorld Singers Rehearsal Hub Portal</h1>
+        </div>
 
-      {/* Features Grid */}
-      <div className="px-3 pb-4">
+        {/* Features Grid */}
+        <div className="px-3 pb-4">
         <div className="grid grid-cols-3 gap-2">
           {features.map((feature, index) => (
             <Link
@@ -344,8 +346,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* About Section */}
-      <div className="px-4 pb-6">
+        {/* About Section */}
+        <div className="px-4 pb-6">
         <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
         <div className="space-y-2">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -422,6 +424,7 @@ export default function HomePage() {
             )}
           </div>
         </div>
+      </div>
       </div>
 
       {/* Sliding Drawer */}

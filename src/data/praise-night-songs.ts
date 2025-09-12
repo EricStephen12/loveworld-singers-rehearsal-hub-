@@ -1,4 +1,11 @@
 // Praise Night Songs Data - specific to praise night page
+export interface Comment {
+  id: string;
+  text: string;
+  date: string;
+  author: string;
+}
+
 export interface PraiseNightSong {
   title: string;
   status: 'heard' | 'unheard';
@@ -14,7 +21,7 @@ export interface PraiseNightSong {
   writtenBy: string;
   key: string;
   tempo: string;
-  comments: string;
+  comments: Comment[];
 }
 
 export interface PraiseNight {
@@ -48,7 +55,26 @@ const praiseNight25Songs: PraiseNightSong[] = [
     writtenBy: "Pastor Chris Oyakhilome",
     key: "G Major",
     tempo: "72 BPM",
-    comments: "This song should be sung with deep reverence and heartfelt emotion. Allow the congregation to really feel the weight of God's amazing grace."
+    comments: [
+      {
+        id: "1",
+        text: "This song should be sung with deep reverence and heartfelt emotion. Allow the congregation to really feel the weight of God's amazing grace.",
+        date: "2024-12-15T10:30:00Z",
+        author: "Pastor"
+      },
+      {
+        id: "2", 
+        text: "Focus on the message of redemption and grace. Emphasize the transformation from lost to found. Sing with conviction and personal testimony.",
+        date: "2024-12-14T14:20:00Z",
+        author: "Pastor"
+      },
+      {
+        id: "3",
+        text: "Remember to pause after 'I once was lost' to let the weight of the words settle. This song should minister hope to those who feel lost or broken.",
+        date: "2024-12-13T09:15:00Z",
+        author: "Pastor"
+      }
+    ]
   },
   {
     title: "Victory Chant",
@@ -65,7 +91,20 @@ const praiseNight25Songs: PraiseNightSong[] = [
     writtenBy: "Pastor Chris Oyakhilome",
     key: "D Major",
     tempo: "120 BPM",
-    comments: "We have the victory in Jesus! This song should be sung with power and conviction. Let the congregation feel the triumph."
+    comments: [
+      {
+        id: "4",
+        text: "We have the victory in Jesus! This song should be sung with power and conviction. Let the congregation feel the triumph.",
+        date: "2024-12-16T11:45:00Z",
+        author: "Pastor"
+      },
+      {
+        id: "5",
+        text: "The bridge should be sung with more intimacy. Lower the volume and let the Holy Spirit move through the quieter moments.",
+        date: "2024-12-15T16:20:00Z",
+        author: "Pastor"
+      }
+    ]
   },
   {
     title: "Celebrate Jesus",
@@ -82,7 +121,14 @@ const praiseNight25Songs: PraiseNightSong[] = [
     writtenBy: "Pastor Chris Oyakhilome",
     key: "C Major",
     tempo: "110 BPM",
-    comments: "Celebrate Jesus, celebrate! This is a joyful song that should lift everyone's spirits. Sing with enthusiasm and joy."
+    comments: [
+      {
+        id: "6",
+        text: "Celebrate Jesus, celebrate! This is a joyful song that should lift everyone's spirits. Sing with enthusiasm and joy.",
+        date: "2024-12-17T08:30:00Z",
+        author: "Pastor"
+      }
+    ]
   },
   {
     title: "Shout to the Lord",
@@ -99,7 +145,14 @@ const praiseNight25Songs: PraiseNightSong[] = [
     writtenBy: "Darlene Zschech",
     key: "F Major",
     tempo: "80 BPM",
-    comments: "My Jesus, my Savior, Lord there is none like You. This is a powerful worship song that should be sung with deep reverence and love."
+    comments: [
+      {
+        id: "7",
+        text: "My Jesus, my Savior, Lord there is none like You. This is a powerful worship song that should be sung with deep reverence and love.",
+        date: "2024-12-18T13:15:00Z",
+        author: "Pastor"
+      }
+    ]
   }
 ];
 
@@ -120,7 +173,14 @@ const loveworldSpecialSongs: PraiseNightSong[] = [
     writtenBy: "John Newton",
     key: "G Major",
     tempo: "60 BPM",
-    comments: "Amazing grace, how sweet the sound. This classic hymn should be sung with deep reverence and gratitude."
+    comments: [
+      {
+        id: "8",
+        text: "Amazing grace, how sweet the sound. This classic hymn should be sung with deep reverence and gratitude.",
+        date: "2024-12-19T10:00:00Z",
+        author: "Pastor"
+      }
+    ]
   },
   {
     title: "How Great Thou Art",
@@ -137,7 +197,14 @@ const loveworldSpecialSongs: PraiseNightSong[] = [
     writtenBy: "Stuart Hine",
     key: "C Major",
     tempo: "70 BPM",
-    comments: "O Lord my God, when I in awesome wonder. This powerful hymn should be sung with awe and reverence."
+    comments: [
+      {
+        id: "9",
+        text: "O Lord my God, when I in awesome wonder. This powerful hymn should be sung with awe and reverence.",
+        date: "2024-12-20T15:30:00Z",
+        author: "Pastor"
+      }
+    ]
   }
 ];
 

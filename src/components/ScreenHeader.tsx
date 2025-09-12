@@ -42,8 +42,8 @@ export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', 
           </button>
         </div>
         
-        {/* Center - Title and Timer (centered on mobile, normal on desktop) */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center sm:relative sm:left-auto sm:transform-none">
+        {/* Center - Title and Timer (centered on all screen sizes) */}
+        <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center">
           <button 
             onClick={onTitleClick}
             className={`text-base sm:text-lg font-outfit-semibold text-gray-800 transition-all duration-1000 ease-out delay-200 ${mounted ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-3 scale-90'} ${onTitleClick ? 'hover:text-gray-900 active:scale-95' : 'cursor-default'}`}

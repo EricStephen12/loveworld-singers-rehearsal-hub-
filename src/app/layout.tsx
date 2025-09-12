@@ -86,7 +86,7 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#9333ea" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>
-      <body className={`${inter.variable} ${poppins.variable} ${outfit.variable} font-sans safe-area-top safe-area-bottom safe-area-left safe-area-right`}>
+      <body className={`${inter.variable} ${poppins.variable} ${outfit.variable} font-sans`}>
         <main className="min-h-screen bg-gray-50">
           {children}
         </main>

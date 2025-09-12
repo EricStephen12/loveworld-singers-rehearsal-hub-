@@ -394,6 +394,8 @@ export default function PraiseNightPage() {
   const [isWrittenByExpanded, setIsWrittenByExpanded] = useState(false);
   const [isKeyExpanded, setIsKeyExpanded] = useState(false);
   const [isCommentsExpanded, setIsCommentsExpanded] = useState(false);
+  const [isCommentsExpanded2, setIsCommentsExpanded2] = useState(false);
+  const [isCommentsExpanded3, setIsCommentsExpanded3] = useState(false);
   const [isAudioExpanded, setIsAudioExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedSongIndex, setSelectedSongIndex] = useState<number | null>(null);
@@ -993,7 +995,7 @@ function TopCarousel() {
             className="fixed inset-0 bg-black/20 z-[60]"
             onClick={() => setShowDropdown(false)}
           />
-          <div className="fixed right-3 left-3 sm:right-4 sm:left-auto top-16 sm:top-16 z-[70] w-auto sm:w-64 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden max-h-64 overflow-y-auto">
+          <div className="fixed right-3 left-3 sm:right-4 sm:left-auto top-16 sm:top-16 z-[70] w-auto sm:w-64 max-w-2xl mx-auto sm:mx-0 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden max-h-64 overflow-y-auto">
             {allPraiseNights.map((praiseNight) => (
               <button
                 key={praiseNight.id}
@@ -1010,10 +1012,10 @@ function TopCarousel() {
         </>
       )}
 
-      {/* Animated iOS-style Search Bar (slides from top) */}
+      {/* Animated iOS-style Search Bar (slides from top) - Responsive */}
       <div className={`fixed left-0 right-0 top-0 z-40 transition-transform duration-300 ${isSearchOpen ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200">
-          <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 py-3 flex items-center gap-2">
+          <div className="mx-auto max-w-2xl px-3 sm:px-4 py-3 flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
@@ -1035,7 +1037,8 @@ function TopCarousel() {
               </div>
               </div>
 
-      <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 py-2 sm:py-4 relative">
+      {/* Content Container with Responsive Max Width */}
+      <div className="mx-auto max-w-2xl px-3 sm:px-4 py-2 sm:py-4 relative">
         {/* E-card with embedded switcher below (single image, no slide) */}
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-2 sm:mb-3 max-w-md sm:max-w-lg mx-auto shadow-2xl shadow-black/20 ring-1 ring-black/5 breathe-animation">
           <div className="relative h-35 sm:h-43 md:h-51">
@@ -1164,8 +1167,7 @@ function TopCarousel() {
               <p className="text-sm">Songs will appear here when data is loaded</p>
             </div>
           ) : (
-            filteredSongs.map((song, index) => {
-  return (
+            filteredSongs.map((song, index) => (
               <div
                 key={index}
                 onClick={() => handleSongClick(song, index)}
@@ -1199,18 +1201,18 @@ function TopCarousel() {
                               </div>
                               </div>
               </div>
-            );
-          })
+            ))
           )}
         </div>
         
         {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
-                </div>
+      </div>
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* Bottom Bar with Categories and FAB */}
-      <div className="fixed bottom-6 left-4 right-6 z-30 flex items-center justify-between">
+      {/* Bottom Bar with Categories and FAB - Responsive */}
+      <div className="fixed bottom-6 left-4 right-4 sm:left-6 sm:right-6 z-30 flex items-center justify-center">
+        <div className="mx-auto max-w-2xl w-full flex items-center justify-between">
         {/* All 3 buttons with equal spacing */}
         <div className="flex items-center justify-between w-full gap-4">
           {mainCategories.map((category) => (
@@ -1235,6 +1237,7 @@ function TopCarousel() {
           >
             Other Categories
           </button>
+        </div>
         </div>
       </div>
 
@@ -1281,10 +1284,10 @@ function TopCarousel() {
                     <div className="font-medium text-slate-900 text-sm leading-tight">{category}</div>
                     <div className="text-xs text-slate-500 mt-0.5 leading-tight">
                       {finalSongData.filter(song => song.category === category).length} songs
-                    </div>
+                              </div>
                             </button>
                 ))}
-              </div>
+                              </div>
         </div>
       </div>
         </>
@@ -1293,17 +1296,19 @@ function TopCarousel() {
       {/* Full Screen Song Detail Modal */}
       {isSongDetailOpen && selectedSong && (
         <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          {/* Header */}
-          <div className="flex-shrink-0 px-6 py-2 flex items-center justify-between">
+          {/* Responsive Container */}
+          <div className="mx-auto max-w-2xl w-full flex flex-col h-full">
+            {/* Header */}
+            <div className="flex-shrink-0 px-6 py-2 flex items-center justify-between">
                             <button
               onClick={handleCloseSongDetail}
               className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
             >
               <ChevronLeft className="w-5 h-5 text-gray-900" />
-            </button>
+                            </button>
             <div></div>
             <div></div>
-          </div>
+                  </div>
 
           {/* Song Cover Art Area */}
           <div className="flex-shrink-0 px-6 pt-0 pb-4 flex justify-center">
@@ -1377,8 +1382,8 @@ function TopCarousel() {
                           <div className="space-y-2">
                             {selectedSong.lyrics.verse1.split('\n').map((line: string, index: number) => (
                               <p key={index} className="text-gray-700">{line}</p>
-                            ))}
-                          </div>
+                ))}
+              </div>
                         </>
                       )}
                       
@@ -1432,59 +1437,50 @@ function TopCarousel() {
 
             {activeTab === 'comments' && (
               <div className="space-y-3">
-                {/* Pastor Comment 1 */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-medium">P</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h5 className="font-semibold text-gray-900 text-sm">Pastor</h5>
-                        <span className="text-xs text-gray-500">2 days ago</span>
+                {selectedSong?.comments && selectedSong.comments.length > 0 ? (
+                  // Sort comments by date in descending order (latest first) and display them
+                  selectedSong.comments
+                    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((comment: any) => (
+                      <div key={comment.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-sm font-medium">P</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h5 className="font-semibold text-gray-900 text-sm">{comment.author}</h5>
+                              <span className="text-xs text-gray-500">
+                                {new Date(comment.date).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+        </div>
+                            <p className="text-gray-700 text-sm leading-relaxed">
+                              {comment.text}
+                            </p>
+      </div>
+                        </div>
                       </div>
-                      <p className="text-gray-700 text-sm leading-relaxed">
-                        {selectedSong?.comments || "Focus on the message of redemption and grace. Emphasize the transformation from lost to found. Sing with conviction and personal testimony."}
-                      </p>
+                    ))
+                ) : (
+                  <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-center py-8">
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-500 text-sm">No comments yet</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Pastor Comment 2 */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-medium">P</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h5 className="font-semibold text-gray-900 text-sm">Pastor</h5>
-                        <span className="text-xs text-gray-500">1 day ago</span>
-                      </div>
-                      <p className="text-gray-700 text-sm leading-relaxed">
-                        Remember to pause after "I once was lost" to let the weight of the words settle. This song should minister hope to those who feel lost or broken.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Pastor Comment 3 */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-medium">P</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h5 className="font-semibold text-gray-900 text-sm">Pastor</h5>
-                        <span className="text-xs text-gray-500">3 hours ago</span>
-                      </div>
-                      <p className="text-gray-700 text-sm leading-relaxed">
-                        The bridge should be sung with more intimacy. Lower the volume and let the Holy Spirit move through the quieter moments.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -1796,51 +1792,63 @@ function TopCarousel() {
 
                     {activeHistorySubTab === 'comments' && (
                       <div>
-                        <p className="text-xs text-gray-500 font-bold mb-2 px-2">Sunday, May 5, 2024 • 4:10 PM</p>
-                        <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
-                          <button
-                            onClick={() => setIsCommentsExpanded(!isCommentsExpanded)}
-                            className="w-full p-4 flex items-center justify-between hover:bg-white/20 transition-colors duration-200 rounded-2xl"
-                          >
-                            <span className="text-sm font-medium text-slate-700">Pastor's Historical Comments</span>
-                            {isCommentsExpanded ? (
-                              <ChevronUp className="w-4 h-4 text-slate-500" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4 text-slate-500" />
-                            )}
-                          </button>
-                          
-                          {isCommentsExpanded && (
-                            <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
-                    <div className="space-y-4">
-                                <div>
-                                  <p className="font-semibold text-pink-600 mb-2">Performance Guidelines:</p>
-                                  <p>"{selectedSong?.comments || 'This song should be sung with deep reverence and heartfelt emotion. Allow the congregation to really feel the weight of God\'s amazing grace.'}"</p>
-                    </div>
-                                
-                                <div>
-                                  <p className="font-semibold text-pink-600 mb-2">Spiritual Significance:</p>
-                                  <p>"Every time we sing this song, we're reminded of the transformative power of God's grace. It's not just a song, but a declaration of faith."</p>
-                  </div>
-                                
-                                <div>
-                                  <p className="font-semibold text-pink-600 mb-2">Ministry Impact:</p>
-                                  <p>"This song has touched countless lives during our services. Many have testified of receiving healing and breakthrough while singing these words."</p>
-              </div>
-                                
-                                <div>
-                                  <p className="font-semibold text-pink-600 mb-2">Historical Context:</p>
-                                  <p>"Written during our 2023 Global Day of Prayer, this song captures the heart of our ministry - spreading God's love and grace to all nations."</p>
-          </div>
-                                
-                                <div>
-                                  <p className="font-semibold text-pink-600 mb-2">Special Instructions:</p>
-                                  <p>"During the bridge, encourage the congregation to lift their hands. This is a moment of surrender and worship."</p>
+                        {selectedSong?.comments && selectedSong.comments.length > 0 ? (
+                          selectedSong.comments
+                            .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map((comment: any, index: number) => (
+                              <div key={comment.id}>
+                                <p className="text-xs text-gray-500 font-bold mb-2 px-2">
+                                  {new Date(comment.date).toLocaleDateString('en-US', {
+              weekday: 'long', 
+              month: 'long', 
+              day: 'numeric',
+                                    year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </p>
+                                <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full">
+                                  <button
+                                    onClick={() => {
+                                      if (index === 0) setIsCommentsExpanded(!isCommentsExpanded);
+                                      else if (index === 1) setIsCommentsExpanded2(!isCommentsExpanded2);
+                                      else if (index === 2) setIsCommentsExpanded3(!isCommentsExpanded3);
+                                    }}
+                                    className="w-full p-4 flex items-center justify-between hover:bg-white/20 transition-colors duration-200 rounded-2xl"
+                                  >
+                                    <span className="text-sm font-medium text-slate-700">Pastor's Comment</span>
+                                    {(index === 0 && isCommentsExpanded) || (index === 1 && isCommentsExpanded2) || (index === 2 && isCommentsExpanded3) ? (
+                                      <ChevronUp className="w-4 h-4 text-slate-500" />
+                                    ) : (
+                                      <ChevronDown className="w-4 h-4 text-slate-500" />
+                                    )}
+                                  </button>
+                                  
+                                  {((index === 0 && isCommentsExpanded) || (index === 1 && isCommentsExpanded2) || (index === 2 && isCommentsExpanded3)) && (
+                                    <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed">
+                                      <div className="space-y-3">
+                                        <div>
+                                          <p className="font-semibold text-pink-600 mb-2">Comment:</p>
+                                          <p>"{comment.text}"</p>
         </div>
-      </div>
+                                        <div>
+                                          <p className="font-semibold text-pink-600 mb-2">Author:</p>
+                                          <p>{comment.author}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                        ) : (
+                          <div>
+                            <p className="text-xs text-gray-500 font-bold mb-2 px-2">No comments available</p>
+                            <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm ring-1 ring-black/5 w-full p-4">
+                              <p className="text-sm text-slate-700 text-center">No historical comments for this song yet.</p>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1866,22 +1874,22 @@ function TopCarousel() {
                                 <div>
                                   <p className="font-semibold text-indigo-600 mb-1">Studio Recording:</p>
                                   <p>High-quality studio version (320kbps MP3) - Duration: 4:32</p>
-                                </div>
-                                
+        </div>
+
                                 <div>
                                   <p className="font-semibold text-indigo-600 mb-1">Live Performance:</p>
                                   <p>Praise Night 15 live recording - March 15, 2024 (256kbps MP3)</p>
-                                </div>
-                                
+          </div>
+
                                 <div>
                                   <p className="font-semibold text-indigo-600 mb-1">Rehearsal Version:</p>
                                   <p>Practice recording with vocal guide - April 8, 2024</p>
-                                </div>
-                                
+                </div>
+                
                                 <div>
                                   <p className="font-semibold text-indigo-600 mb-1">Instrumental Track:</p>
                                   <p>Backing track for live performances (WAV format)</p>
-                                </div>
+                    </div>
                                 
                                 <div>
                                   <p className="font-semibold text-indigo-600 mb-1">Acapella Version:</p>
@@ -1946,6 +1954,7 @@ function TopCarousel() {
               </div>
             </div>
           </div>
+          </div>
         </div>
       )}
 
@@ -1987,8 +1996,8 @@ function TopCarousel() {
                         <div className="space-y-3">
                           {selectedSong.lyrics.verse1.split('\n').map((line: string, index: number) => (
                             <p key={index} className="text-gray-700 text-lg leading-relaxed">{line}</p>
-                          ))}
-                        </div>
+                      ))}
+                    </div>
                       </>
                     )}
                     
@@ -1999,7 +2008,7 @@ function TopCarousel() {
                           {selectedSong.lyrics.chorus.split('\n').map((line: string, index: number) => (
                             <p key={index} className="text-gray-700 text-lg leading-relaxed">{line}</p>
                           ))}
-                        </div>
+                  </div>
                       </>
                     )}
                     
@@ -2009,8 +2018,8 @@ function TopCarousel() {
                         <div className="space-y-3">
                           {selectedSong.lyrics.verse2.split('\n').map((line: string, index: number) => (
                             <p key={index} className="text-gray-700 text-lg leading-relaxed">{line}</p>
-                          ))}
-                        </div>
+                ))}
+              </div>
                       </>
                     )}
                     
@@ -2020,8 +2029,8 @@ function TopCarousel() {
                         <div className="space-y-3">
                           {selectedSong.lyrics.bridge.split('\n').map((line: string, index: number) => (
                             <p key={index} className="text-gray-700 text-lg leading-relaxed">{line}</p>
-                          ))}
-                        </div>
+            ))}
+          </div>
                       </>
                     )}
                   </>
@@ -2033,10 +2042,10 @@ function TopCarousel() {
                       <p className="text-gray-700 text-lg leading-relaxed">There is no shadow of turning with Thee</p>
                       <p className="text-gray-700 text-lg leading-relaxed">Thou changest not, Thy compassions they fail not</p>
                       <p className="text-gray-700 text-lg leading-relaxed">As Thou hast been Thou forever wilt be</p>
-                    </div>
+        </div>
                   </>
                 )}
-              </div>
+      </div>
             </div>
           </div>
         </div>
