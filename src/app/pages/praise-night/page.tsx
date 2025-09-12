@@ -159,17 +159,17 @@ export default function PraiseNightPage() {
   const songCategories = [
     "New Praise Songs",
     "New Healing Songs", 
+    "Approved Songs",
     "Previously Ministered Songs",
     "Previously Ministered Healing Songs",
     "LoveWorld Orchestra",
-    "Praise in Languages",
-    "Approved Songs"
+    "Praise in Languages"
   ];
 
-  // Categories to show in horizontal bar (first 2)
-  const mainCategories = songCategories.slice(0, 2);
+  // Categories to show in horizontal bar (first 3)
+  const mainCategories = songCategories.slice(0, 3);
   // Categories to keep in FAB (remaining ones)
-  const otherCategories = songCategories.slice(2);
+  const otherCategories = songCategories.slice(3);
 
   // Get centralized song data from the current praise night (client-side only)
   const [centralizedSongs, setCentralizedSongs] = useState<PraiseNightSong[]>([]);
@@ -1210,34 +1210,37 @@ function TopCarousel() {
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* Bottom Bar with Categories and FAB - Responsive */}
-      <div className="fixed bottom-6 left-4 right-4 sm:left-6 sm:right-6 z-30 flex items-center justify-center">
-        <div className="mx-auto max-w-2xl w-full flex items-center justify-between">
-        {/* All 3 buttons with equal spacing */}
-        <div className="flex items-center justify-between w-full gap-4">
-          {mainCategories.map((category) => (
-            <button
-              key={category}
-              onClick={() => handleCategorySelect(category)}
-              className={`flex-1 px-2 py-1 rounded-full text-xs font-bold transition-all duration-200 ${
-                activeCategory === category
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                  : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
+      {/* Bottom Bar with Categories and FAB - Same Row */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-br from-purple-100/80 to-purple-200/80 backdrop-blur-md shadow-sm">
+        <div className="mx-auto max-w-2xl w-full flex items-center justify-center py-4">
+          {/* Category buttons - smaller size */}
+          <div className="flex items-center gap-2">
+            {mainCategories.map((category) => (
+              <button
+                key={category}
+                onClick={() => handleCategorySelect(category)}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all duration-200 ${
+                  activeCategory === category
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
           
-          {/* Other Categories Button - Same style as category buttons */}
+          {/* FAB for Other Categories - Same spacing */}
           <button
             onClick={() => setIsCategoryDrawerOpen(true)}
-            className="flex-1 px-2 py-1 rounded-full text-xs font-bold transition-all duration-200 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200"
+            className="ml-2 w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
+            style={{
+              boxShadow: '0 8px 20px -4px rgba(147, 51, 234, 0.3), 0 6px 8px -4px rgba(147, 51, 234, 0.1)'
+            }}
             aria-label="Open other categories"
           >
-            Other Categories
+            <Plus className="w-5 h-5" />
           </button>
-        </div>
         </div>
       </div>
 
