@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Poppins, Outfit } from 'next/font/google'
 import './globals.css'
 import PWAInstall from '@/components/PWAInstall'
+import { AudioProvider } from '@/contexts/AudioContext'
+import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -87,10 +89,13 @@ export default function RootLayout({
         <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>
       <body className={`${inter.variable} ${poppins.variable} ${outfit.variable} font-sans`}>
-        <main className="min-h-screen bg-gray-50">
-          {children}
-        </main>
-        <PWAInstall />
+        <AudioProvider>
+          <main className="min-h-screen bg-gray-50">
+            {children}
+          </main>
+          <PWAInstall />
+          <GlobalMiniPlayer />
+        </AudioProvider>
       </body>
     </html>
   )

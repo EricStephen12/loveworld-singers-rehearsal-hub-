@@ -10,11 +10,12 @@ type ScreenHeaderProps = {
   rightImageSrc?: string
   showDivider?: boolean
   rightButtons?: React.ReactNode
+  leftButtons?: React.ReactNode
   onTitleClick?: () => void
   timer?: React.ReactNode
 }
 
-export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', showDivider = true, rightButtons, onTitleClick, timer }: ScreenHeaderProps) {
+export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', showDivider = true, rightButtons, leftButtons, onTitleClick, timer }: ScreenHeaderProps) {
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
 
@@ -30,8 +31,8 @@ export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', 
   return (
     <div className={`sticky top-0 z-50 bg-white/80 backdrop-blur-xl ${showDivider ? 'border-b border-gray-100/50' : ''}`}>
       <div className="flex items-center justify-between p-4 relative">
-        {/* Left side - Menu button */}
-        <div className="flex items-center">
+        {/* Left side - Menu button and left buttons */}
+        <div className="flex items-center space-x-2">
           <button 
             onClick={onMenuClick}
             className={`flex items-center p-2 rounded-lg transition-all duration-1000 ease-out focus:outline-none focus:ring-0 focus:border-0 hover:bg-gray-100 ${mounted ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-4 scale-75'}`}
@@ -40,6 +41,11 @@ export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', 
           >
             <Menu className="w-5 h-5 text-gray-600" />
           </button>
+          {leftButtons && (
+            <div className={`transition-all duration-1000 ease-out ${mounted ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-4 scale-75'}`}>
+              {leftButtons}
+            </div>
+          )}
         </div>
         
         {/* Center - Title and Timer (centered on all screen sizes) */}
