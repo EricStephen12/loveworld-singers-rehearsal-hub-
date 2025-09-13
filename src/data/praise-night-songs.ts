@@ -138,6 +138,7 @@ const praiseNight25Songs: PraiseNightSong[] = [
     leadKeyboardist: "XANO",
     leadGuitarist: "JAMES",
     drummer: "PETER",
+    audioFile: "/audio/YOUR_DOMINION_IS_FOR_ETERNITY_ENIOLA(2).mp3",
     comments: [
       {
         id: "6",
@@ -165,6 +166,7 @@ const praiseNight25Songs: PraiseNightSong[] = [
     leadKeyboardist: "XANO",
     leadGuitarist: "JAMES",
     drummer: "PETER",
+    audioFile: "/audio/Forsaken_Epic_Trailer_Music_No_Copyright.mp3",
     comments: [
       {
         id: "7",
@@ -196,6 +198,7 @@ const loveworldSpecialSongs: PraiseNightSong[] = [
     leadKeyboardist: "XANO",
     leadGuitarist: "JAMES",
     drummer: "PETER",
+    audioFile: "/audio/YOUR_DOMINION_IS_FOR_ETERNITY_ENIOLA(2).mp3",
     comments: [
       {
         id: "8",
@@ -223,6 +226,7 @@ const loveworldSpecialSongs: PraiseNightSong[] = [
     leadKeyboardist: "XANO",
     leadGuitarist: "JAMES",
     drummer: "PETER",
+    audioFile: "/audio/Forsaken_Epic_Trailer_Music_No_Copyright.mp3",
     comments: [
       {
         id: "9",

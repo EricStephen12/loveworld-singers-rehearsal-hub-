@@ -26,7 +26,7 @@ export default function GlobalMiniPlayer() {
   // Show mini player only when:
   // 1. There's a current song
   // 2. Song detail modal is NOT open
-  // 3. Song has audio (is playing or paused)
+  // 3. Song has audio file
   React.useEffect(() => {
     if (currentSong && !isSongDetailOpen && currentSong.audioFile && currentSong.audioFile.trim() !== '') {
       setShowMiniPlayer(true);

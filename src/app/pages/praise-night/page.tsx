@@ -11,6 +11,7 @@ import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer,
 import SongDetailModal from "@/components/SongDetailModal";
 import Link from "next/link";
 import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, PraiseNightSong, PraiseNight } from "@/data/praise-night-songs";
+import { categoryManager } from "@/data/categories";
 import { offlineManager } from "@/utils/offlineManager";
 import ScreenHeader from "@/components/ScreenHeader";
 import SharedDrawer from "@/components/SharedDrawer";
@@ -25,7 +26,7 @@ export default function PraiseNightPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   // Audio context
-  const { setCurrentSong } = useAudio();
+  const { setCurrentSong, play } = useAudio();
   
   // Add missing state variables that are used but not defined
   const [activeTab, setActiveTab] = useState('lyrics');
@@ -138,12 +139,31 @@ export default function PraiseNightPage() {
     setIsCategoryDrawerOpen(false);
   };
 
-  // Handle song card click
+  // Handle song card click - opens song detail modal
   const handleSongClick = (song: any, index: number) => {
     setSelectedSongIndex(index); // Set the selected song index
     setSelectedSong({...song, imageIndex: index});
     setIsSongDetailOpen(true);
-    setCurrentSong(song); // Set the current song in global audio context
+    setCurrentSong(song, false); // Set the current song in global audio context
+    
+    // Dispatch event to hide mini player
+    window.dispatchEvent(new CustomEvent('songDetailOpen'));
+  };
+
+  // Handle song card click when outside modal - opens modal AND starts playing
+  const handleSongSwitch = (song: any, index: number) => {
+    setSelectedSongIndex(index); // Set the selected song index
+    setSelectedSong({...song, imageIndex: index});
+    setIsSongDetailOpen(true);
+    
+    // Set the current song with auto-play enabled (only if it has audio)
+    if (song.audioFile && song.audioFile.trim() !== '') {
+      console.log('Setting song with auto-play:', song.title);
+      setCurrentSong(song, true); // Enable auto-play
+    } else {
+      console.log('Song has no audio file, setting without auto-play:', song.title);
+      setCurrentSong(song, false); // No auto-play
+    }
     
     // Dispatch event to hide mini player
     window.dispatchEvent(new CustomEvent('songDetailOpen'));
@@ -170,7 +190,7 @@ export default function PraiseNightPage() {
   const handleCloseSongDetail = () => {
     setIsSongDetailOpen(false);
     setSelectedSong(null);
-    
+
     // Dispatch event to show mini player (if song is playing)
     window.dispatchEvent(new CustomEvent('songDetailClose'));
   };
@@ -182,31 +202,32 @@ export default function PraiseNightPage() {
     return num < 10 ? `0${num}` : num.toString();
   }
 
-  // Song categories
-  const songCategories = [
-    "New Praise Songs",
-    "New Healing Songs", 
-    "Previously Ministered Songs",
-    "Approved Songs",
-    "Previously Ministered Healing Songs",
-    "LoveWorld Orchestra",
-    "Praise in Languages"
-  ];
+  // Song categories - now using category manager
+  const songCategories = categoryManager.getCategoryNames();
 
   // Categories to show in horizontal bar (first 2)
   const mainCategories = songCategories.slice(0, 2);
   // Categories to keep in FAB (remaining ones)
   const otherCategories = songCategories.slice(2);
 
-  // Icon mapping for categories
-  const categoryIcons = {
-    "New Praise Songs": Music,
-    "New Healing Songs": Heart,
-    "Approved Songs": CheckCircle,
-    "Previously Ministered Songs": BookOpen,
-    "Previously Ministered Healing Songs": Sparkles,
-    "LoveWorld Orchestra": Users,
-    "Praise in Languages": Globe
+  // Icon mapping for categories - now using category manager
+  const getCategoryIcon = (categoryName: string) => {
+    const category = categoryManager.getCategoryByName(categoryName);
+    if (!category?.icon) return Music; // Default icon
+    
+    // Map icon names to actual icon components
+    const iconMap: { [key: string]: any } = {
+      "Music": Music,
+      "Heart": Heart,
+      "CheckCircle": CheckCircle,
+      "BookOpen": BookOpen,
+      "Sparkles": Sparkles,
+      "Users": Users,
+      "Globe": Globe,
+      "Star": Sparkles // Using Sparkles as Star alternative
+    };
+    
+    return iconMap[category.icon] || Music;
   };
 
   // Get centralized song data from the current praise night (client-side only)
@@ -630,7 +651,10 @@ export default function PraiseNightPage() {
             filteredSongs.map((song, index) => (
               <div
                 key={index}
-                onClick={() => handleSongClick(song, index)}
+                onClick={() => {
+                  // Always open modal and start playing
+                  handleSongSwitch(song, index);
+                }}
                 className={`bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group mb-3 w-full cursor-pointer ${
                   selectedSongIndex === index 
                     ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-200/50 bg-purple-50/30' 
@@ -783,9 +807,10 @@ export default function PraiseNightPage() {
           selectedSong={selectedSong} 
           isOpen={isSongDetailOpen} 
           onClose={handleCloseSongDetail}
+          currentFilter={activeFilter}
           onSongChange={(newSong) => {
             setSelectedSong(newSong);
-            setCurrentSong(newSong);
+            setCurrentSong(newSong, false);
           }}
         />
       )}

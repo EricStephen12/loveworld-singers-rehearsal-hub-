@@ -10,9 +10,10 @@ interface SongDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSongChange?: (song: PraiseNightSong) => void;
+  currentFilter?: 'heard' | 'unheard'; // Add current filter prop
 }
 
-export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongChange }: SongDetailModalProps) {
+export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongChange, currentFilter = 'heard' }: SongDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'lyrics' | 'solfas' | 'comments' | 'history'>('lyrics');
   const [isRepeating, setIsRepeating] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
@@ -94,16 +95,18 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
   };
 
   useEffect(() => {
-    // Load songs from the same category and find current song index
+    // Load songs from the same category AND current filter, find current song index
     if (selectedSong) {
       const allSongs = getCurrentSongs();
-      const songsInCategory = allSongs.filter(song => song.category === selectedSong.category);
+      const songsInCategory = allSongs.filter(song => 
+        song.category === selectedSong.category && song.status === currentFilter
+      );
       setCategorySongs(songsInCategory);
       
       const index = songsInCategory.findIndex(song => song.title === selectedSong.title);
       setCurrentSongIndex(index >= 0 ? index : 0);
     }
-  }, [selectedSong]);
+  }, [selectedSong, currentFilter]);
 
 
   if (!isOpen || !selectedSong) return null;
