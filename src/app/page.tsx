@@ -1,32 +1,45 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function SplashPage() {
   const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     // Check authentication status and redirect accordingly
     const checkAuthAndRedirect = () => {
-      const authStatus = localStorage.getItem('isAuthenticated')
-      const hasCompletedProfile = localStorage.getItem('hasCompletedProfile')
-      const hasSubscribed = localStorage.getItem('hasSubscribed')
-      
-      if (authStatus === 'true' && hasCompletedProfile === 'true' && hasSubscribed === 'true') {
-        // User is fully authenticated, go to home
-        router.push('/home')
-      } else {
-        // User needs to authenticate, go to auth
+      try {
+        const authStatus = localStorage.getItem('isAuthenticated')
+        const hasCompletedProfile = localStorage.getItem('hasCompletedProfile')
+        const hasSubscribed = localStorage.getItem('hasSubscribed')
+        
+        if (authStatus === 'true' && hasCompletedProfile === 'true' && hasSubscribed === 'true') {
+          // User is fully authenticated, go to home
+          router.push('/home')
+        } else {
+          // User needs to authenticate, go to auth
+          router.push('/auth')
+        }
+      } catch (error) {
+        // If localStorage fails, go to auth
         router.push('/auth')
       }
     }
 
-    // Show splash for 2 seconds then redirect
-    const timer = setTimeout(checkAuthAndRedirect, 2000)
+    // Show splash for minimum 2 seconds then redirect
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+      checkAuthAndRedirect()
+    }, 2000)
 
     return () => clearTimeout(timer)
   }, [router])
+
+  if (!isLoading) {
+    return null // Prevent flash during navigation
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center">
@@ -51,7 +64,7 @@ export default function SplashPage() {
             animationTimingFunction: 'ease-in-out'
           }}
         />
-        </div>
+      </div>
     </div>
   )
 }
