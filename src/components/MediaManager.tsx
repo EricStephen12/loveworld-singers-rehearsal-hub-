@@ -508,7 +508,7 @@ export default function MediaManager({
       </div>
 
       {/* Files Grid/List */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {uploading && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-blue-700 text-sm">Uploading files...</p>

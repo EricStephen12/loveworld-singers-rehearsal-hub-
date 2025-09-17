@@ -31,6 +31,7 @@ export interface PraiseNightSong {
   drummer?: string;
   lyrics?: string;
   solfas?: string;
+  rehearsalCount?: number; // Manual rehearsal count
   audioFile?: string;
   mediaId?: number; // Reference to media table for uploaded audio files
   comments: Comment[];

@@ -996,7 +996,7 @@ function PraiseNightPageContent() {
                         {/* Rehearsal Count */}
                         <div className="px-2 py-1 bg-purple-100 rounded-full">
                           <span className="text-xs font-bold text-purple-600">
-                            x{(song.history?.filter(entry => entry.type === 'metadata').length || 0) + 1}
+                            x{song.rehearsalCount || 1}
                           </span>
                         </div>
                         <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-slate-200 transition-colors">

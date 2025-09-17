@@ -74,6 +74,21 @@ export default function EditSongModal({
     setShowMediaManager(false);
   };
 
+  // Helper function to convert HTML to plain text
+  const htmlToPlainText = (html: string) => {
+    if (!html) return '';
+    // Create a temporary div to parse HTML and extract text
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
+
+  // Helper function to convert plain text to HTML (preserve line breaks)
+  const plainTextToHtml = (text: string) => {
+    if (!text) return '';
+    return text.replace(/\n/g, '<br>');
+  };
+
   // Initialize form when song changes
   useEffect(() => {
     if (song) {
@@ -92,20 +107,19 @@ export default function EditSongModal({
       setSongLeadKeyboardist(song.leadKeyboardist || '');
       setSongLeadGuitarist(song.leadGuitarist || '');
       setSongDrummer(song.drummer || '');
-      setSongSolfas(song.solfas || '');
       setSongHistory('');
       setSongAudioFile(song.audioFile || '');
       setAudioFile(null); // Reset file object when editing existing song
       
-      // Set lyrics directly (already in HTML format)
-      setSongLyrics(song.lyrics || '');
+      // Convert HTML to plain text for editing
+      setSongLyrics(htmlToPlainText(song.lyrics || ''));
+      setSongSolfas(htmlToPlainText(song.solfas || ''));
       
       setSongComments(song.comments);
       setNewComment('');
       
-      // Calculate rehearsal count from metadata history
-      const metadataCount = song.history?.filter(entry => entry.type === 'metadata').length || 0;
-      setRehearsalCount(metadataCount + 1);
+      // Load rehearsal count from song data, default to 1 if not set
+      setRehearsalCount(song.rehearsalCount || 1);
     } else {
       // Adding new song - reset all form fields to empty/default values
       setSongTitle('');
@@ -156,7 +170,7 @@ export default function EditSongModal({
         status: songStatus,
         category: songCategory,
         praiseNightId: selectedPraiseNight?.id,
-        lyrics: songLyrics, // Save as HTML string
+        lyrics: plainTextToHtml(songLyrics), // Convert plain text to HTML for storage
         leadSinger: songLeadSinger,
         writer: songWriter,
         conductor: songConductor,
@@ -165,7 +179,8 @@ export default function EditSongModal({
         leadKeyboardist: songLeadKeyboardist,
         leadGuitarist: songLeadGuitarist,
         drummer: songDrummer,
-        solfas: songSolfas, // Save as HTML string
+        solfas: plainTextToHtml(songSolfas), // Convert plain text to HTML for storage
+        rehearsalCount: rehearsalCount, // Save rehearsal count to database
         comments: songComments,
         audioFile: finalAudioFile,
         mediaId: audioFile ? parseInt(audioFile.id) : undefined, // Store media ID for database relationship (convert string to number)
@@ -190,21 +205,7 @@ export default function EditSongModal({
       if (song) {
         const newHistoryEntries = [];
 
-        // Check for rehearsal count changes
-        const currentRehearsalCount = (song.history?.filter(entry => entry.type === 'metadata').length || 0) + 1;
-        if (rehearsalCount > currentRehearsalCount) {
-          // Add new rehearsal entries for the difference
-          const newRehearsals = rehearsalCount - currentRehearsalCount;
-          for (let i = 0; i < newRehearsals; i++) {
-            newHistoryEntries.push({
-              id: `metadata-${Date.now()}-${i}`,
-              type: 'metadata' as const,
-              content: `Rehearsal #${currentRehearsalCount + i + 1} - Practice session`,
-              date: new Date().toISOString(),
-              version: currentRehearsalCount + i + 1
-            });
-          }
-        }
+        // Rehearsal count is now just a display field - no automatic history entries
 
         // Check for metadata changes
         if (song.leadSinger !== songLeadSinger ||
@@ -237,25 +238,27 @@ export default function EditSongModal({
           });
         }
 
-        // Check for lyrics changes
-        if (song.lyrics !== songLyrics) {
+        // Check for lyrics changes (compare HTML versions)
+        const newLyricsHtml = plainTextToHtml(songLyrics);
+        if (song.lyrics !== newLyricsHtml) {
           console.log('🎵 Lyrics changed, adding history entry');
           newHistoryEntries.push({
             id: `lyrics-${Date.now()}`,
             type: 'lyrics' as const,
-            content: songLyrics,
+            content: newLyricsHtml,
             date: new Date().toISOString(),
             version: (song.history?.filter(entry => entry.type === 'lyrics').length || 0) + 1
           });
         }
 
-        // Check for solfas changes
-        if (song.solfas !== songSolfas) {
+        // Check for solfas changes (compare HTML versions)
+        const newSolfasHtml = plainTextToHtml(songSolfas);
+        if (song.solfas !== newSolfasHtml) {
           console.log('🎵 Solfas changed, adding history entry');
           newHistoryEntries.push({
             id: `solfas-${Date.now()}`,
             type: 'solfas' as const,
-            content: songSolfas,
+            content: newSolfasHtml,
             date: new Date().toISOString(),
             version: (song.history?.filter(entry => entry.type === 'solfas').length || 0) + 1
           });
@@ -358,36 +361,8 @@ export default function EditSongModal({
   return (
     <>
       <style jsx>{`
-        [contenteditable]:empty:before {
-          content: attr(data-placeholder);
-          color: #94a3b8;
-          pointer-events: none;
-        }
-        [contenteditable]:focus:before {
-          content: none;
-        }
-        .rich-editor {
-          min-height: 400px;
-          outline: none;
-        }
-        .rich-editor:focus {
-          outline: none;
-        }
-        .rich-editor h3 {
-          font-weight: 600;
-          margin: 1rem 0 0.5rem 0;
-          color: #374151;
-        }
-        .rich-editor p {
-          margin: 0.5rem 0;
-          line-height: 1.6;
-        }
-        .rich-editor ul, .rich-editor ol {
-          margin: 0.5rem 0;
-          padding-left: 1.5rem;
-        }
-        .rich-editor li {
-          margin: 0.25rem 0;
+        .hide-toolbar {
+          display: none !important;
         }
       `}</style>
       
@@ -428,6 +403,23 @@ export default function EditSongModal({
                           type="text"
                           value={songTitle}
                           onChange={(e) => setSongTitle(e.target.value)}
+                          onPaste={(e) => {
+                            e.preventDefault();
+                            const clipboardData = e.clipboardData || (window as any).clipboardData;
+                            const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
+                            const target = e.target as HTMLInputElement;
+                            const start = target.selectionStart || 0;
+                            const end = target.selectionEnd || 0;
+                            const currentValue = songTitle;
+                            const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
+                            setSongTitle(newValue);
+                            // Set cursor position after pasted text
+                            setTimeout(() => {
+                              target.selectionStart = target.selectionEnd = start + pastedText.length;
+                            }, 0);
+                          }}
+                          dir="ltr"
+                          style={{ textAlign: 'left', direction: 'ltr' }}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 text-lg font-medium"
                           placeholder="Enter song title"
                         />
@@ -515,15 +507,15 @@ export default function EditSongModal({
 
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Rehearsal Count
+                          Rehearsal Count (Manual)
                         </label>
                         <input
                           type="number"
-                          min="1"
+                          min="0"
                           value={rehearsalCount}
-                          onChange={(e) => setRehearsalCount(parseInt(e.target.value) || 1)}
+                          onChange={(e) => setRehearsalCount(parseInt(e.target.value) || 0)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                          placeholder="e.g., 3"
+                          placeholder="Enter rehearsal count manually"
                         />
                       </div>
                     </div>
@@ -721,8 +713,11 @@ export default function EditSongModal({
                       </h4>
                     </div>
                     <div className="p-4 sm:p-6">
-                      {/* Rich Text Editor Toolbar */}
-                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                      {/* Plain Text Editor - No formatting toolbar needed */}
+                      <div className="mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
+                        Plain text editor - Type your lyrics naturally
+                      </div>
+                      <div className="hide-toolbar flex flex-wrap items-center gap-1 sm:gap-2 mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
                         <button
                           type="button"
                           onClick={() => document.execCommand('bold')}
@@ -800,14 +795,34 @@ export default function EditSongModal({
                       </div>
                       
                       <div className="relative">
-                        <div
+                        <textarea
                           id="lyrics-editor"
-                          contentEditable
-                          suppressContentEditableWarning={true}
-                          onInput={(e) => setSongLyrics(e.currentTarget.innerHTML)}
-                          dangerouslySetInnerHTML={{ __html: songLyrics }}
-                          className="rich-editor w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 text-sm leading-relaxed resize-none"
-                          data-placeholder="Enter complete song lyrics here...
+                          value={songLyrics} // Now contains plain text
+                          onChange={(e) => setSongLyrics(e.target.value)}
+                          onPaste={(e) => {
+                            e.preventDefault();
+                            const clipboardData = e.clipboardData || (window as any).clipboardData;
+                            const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
+                            const target = e.target as HTMLTextAreaElement;
+                            const start = target.selectionStart || 0;
+                            const end = target.selectionEnd || 0;
+                            const currentValue = songLyrics;
+                            const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
+                            setSongLyrics(newValue);
+                            // Set cursor position after pasted text
+                            setTimeout(() => {
+                              target.selectionStart = target.selectionEnd = start + pastedText.length;
+                            }, 0);
+                          }}
+                          dir="ltr"
+                          style={{ 
+                            textAlign: 'left', 
+                            direction: 'ltr',
+                            minHeight: '400px',
+                            resize: 'vertical'
+                          }}
+                          className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 text-sm leading-relaxed"
+                          placeholder="Enter complete song lyrics here...
 
 Example:
 Verse 1:
@@ -823,7 +838,7 @@ Bridge:
 [Your bridge lyrics here]"
                         />
                         <div className="absolute bottom-3 right-3 text-xs text-slate-400 bg-white px-2 py-1 rounded">
-                          {songLyrics.replace(/<[^>]*>/g, '').length} characters
+                          {songLyrics.length} characters
                         </div>
                       </div>
                     </div>
@@ -838,8 +853,11 @@ Bridge:
                       </h4>
                     </div>
                     <div className="p-4 sm:p-6">
-                      {/* Rich Text Editor Toolbar */}
-                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                      {/* Plain Text Editor - No formatting toolbar needed */}
+                      <div className="mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
+                        Plain text editor - Type your solfas naturally
+                      </div>
+                      <div className="hide-toolbar flex flex-wrap items-center gap-1 sm:gap-2 mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
                         <button
                           type="button"
                           onClick={() => document.execCommand('bold')}
@@ -917,15 +935,34 @@ Bridge:
                       </div>
                       
                       <div className="relative">
-                        <div
+                        <textarea
                           id="solfas-editor"
-                          contentEditable
-                          suppressContentEditableWarning={true}
-                          onInput={(e) => setSongSolfas(e.currentTarget.innerHTML)}
-                          dangerouslySetInnerHTML={{ __html: songSolfas }}
-                          className="rich-editor w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 text-sm leading-relaxed resize-none font-mono"
-                          style={{ minHeight: '300px' }}
-                          data-placeholder="Enter solfas notation here...
+                          value={songSolfas} // Now contains plain text
+                          onChange={(e) => setSongSolfas(e.target.value)}
+                          onPaste={(e) => {
+                            e.preventDefault();
+                            const clipboardData = e.clipboardData || (window as any).clipboardData;
+                            const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
+                            const target = e.target as HTMLTextAreaElement;
+                            const start = target.selectionStart || 0;
+                            const end = target.selectionEnd || 0;
+                            const currentValue = songSolfas;
+                            const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
+                            setSongSolfas(newValue);
+                            // Set cursor position after pasted text
+                            setTimeout(() => {
+                              target.selectionStart = target.selectionEnd = start + pastedText.length;
+                            }, 0);
+                          }}
+                          dir="ltr"
+                          style={{ 
+                            textAlign: 'left', 
+                            direction: 'ltr',
+                            minHeight: '300px',
+                            resize: 'vertical'
+                          }}
+                          className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 text-sm leading-relaxed font-mono"
+                          placeholder="Enter solfas notation here...
 
 Example:
 Do Re Mi Fa Sol La Ti Do
@@ -937,7 +974,7 @@ Do Re Mi Fa Sol La Ti Do
 Do Re Mi Fa Sol La Ti Do"
                         />
                         <div className="absolute bottom-3 right-3 text-xs text-slate-400 bg-white px-2 py-1 rounded">
-                          {songSolfas.replace(/<[^>]*>/g, '').length} characters
+                          {songSolfas.length} characters
                         </div>
                       </div>
                     </div>
@@ -963,7 +1000,24 @@ Do Re Mi Fa Sol La Ti Do"
                             <textarea
                               value={newComment}
                               onChange={(e) => setNewComment(e.target.value)}
+                              onPaste={(e) => {
+                                e.preventDefault();
+                                const clipboardData = e.clipboardData || (window as any).clipboardData;
+                                const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
+                                const target = e.target as HTMLTextAreaElement;
+                                const start = target.selectionStart;
+                                const end = target.selectionEnd;
+                                const currentValue = newComment;
+                                const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
+                                setNewComment(newValue);
+                                // Set cursor position after pasted text
+                                setTimeout(() => {
+                                  target.selectionStart = target.selectionEnd = start + pastedText.length;
+                                }, 0);
+                              }}
                               rows={3}
+                              dir="ltr"
+                              style={{ textAlign: 'left', direction: 'ltr' }}
                               className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 resize-none"
                               placeholder="Add a new comment..."
                             />

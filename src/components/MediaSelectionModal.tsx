@@ -43,7 +43,7 @@ export default function MediaSelectionModal({
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden h-full">
           <MediaManager
             onSelectFile={(file) => {
               onFileSelect(file);

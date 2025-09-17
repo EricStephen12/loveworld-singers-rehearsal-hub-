@@ -479,37 +479,23 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
               <h1 className="text-white text-xl font-black text-center mb-4 font-poppins uppercase">{selectedSong.title}</h1>
               <div className="text-white text-sm space-y-1 font-poppins">
                 <div className="border-b border-white/30 pb-1">
-                  <span className="font-semibold uppercase">LEAD SINGER:</span> {selectedSong?.leadSinger || 'Unknown Artist'}
+                  <span className="font-semibold uppercase">LEAD SINGER:</span> {selectedSong?.leadSinger || ''}
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  {selectedSong?.writer && (
-                    <span><span className="font-semibold uppercase">WRITER:</span> {selectedSong.writer}</span>
-                  )}
-                  <span className="font-bold">x{(selectedSong?.history?.filter(entry => entry.type === 'metadata').length || 0) + 1}</span>
+                  <span><span className="font-semibold uppercase">WRITER:</span> {selectedSong?.writer || ''}</span>
+                  <span className="font-bold">x{selectedSong?.rehearsalCount || 1}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  {selectedSong?.conductor && (
-                    <span><span className="font-semibold uppercase">CONDUCTOR:</span> {selectedSong.conductor}</span>
-                  )}
-                  {selectedSong?.key && (
-                    <span><span className="font-semibold uppercase">KEY:</span> {selectedSong.key}</span>
-                  )}
+                  <span><span className="font-semibold uppercase">CONDUCTOR:</span> {selectedSong?.conductor || ''}</span>
+                  <span><span className="font-semibold uppercase">KEY:</span> {selectedSong?.key || ''}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  {selectedSong?.leadKeyboardist && (
-                    <span><span className="font-semibold uppercase">LEAD KEYBOARDIST:</span> {selectedSong.leadKeyboardist}</span>
-                  )}
-                  {selectedSong?.tempo && (
-                    <span><span className="font-semibold uppercase">TEMPO:</span> {selectedSong.tempo}</span>
-                  )}
+                  <span><span className="font-semibold uppercase">LEAD KEYBOARDIST:</span> {selectedSong?.leadKeyboardist || ''}</span>
+                  <span><span className="font-semibold uppercase">TEMPO:</span> {selectedSong?.tempo || ''}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  {selectedSong?.drummer !== undefined && (
-                    <span><span className="font-semibold uppercase">DRUMMER:</span> {selectedSong.drummer}</span>
-                  )}
-                  {selectedSong?.leadGuitarist !== undefined && (
-                    <span><span className="font-semibold uppercase">LEAD GUITARIST:</span> {selectedSong.leadGuitarist}</span>
-                  )}
+                  <span><span className="font-semibold uppercase">DRUMMER:</span> {selectedSong?.drummer || ''}</span>
+                  <span><span className="font-semibold uppercase">LEAD GUITARIST:</span> {selectedSong?.leadGuitarist || ''}</span>
                 </div>
               </div>
             </div>
@@ -581,9 +567,12 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                 {selectedSong?.lyrics ? (
                   <div 
                     dangerouslySetInnerHTML={{ __html: selectedSong.lyrics }}
+                    dir="ltr"
                     style={{
                       lineHeight: '1.8',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      textAlign: 'left',
+                      direction: 'ltr'
                     }}
                   />
                 ) : (
@@ -602,11 +591,14 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                 {selectedSong?.solfas ? (
                   <div 
                     dangerouslySetInnerHTML={{ __html: selectedSong.solfas }}
+                    dir="ltr"
                     style={{
                       lineHeight: '1.8',
                       fontSize: '14px',
                       fontFamily: 'monospace',
-                      fontStyle: 'italic'
+                      fontStyle: 'italic',
+                      textAlign: 'left',
+                      direction: 'ltr'
                     }}
                   />
                 ) : (

@@ -74,6 +74,7 @@ export interface DatabaseSong {
   drummer: string;
   lyrics: string;
   solfas?: string;
+  rehearsalCount?: number;
   audioFile?: string;
   createdAt: string;
   updatedAt: string;
@@ -322,16 +323,17 @@ export async function getSongsByPageId(pageId: number): Promise<PraiseNightSong[
         status: song.status,
         category: song.category,
         praiseNightId: song.praisenightid,
-        leadSinger: song.leadSinger,
+        leadSinger: song.leadsinger,
         writer: song.writer,
         conductor: song.conductor,
         key: song.key,
         tempo: song.tempo,
-        leadKeyboardist: song.leadKeyboardist,
-        leadGuitarist: song.leadGuitarist,
+        leadKeyboardist: song.leadkeyboardist,
+        leadGuitarist: song.leadguitarist,
         drummer: song.drummer,
         lyrics: song.lyrics,
         solfas: song.solfas,
+        rehearsalCount: song.rehearsalcount,
         audioFile: audioFile,
         comments: comments,
         history: history
@@ -365,6 +367,7 @@ export async function createSong(songData: Omit<PraiseNightSong, 'comments' | 'h
         drummer: songData.drummer,
         lyrics: songData.lyrics,
         solfas: songData.solfas,
+        rehearsalcount: songData.rehearsalCount,
         audiofile: songData.audioFile,
         mediaid: songData.mediaId
       })
@@ -392,6 +395,7 @@ export async function createSong(songData: Omit<PraiseNightSong, 'comments' | 'h
       drummer: data.drummer,
       lyrics: data.lyrics,
       solfas: data.solfas,
+      rehearsalCount: data.rehearsalcount,
       audioFile: data.audiofile,
       comments: [],
       history: []
@@ -419,16 +423,17 @@ export async function updateSong(songId: number, songData: Partial<PraiseNightSo
       updateData.category = songData.category;
       console.log('💾 Updating category to:', songData.category);
     }
-    if (songData.leadSinger) updateData.leadsinger = songData.leadSinger;
-    if (songData.writer) updateData.writer = songData.writer;
-    if (songData.conductor) updateData.conductor = songData.conductor;
-    if (songData.key) updateData.key = songData.key;
-    if (songData.tempo) updateData.tempo = songData.tempo;
-    if (songData.leadKeyboardist) updateData.leadkeyboardist = songData.leadKeyboardist;
-    if (songData.leadGuitarist) updateData.leadguitarist = songData.leadGuitarist;
-    if (songData.drummer) updateData.drummer = songData.drummer;
+    if (songData.leadSinger !== undefined) updateData.leadsinger = songData.leadSinger;
+    if (songData.writer !== undefined) updateData.writer = songData.writer;
+    if (songData.conductor !== undefined) updateData.conductor = songData.conductor;
+    if (songData.key !== undefined) updateData.key = songData.key;
+    if (songData.tempo !== undefined) updateData.tempo = songData.tempo;
+    if (songData.leadKeyboardist !== undefined) updateData.leadkeyboardist = songData.leadKeyboardist;
+    if (songData.leadGuitarist !== undefined) updateData.leadguitarist = songData.leadGuitarist;
+    if (songData.drummer !== undefined) updateData.drummer = songData.drummer;
     if (songData.lyrics) updateData.lyrics = songData.lyrics;
     if (songData.solfas) updateData.solfas = songData.solfas;
+    if (songData.rehearsalCount !== undefined) updateData.rehearsalcount = songData.rehearsalCount;
     // Handle audio file updates - always update both fields together
     updateData.audiofile = songData.audioFile || null;
     updateData.mediaid = songData.mediaId || null;
@@ -777,16 +782,17 @@ export async function getSongsByCategory(categoryName: string): Promise<PraiseNi
         status: song.status,
         category: song.category,
         praiseNightId: song.praisenightid,
-        leadSinger: song.leadSinger,
+        leadSinger: song.leadsinger,
         writer: song.writer,
         conductor: song.conductor,
         key: song.key,
         tempo: song.tempo,
-        leadKeyboardist: song.leadKeyboardist,
-        leadGuitarist: song.leadGuitarist,
+        leadKeyboardist: song.leadkeyboardist,
+        leadGuitarist: song.leadguitarist,
         drummer: song.drummer,
         lyrics: song.lyrics,
         solfas: song.solfas,
+        rehearsalCount: song.rehearsalcount,
         audioFile: song.audiofile,
         comments: comments,
         history: history
