@@ -266,24 +266,21 @@ function PraiseNightPageContent() {
     return num < 10 ? `0${num}` : num.toString();
   }
 
-  // Icon mapping for categories - now using category manager
+  // Icon mapping for categories
   const getCategoryIcon = (categoryName: string) => {
-    const category = categoryManager.getCategoryByName(categoryName);
-    if (!category?.icon) return Music; // Default icon
-    
-    // Map icon names to actual icon components
+    // Map category names to icon components
     const iconMap: { [key: string]: any } = {
-      "Music": Music,
-      "Heart": Heart,
-      "CheckCircle": CheckCircle,
-      "BookOpen": BookOpen,
-      "Sparkles": Sparkles,
-      "Users": Users,
-      "Globe": Globe,
-      "Star": Sparkles // Using Sparkles as Star alternative
+      "Praise": Heart,
+      "Worship": Music,
+      "Testimony": CheckCircle,
+      "Word": BookOpen,
+      "Special": Sparkles,
+      "Choir": Users,
+      "International": Globe,
+      "default": Music
     };
     
-    return iconMap[category.icon] || Music;
+    return iconMap[categoryName] || iconMap["default"];
   };
 
   // Use songs directly from currentPraiseNight (Supabase data)

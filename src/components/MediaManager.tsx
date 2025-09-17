@@ -257,7 +257,7 @@ export default function MediaManager({
             // If Supabase Storage deletion fails, we should still remove from UI since DB is updated
             setFiles(prev => prev.filter(f => f.id !== file.id));
             addToast({
-              type: 'warning',
+              type: 'info',
               message: `File "${file.name}" removed from database but may still exist in cloud storage.`
             });
           }

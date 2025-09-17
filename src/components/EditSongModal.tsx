@@ -38,7 +38,7 @@ export default function EditSongModal({
   const [songSolfas, setSongSolfas] = useState('');
   const [songHistory, setSongHistory] = useState('');
   const [songAudioFile, setSongAudioFile] = useState('');
-  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<any | null>(null);
   const [songLyrics, setSongLyrics] = useState('');
   const [songComments, setSongComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -157,7 +157,7 @@ export default function EditSongModal({
         solfas: songSolfas, // Save as HTML string
         comments: songComments,
         audioFile: finalAudioFile,
-        mediaId: audioFile ? parseInt(audioFile.id) : null, // Store media ID for database relationship (convert string to number)
+        mediaId: audioFile ? parseInt(audioFile.id) : undefined, // Store media ID for database relationship (convert string to number)
         // Preserve existing history array
         history: song?.history || []
       };

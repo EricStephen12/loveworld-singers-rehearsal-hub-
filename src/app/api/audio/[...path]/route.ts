@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
+    // Await the params promise
+    const resolvedParams = await params;
+    
     // Reconstruct the original Cloudinary URL
-    const cloudinaryUrl = `https://res.cloudinary.com/${params.path.join('/')}`;
+    const cloudinaryUrl = `https://res.cloudinary.com/${resolvedParams.path.join('/')}`;
     
     console.log('🎵 Proxying audio request:', cloudinaryUrl);
     

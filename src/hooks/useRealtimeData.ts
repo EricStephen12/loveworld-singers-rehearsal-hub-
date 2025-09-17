@@ -42,7 +42,7 @@ export function useRealtimeData() {
           table: 'songs'
         },
         async (payload) => {
-          console.log('🎵 Song change detected:', payload.eventType, payload.new?.title || payload.old?.title);
+          console.log('🎵 Song change detected:', payload.eventType, (payload.new as any)?.title || (payload.old as any)?.title);
           
           // Refresh all data when any song changes
           try {
@@ -51,11 +51,11 @@ export function useRealtimeData() {
             
             // Show notification to user
             if (payload.eventType === 'UPDATE') {
-              showNotification(`Song "${payload.new?.title}" was updated`, 'info');
+              showNotification(`Song "${(payload.new as any)?.title}" was updated`, 'info');
             } else if (payload.eventType === 'INSERT') {
-              showNotification(`New song "${payload.new?.title}" was added`, 'success');
+              showNotification(`New song "${(payload.new as any)?.title}" was added`, 'success');
             } else if (payload.eventType === 'DELETE') {
-              showNotification(`Song "${payload.old?.title}" was deleted`, 'warning');
+              showNotification(`Song "${(payload.old as any)?.title}" was deleted`, 'warning');
             }
           } catch (error) {
             console.error('Error refreshing data after song change:', error);
@@ -75,18 +75,18 @@ export function useRealtimeData() {
           table: 'pages'
         },
         async (payload) => {
-          console.log('📄 Page change detected:', payload.eventType, payload.new?.name || payload.old?.name);
+          console.log('📄 Page change detected:', payload.eventType, (payload.new as any)?.name || (payload.old as any)?.name);
           
           try {
             const updatedPages = await getAllPages();
             setPages(updatedPages);
             
             if (payload.eventType === 'UPDATE') {
-              showNotification(`Page "${payload.new?.name}" was updated`, 'info');
+              showNotification(`Page "${(payload.new as any)?.name}" was updated`, 'info');
             } else if (payload.eventType === 'INSERT') {
-              showNotification(`New page "${payload.new?.name}" was created`, 'success');
+              showNotification(`New page "${(payload.new as any)?.name}" was created`, 'success');
             } else if (payload.eventType === 'DELETE') {
-              showNotification(`Page "${payload.old?.name}" was deleted`, 'warning');
+              showNotification(`Page "${(payload.old as any)?.name}" was deleted`, 'warning');
             }
           } catch (error) {
             console.error('Error refreshing data after page change:', error);

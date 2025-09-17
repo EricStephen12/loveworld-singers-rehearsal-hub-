@@ -10,7 +10,7 @@ interface AudioContextType {
   duration: number;
   isLoading: boolean;
   hasError: boolean;
-  audioRef: React.RefObject<HTMLAudioElement>;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
   setCurrentSong: (song: PraiseNightSong | null, autoPlay?: boolean) => void;
   togglePlayPause: () => void;
   play: () => void;

@@ -41,12 +41,10 @@ export async function POST(request: NextRequest) {
     // Generate URL with better CORS support
     const secureUrl = (result as any).secure_url;
     
-    // For audio files, use the raw delivery URL which has better CORS support
-    const corsUrl = secureUrl.replace('/upload/', '/raw/upload/');
-    
+    // Use the standard secure URL for better compatibility
     return NextResponse.json({ 
       success: true, 
-      url: corsUrl,
+      url: secureUrl,
       publicId: (result as any).public_id
     });
 
