@@ -5,6 +5,17 @@ import { X, Save, Trash2, FolderOpen } from 'lucide-react';
 import { PraiseNightSong, Comment, Category } from '../types/supabase';
 import MediaSelectionModal from './MediaSelectionModal';
 
+interface MediaFile {
+  id: string;
+  name: string;
+  url: string;
+  type: 'image' | 'audio' | 'video' | 'document';
+  size: number;
+  uploadedAt: string;
+  folder?: string;
+  storagePath?: string;
+}
+
 interface EditSongModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -38,7 +49,7 @@ export default function EditSongModal({
   const [songSolfas, setSongSolfas] = useState('');
   const [songHistory, setSongHistory] = useState('');
   const [songAudioFile, setSongAudioFile] = useState('');
-  const [audioFile, setAudioFile] = useState<any | null>(null);
+  const [audioFile, setAudioFile] = useState<MediaFile | null>(null);
   const [songLyrics, setSongLyrics] = useState('');
   const [songComments, setSongComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');

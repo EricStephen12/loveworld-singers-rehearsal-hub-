@@ -5,7 +5,7 @@ import { CheckCircle, XCircle, X } from 'lucide-react';
 
 export interface Toast {
   id: string;
-  type: 'success' | 'error' | 'info';
+  type: 'success' | 'error' | 'info' | 'warning';
   message: string;
   duration?: number;
 }
@@ -32,6 +32,8 @@ export default function ToastComponent({ toast, onRemove }: ToastProps) {
         return <XCircle className="w-5 h-5 text-red-500" />;
       case 'info':
         return <CheckCircle className="w-5 h-5 text-blue-500" />;
+      case 'warning':
+        return <XCircle className="w-5 h-5 text-yellow-500" />;
       default:
         return <CheckCircle className="w-5 h-5 text-gray-500" />;
     }
@@ -45,6 +47,8 @@ export default function ToastComponent({ toast, onRemove }: ToastProps) {
         return 'bg-red-50 border-red-200';
       case 'info':
         return 'bg-blue-50 border-blue-200';
+      case 'warning':
+        return 'bg-yellow-50 border-yellow-200';
       default:
         return 'bg-gray-50 border-gray-200';
     }
@@ -58,6 +62,8 @@ export default function ToastComponent({ toast, onRemove }: ToastProps) {
         return 'text-red-800';
       case 'info':
         return 'text-blue-800';
+      case 'warning':
+        return 'text-yellow-800';
       default:
         return 'text-gray-800';
     }

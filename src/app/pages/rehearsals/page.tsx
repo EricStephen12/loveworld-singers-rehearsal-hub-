@@ -191,18 +191,8 @@ export default function RehearsalsPage() {
                 </button>
               </div>
               
-              {/* Right Section - Search Button and Logo */}
+              {/* Right Section - Logo */}
               <div className="flex items-center space-x-1">
-                {/* Search Button */}
-                <button
-                  onClick={() => setIsSearchOpen((v) => !v)}
-                  aria-label="Toggle search"
-                  className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90"
-                  style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
-                >
-                  <Search className="w-5 h-5 text-gray-600 transition-all duration-200" />
-                </button>
-
                 {/* Logo */}
                 <div className="flex items-center">
                   <div className="relative">
@@ -334,7 +324,7 @@ export default function RehearsalsPage() {
         )}
       </div>
 
-      <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
+      <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
         {/* Image Carousel */}
         <div className="mb-6">
           <div
@@ -363,27 +353,27 @@ export default function RehearsalsPage() {
         </div>
 
         {/* Rehearsal Options */}
-        <div>
+        <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
           {rehearsalOptions.map((option) => (
             <Link key={option.id} href={option.href}>
-              <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group ring-1 ring-black/5 mb-3">
+              <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group ring-1 ring-black/5 mb-3 lg:mb-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 ${option.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
-                      <option.icon className={`w-4 h-4 ${option.iconColor}`} />
+                  <div className="flex items-center gap-3 lg:gap-4">
+                    <div className={`w-10 h-10 lg:w-12 lg:h-12 ${option.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
+                      <option.icon className={`w-4 h-4 lg:w-5 lg:h-5 ${option.iconColor}`} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-medium text-slate-900 text-sm group-hover:text-black leading-tight">
+                      <h3 className="font-medium text-slate-900 text-sm lg:text-base group-hover:text-black leading-tight">
                         {option.title}
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5 leading-tight">
+                      <p className="text-xs lg:text-sm text-slate-500 mt-0.5 leading-tight">
                         {option.description}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                      <ChevronRight className="w-3 h-3 text-slate-500 group-hover:translate-x-0.5 transition-all duration-200" />
+                    <div className="w-6 h-6 lg:w-7 lg:h-7 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                      <ChevronRight className="w-3 h-3 lg:w-4 lg:h-4 text-slate-500 group-hover:translate-x-0.5 transition-all duration-200" />
                     </div>
                   </div>
                 </div>

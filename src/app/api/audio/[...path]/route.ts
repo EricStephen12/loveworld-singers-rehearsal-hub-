@@ -5,7 +5,7 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    // Await the params promise
+    // Await the params in Next.js 15
     const resolvedParams = await params;
     
     // Reconstruct the original Cloudinary URL

@@ -193,7 +193,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Main Content Container with Responsive Max Width */}
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl">
         {/* Enhanced iOS Style Header */}
         <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
           <div className="relative">
@@ -390,20 +390,20 @@ export default function HomePage() {
         </div>
 
         {/* Features Grid */}
-        <div className="px-3 pb-4">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="px-3 pb-4 lg:px-6">
+        <div className="grid grid-cols-3 gap-2 lg:grid-cols-4 xl:grid-cols-5 lg:gap-4">
           {features.map((feature, index) => (
             <Link
               key={index}
               href={feature.href}
-              className="group flex flex-col items-center p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 active:bg-gray-50 border border-gray-100/50 hover:border-purple-200/50"
+              className="group flex flex-col items-center p-2 lg:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 active:bg-gray-50 border border-gray-100/50 hover:border-purple-200/50"
               style={{
                 boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
               }}
             >
-              <div className="relative mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-sm">
-                  <feature.icon className="w-4 h-4 text-purple-600 group-hover:text-purple-700 transition-colors duration-300" />
+              <div className="relative mb-2 lg:mb-3">
+                <div className="w-8 h-8 lg:w-12 lg:h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg lg:rounded-xl flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-sm">
+                  <feature.icon className="w-4 h-4 lg:w-6 lg:h-6 text-purple-600 group-hover:text-purple-700 transition-colors duration-300" />
                 </div>
                 {feature.badge && (
                   <div className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 via-red-500 to-red-600 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center font-bold shadow-xl border-2 border-white animate-pulse">
@@ -411,91 +411,96 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-              <span className="text-xs font-medium text-gray-800 text-center leading-tight group-hover:text-purple-700 transition-colors duration-300">{feature.title}</span>
+              <span className="text-xs lg:text-sm font-medium text-gray-800 text-center leading-tight group-hover:text-purple-700 transition-colors duration-300">{feature.title}</span>
             </Link>
           ))}
         </div>
       </div>
 
-        {/* About Section */}
-        <div className="px-4 pb-6">
-        <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
-        <div className="space-y-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => toggleAbout(0)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-            >
-              <h4 className="text-sm font-medium text-gray-800 pr-2">What is LoveWorld Singers Rehearsal Hub?</h4>
-              <div className="flex-shrink-0">
-                {openAbout === 0 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+        {/* About & FAQ Sections - Two Column Layout on Tablets */}
+        <div className="px-4 pb-6 lg:px-6">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-8">
+            {/* About Section */}
+            <div className="pb-6 lg:pb-0">
+              <h2 className="text-lg lg:text-xl font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
+              <div className="space-y-2 lg:space-y-3">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <button 
+                    onClick={() => toggleAbout(0)}
+                    className="w-full p-4 lg:p-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+                  >
+                    <h4 className="text-sm lg:text-base font-medium text-gray-800 pr-2">What is LoveWorld Singers Rehearsal Hub?</h4>
+                    <div className="flex-shrink-0">
+                      {openAbout === 0 ? <ChevronUp className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" /> : <ChevronDown className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" />}
+                    </div>
+                  </button>
+                  {openAbout === 0 && (
+                    <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-gray-100">
+                      <p className="text-sm lg:text-base text-gray-600 leading-relaxed pt-3">A comprehensive platform for managing rehearsal schedules, song collections, and ministry activities. Connect with fellow singers, access audio resources, and stay updated with the latest ministry news.</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </button>
-            {openAbout === 0 && (
-              <div className="px-4 pb-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600 leading-relaxed pt-3">A comprehensive platform for managing rehearsal schedules, song collections, and ministry activities. Connect with fellow singers, access audio resources, and stay updated with the latest ministry news.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+            </div>
 
-      {/* FAQ Section */}
-      <div className="px-4 pb-6">
-        <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">FAQ</h2>
-        <div className="space-y-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => toggleFAQ(0)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-            >
-              <h4 className="text-sm font-medium text-gray-800 pr-2">How do I join a rehearsal?</h4>
-              <div className="flex-shrink-0">
-                {openFAQ === 0 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+            {/* FAQ Section */}
+            <div>
+              <h2 className="text-lg lg:text-xl font-outfit-semibold text-gray-800 mb-4">FAQ</h2>
+              <div className="space-y-2 lg:space-y-3">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <button 
+                    onClick={() => toggleFAQ(0)}
+                    className="w-full p-4 lg:p-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+                  >
+                    <h4 className="text-sm lg:text-base font-medium text-gray-800 pr-2">How do I join a rehearsal?</h4>
+                    <div className="flex-shrink-0">
+                      {openFAQ === 0 ? <ChevronUp className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" /> : <ChevronDown className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" />}
+                    </div>
+                  </button>
+                  {openFAQ === 0 && (
+                    <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-gray-100">
+                      <p className="text-sm lg:text-base text-gray-600 leading-relaxed pt-3">Check the Rehearsals section for upcoming sessions and register through the calendar.</p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <button 
+                    onClick={() => toggleFAQ(1)}
+                    className="w-full p-4 lg:p-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+                  >
+                    <h4 className="text-sm lg:text-base font-medium text-gray-800 pr-2">Where can I find song lyrics?</h4>
+                    <div className="flex-shrink-0">
+                      {openFAQ === 1 ? <ChevronUp className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" /> : <ChevronDown className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" />}
+                    </div>
+                  </button>
+                  {openFAQ === 1 && (
+                    <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-gray-100">
+                      <p className="text-sm lg:text-base text-gray-600 leading-relaxed pt-3">Access song lyrics and audio resources in the AudioLabs section.</p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <button 
+                    onClick={() => toggleFAQ(2)}
+                    className="w-full p-4 lg:p-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+                  >
+                    <h4 className="text-sm lg:text-base font-medium text-gray-800 pr-2">How do I get support?</h4>
+                    <div className="flex-shrink-0">
+                      {openFAQ === 2 ? <ChevronUp className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" /> : <ChevronDown className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" />}
+                    </div>
+                  </button>
+                  {openFAQ === 2 && (
+                    <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-gray-100">
+                      <p className="text-sm lg:text-base text-gray-600 leading-relaxed pt-3">Use the Support section or contact your ministry coordinator for assistance.</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </button>
-            {openFAQ === 0 && (
-              <div className="px-4 pb-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600 leading-relaxed pt-3">Check the Rehearsals section for upcoming sessions and register through the calendar.</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => toggleFAQ(1)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-            >
-              <h4 className="text-sm font-medium text-gray-800 pr-2">Where can I find song lyrics?</h4>
-              <div className="flex-shrink-0">
-                {openFAQ === 1 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-              </div>
-            </button>
-            {openFAQ === 1 && (
-              <div className="px-4 pb-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600 leading-relaxed pt-3">Access song lyrics and audio resources in the AudioLabs section.</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => toggleFAQ(2)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-            >
-              <h4 className="text-sm font-medium text-gray-800 pr-2">How do I get support?</h4>
-              <div className="flex-shrink-0">
-                {openFAQ === 2 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-              </div>
-            </button>
-            {openFAQ === 2 && (
-              <div className="px-4 pb-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600 leading-relaxed pt-3">Use the Support section or contact your ministry coordinator for assistance.</p>
-              </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Sliding Drawer */}
