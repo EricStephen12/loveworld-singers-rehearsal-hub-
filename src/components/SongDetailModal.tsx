@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronLeft, BookOpen, Music, Users, Clock, Play, Pause, SkipBack, SkipForward, RotateCcw, Music2 } from "lucide-react";
-import { PraiseNightSong, getCurrentSongs } from "@/data/praise-night-songs";
+import { ChevronLeft, BookOpen, Music, Users, Clock, Play, Pause, SkipBack, SkipForward, RotateCcw, Music2, ChevronDown, ChevronUp, Settings } from "lucide-react";
+import { PraiseNightSong, HistoryEntry } from "@/types/supabase";
 import { useAudio } from "@/contexts/AudioContext";
 
 interface SongDetailModalProps {
@@ -11,71 +11,291 @@ interface SongDetailModalProps {
   onClose: () => void;
   onSongChange?: (song: PraiseNightSong) => void;
   currentFilter?: 'heard' | 'unheard'; // Add current filter prop
+  songs?: PraiseNightSong[]; // Add songs prop
 }
 
-export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongChange, currentFilter = 'heard' }: SongDetailModalProps) {
+export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongChange, currentFilter = 'heard', songs = [] }: SongDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'lyrics' | 'solfas' | 'comments' | 'history'>('lyrics');
+  const [activeHistoryTab, setActiveHistoryTab] = useState<'lyrics' | 'audio' | 'solfas' | 'comments' | 'metadata'>('lyrics');
   const [isRepeating, setIsRepeating] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [categorySongs, setCategorySongs] = useState<PraiseNightSong[]>([]);
+  const [collapsedHistoryCards, setCollapsedHistoryCards] = useState<Set<string>>(new Set([
+    'lyrics-1', 'lyrics-2', 'lyrics-3', 'lyrics-4',
+    'audio-1', 'audio-2', 'audio-3',
+    'solfas-1', 'solfas-2', 'solfas-3',
+    'comment-1', 'comment-2', 'comment-3', 'comment-4'
+  ]));
+  
+  // State for history audio players
+  const [historyAudioStates, setHistoryAudioStates] = useState<{[key: string]: {isPlaying: boolean, currentTime: number, duration: number}}>({});
+  const historyAudioRefs = useRef<Record<string, HTMLAudioElement | null>>({});
+  const [mainPlayerWasPlaying, setMainPlayerWasPlaying] = useState(false);
   
   // Use global audio context
-  const { isPlaying, currentTime, duration, togglePlayPause, audioRef } = useAudio();
+  const { isPlaying, currentTime, duration, isLoading, hasError, togglePlayPause, audioRef, setCurrentSong } = useAudio();
 
+  // Set the current song when modal opens (only once per song)
+  useEffect(() => {
+    if (selectedSong && isOpen) {
+      console.log('🎵 SongDetailModal: Setting current song:', {
+        title: selectedSong.title,
+        audioFile: selectedSong.audioFile,
+        hasAudioFile: !!selectedSong.audioFile,
+        audioFileLength: selectedSong.audioFile?.length
+      });
+      setCurrentSong(selectedSong, false);
+    }
+  }, [selectedSong?.title, isOpen]); // Remove setCurrentSong from dependencies to prevent loop
+
+  // Load songs from the same category AND current filter, find current song index
+  useEffect(() => {
+    if (selectedSong) {
+      const songsInCategory = songs.filter(song => 
+        song.category === selectedSong.category && song.status === currentFilter
+      );
+      setCategorySongs(songsInCategory);
+      
+      const index = songsInCategory.findIndex(song => song.title === selectedSong.title);
+      setCurrentSongIndex(index >= 0 ? index : 0);
+    }
+  }, [selectedSong, currentFilter, songs]);
+
+  // Handle audio ended event for repeat functionality
+  useEffect(() => {
+    const handleAudioEnded = (event: CustomEvent) => {
+      console.log('🔄 Audio ended, repeat mode:', isRepeating);
+      if (isRepeating && event.detail.song?.title === selectedSong?.title) {
+        console.log('🔄 Repeating song:', selectedSong?.title);
+        // Restart the current song
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch((error) => {
+            console.error('Error repeating song:', error);
+          });
+        }
+      }
+    };
+
+    window.addEventListener('audioEnded', handleAudioEnded as EventListener);
+    return () => {
+      window.removeEventListener('audioEnded', handleAudioEnded as EventListener);
+    };
+  }, [isRepeating, selectedSong?.title]);
 
   const handlePrevious = () => {
-    console.log('Previous clicked:', { currentSongIndex, categorySongsLength: categorySongs.length, onSongChange: !!onSongChange });
-    if (currentSongIndex > 0) {
+    console.log('⏮️ Previous clicked:', { currentSongIndex, categorySongsLength: categorySongs.length, onSongChange: !!onSongChange });
+    
+    if (currentSongIndex > 0 && categorySongs.length > 0) {
+      // Go to previous song
       const prevSong = categorySongs[currentSongIndex - 1];
-      console.log('Previous song:', prevSong);
+      console.log('⏮️ Going to previous song:', prevSong.title);
       if (prevSong && onSongChange) {
         setCurrentSongIndex(currentSongIndex - 1);
         onSongChange(prevSong);
-        // Auto-play the previous song
-        setTimeout(() => {
-          if (audioRef.current && prevSong.audioFile && prevSong.audioFile.trim() !== '') {
-            audioRef.current.play().catch((error) => {
-              console.error('Error auto-playing previous song:', error);
-            });
-          }
-        }, 100); // Small delay to ensure the new song is loaded
+        // Set the new song in audio context and auto-play
+        setCurrentSong(prevSong, true);
       }
-    } else if (audioRef.current) {
-      // If at first song in category, go back 10 seconds
-      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
+    } else if (audioRef.current && duration > 0) {
+      // If at first song or no songs, skip back 10 seconds
+      const newTime = Math.max(0, audioRef.current.currentTime - 10);
+      audioRef.current.currentTime = newTime;
+      console.log('⏮️ Skipped back 10 seconds to:', newTime);
     }
   };
 
   const handleNext = () => {
-    console.log('Next clicked:', { currentSongIndex, categorySongsLength: categorySongs.length, onSongChange: !!onSongChange });
-    if (currentSongIndex < categorySongs.length - 1) {
+    console.log('⏭️ Next clicked:', { currentSongIndex, categorySongsLength: categorySongs.length, onSongChange: !!onSongChange });
+    
+    if (currentSongIndex < categorySongs.length - 1 && categorySongs.length > 0) {
+      // Go to next song
       const nextSong = categorySongs[currentSongIndex + 1];
-      console.log('Next song:', nextSong);
+      console.log('⏭️ Going to next song:', nextSong.title);
       if (nextSong && onSongChange) {
         setCurrentSongIndex(currentSongIndex + 1);
         onSongChange(nextSong);
-        // Auto-play the next song
-        setTimeout(() => {
-          if (audioRef.current && nextSong.audioFile && nextSong.audioFile.trim() !== '') {
-            audioRef.current.play().catch((error) => {
-              console.error('Error auto-playing next song:', error);
-            });
-          }
-        }, 100); // Small delay to ensure the new song is loaded
+        // Set the new song in audio context and auto-play
+        setCurrentSong(nextSong, true);
       }
-    } else if (audioRef.current) {
-      // If at last song in category, skip forward 10 seconds
-      audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 10);
+    } else if (audioRef.current && duration > 0) {
+      // If at last song or no songs, skip forward 10 seconds
+      const newTime = Math.min(duration, audioRef.current.currentTime + 10);
+      audioRef.current.currentTime = newTime;
+      console.log('⏭️ Skipped forward 10 seconds to:', newTime);
     }
   };
 
   const toggleRepeat = () => {
-    setIsRepeating(!isRepeating);
+    const newRepeatState = !isRepeating;
+    setIsRepeating(newRepeatState);
+    console.log('🔄 Repeat toggled:', newRepeatState ? 'ON' : 'OFF');
   };
 
   const handleMusicPage = () => {
     // Navigate to music page - you can implement this based on your routing
     console.log('Navigate to music page');
+  };
+
+  const handleToggleHistoryCard = (cardId: string) => {
+    setCollapsedHistoryCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId);
+      } else {
+        newSet.add(cardId);
+      }
+      return newSet;
+    });
+  };
+
+  // History audio player functions
+  const handleHistoryAudioPlayPause = (audioId: string) => {
+    const historyAudioRef = historyAudioRefs.current[audioId];
+    if (!historyAudioRef) return;
+
+    // Pause all other history audios
+    Object.keys(historyAudioRefs.current).forEach(id => {
+      if (id !== audioId && historyAudioRefs.current[id]) {
+        historyAudioRefs.current[id]!.pause();
+        setHistoryAudioStates(prev => ({
+          ...prev,
+          [id]: { ...prev[id], isPlaying: false }
+        }));
+      }
+    });
+
+    if (historyAudioStates[audioId]?.isPlaying) {
+      // Pause current history audio
+      historyAudioRef.pause();
+      setHistoryAudioStates(prev => ({
+        ...prev,
+        [audioId]: { ...prev[audioId], isPlaying: false }
+      }));
+      
+      // Resume main player if it was playing before
+      if (mainPlayerWasPlaying) {
+        togglePlayPause();
+        setMainPlayerWasPlaying(false);
+      }
+    } else {
+      // Play current history audio - pause main player if it's playing
+      if (isPlaying) {
+        setMainPlayerWasPlaying(true);
+        togglePlayPause(); // This will pause the main player
+      }
+      
+      historyAudioRef.play(); // Play the history audio element, not the main one
+      setHistoryAudioStates(prev => ({
+        ...prev,
+        [audioId]: { ...prev[audioId], isPlaying: true }
+      }));
+    }
+  };
+
+  const handleHistoryAudioTimeUpdate = (audioId: string) => {
+    const audioElement = historyAudioRefs.current[audioId];
+    if (audioElement) {
+      setHistoryAudioStates(prev => ({
+        ...prev,
+        [audioId]: { ...prev[audioId], currentTime: audioElement.currentTime }
+      }));
+    }
+  };
+
+  const handleHistoryAudioLoadedMetadata = (audioId: string) => {
+    const audioElement = historyAudioRefs.current[audioId];
+    if (audioElement) {
+      setHistoryAudioStates(prev => ({
+        ...prev,
+        [audioId]: { ...prev[audioId], duration: audioElement.duration }
+      }));
+    }
+  };
+
+  const handleHistoryAudioEnded = (audioId: string) => {
+    setHistoryAudioStates(prev => ({
+      ...prev,
+      [audioId]: { ...prev[audioId], isPlaying: false, currentTime: 0 }
+    }));
+    
+    // Resume main player if it was playing before
+    if (mainPlayerWasPlaying) {
+      togglePlayPause();
+      setMainPlayerWasPlaying(false);
+    }
+  };
+
+  const formatDateTime = (date: Date) => {
+    return {
+      date: date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      }),
+      time: date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      })
+    };
+  };
+
+  // Get history data for the current song
+  const getHistoryData = (type: 'lyrics' | 'solfas' | 'audio' | 'comments' | 'metadata') => {
+    if (!selectedSong?.history) return [];
+    
+    let historyEntries = selectedSong.history
+      .filter(entry => entry.type === type)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    // For audio, only show history if the current audio is different from history entries
+    if (type === 'audio' && selectedSong.audioFile) {
+      historyEntries = historyEntries.filter(entry => entry.content !== selectedSong.audioFile);
+    }
+    
+    return historyEntries;
+  };
+
+  // Get latest content (what's shown in main tabs)
+  const getLatestContent = (type: 'lyrics' | 'solfas' | 'audio' | 'comments') => {
+    if (!selectedSong) return null;
+    
+    switch (type) {
+      case 'lyrics':
+        return selectedSong.lyrics;
+      case 'solfas':
+        return selectedSong.solfas;
+      case 'audio':
+        return selectedSong.audioFile;
+      case 'comments':
+        // Get ONLY the latest pastor comment (newest one)
+        return selectedSong.comments
+          .filter(comment => comment.author === 'Pastor')
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+      default:
+        return null;
+    }
+  };
+
+  // Get older comments for history (all except the latest)
+  const getOlderComments = () => {
+    if (!selectedSong) return [];
+    
+    const pastorComments = selectedSong.comments
+      .filter(comment => comment.author === 'Pastor')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    // Return all except the first one (which is the latest)
+    return pastorComments.slice(1);
+  };
+
+  // Get older solfas for history (all except the latest)
+  const getOlderSolfas = () => {
+    if (!selectedSong?.solfas) return [];
+    
+    // For now, we only have current solfas, but this function is ready for when we have multiple versions
+    // In the future, this would work like comments - showing previous versions
+    return [];
   };
 
 
@@ -85,47 +305,148 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [wasPlayingBeforeDrag, setWasPlayingBeforeDrag] = useState(false);
+
+  const seekToTime = (newTime: number) => {
     if (audioRef.current && duration > 0) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const percentage = clickX / rect.width;
-      audioRef.current.currentTime = percentage * duration;
+      const clampedTime = Math.max(0, Math.min(duration, newTime));
+      
+      // Ensure the audio is loaded before seeking
+      if (audioRef.current.readyState >= 2) {
+        audioRef.current.currentTime = clampedTime;
+        console.log('🎯 Seeked to:', clampedTime, 'seconds');
+      } else {
+        // Wait for audio to be ready then seek
+        const handleCanPlay = () => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = clampedTime;
+            audioRef.current.removeEventListener('canplay', handleCanPlay);
+            console.log('🎯 Seeked to (after load):', clampedTime, 'seconds');
+          }
+        };
+        audioRef.current.addEventListener('canplay', handleCanPlay);
+      }
     }
   };
 
-  useEffect(() => {
-    // Load songs from the same category AND current filter, find current song index
-    if (selectedSong) {
-      const allSongs = getCurrentSongs();
-      const songsInCategory = allSongs.filter(song => 
-        song.category === selectedSong.category && song.status === currentFilter
-      );
-      setCategorySongs(songsInCategory);
-      
-      const index = songsInCategory.findIndex(song => song.title === selectedSong.title);
-      setCurrentSongIndex(index >= 0 ? index : 0);
-    }
-  }, [selectedSong, currentFilter]);
+  const getTimeFromMouseEvent = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    return percentage * duration;
+  };
 
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging && audioRef.current && duration > 0) {
+      const newTime = getTimeFromMouseEvent(e);
+      seekToTime(newTime);
+    }
+  };
+
+  const handleProgressMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setWasPlayingBeforeDrag(isPlaying);
+    
+    // Pause during drag for smoother seeking
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+    }
+    
+    const newTime = getTimeFromMouseEvent(e);
+    seekToTime(newTime);
+    console.log('🎯 Started dragging at:', newTime, 'seconds');
+  };
+
+  const handleProgressMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDragging && audioRef.current && duration > 0) {
+      const newTime = getTimeFromMouseEvent(e);
+      seekToTime(newTime);
+    }
+  };
+
+  const handleProgressMouseUp = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      
+      // Resume playing if it was playing before drag
+      if (wasPlayingBeforeDrag && audioRef.current) {
+        audioRef.current.play().catch(error => {
+          console.error('Error resuming after drag:', error);
+        });
+      }
+      
+      console.log('🎯 Finished dragging');
+    }
+  };
+
+  // Add global mouse events for dragging
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDragging && audioRef.current && duration > 0) {
+        // Find the progress bar element
+        const progressBar = document.querySelector('.progress-bar') as HTMLElement;
+        if (progressBar) {
+          const rect = progressBar.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+          const newTime = percentage * duration;
+          seekToTime(newTime);
+        }
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        
+        // Resume playing if it was playing before drag
+        if (wasPlayingBeforeDrag && audioRef.current) {
+          audioRef.current.play().catch(error => {
+            console.error('Error resuming after drag:', error);
+          });
+        }
+      }
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [isDragging, duration, wasPlayingBeforeDrag]);
 
   if (!isOpen || !selectedSong) return null;
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col overflow-y-auto">
+    <>
+      <style>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      <div className="fixed inset-0 bg-white z-50 flex flex-col">
       {/* Responsive Container */}
-      <div className="mx-auto max-w-2xl w-full min-h-full">
+      <div className="mx-auto max-w-2xl w-full h-full flex flex-col">
         
         {/* iOS Handle */}
-        <div className="flex justify-center pt-2 pb-1">
+        <div className="flex justify-center pt-2 pb-1 flex-shrink-0">
           <div
             onClick={onClose}
             className="w-8 h-0.5 bg-gray-400 rounded-full cursor-pointer"
           ></div>
         </div>
 
-        {/* Header with Album Art and Song Info */}
-        <div className="relative bg-white/80 backdrop-blur-xl px-6 py-4 border-b border-white/30 overflow-hidden">
+        {/* Header with Album Art and Song Info - Sticky */}
+        <div className="relative bg-white/80 backdrop-blur-xl px-6 py-4 border-b border-white/30 overflow-hidden flex-shrink-0">
           {/* Background Image with Blur */}
           <div 
             className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -150,6 +471,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
             </button>
           </div>
           
+          
           {/* Main Header Row */}
           <div className="flex items-center space-x-4 mb-3">
             {/* Song Info - Center */}
@@ -159,11 +481,12 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                 <div className="border-b border-white/30 pb-1">
                   <span className="font-semibold uppercase">LEAD SINGER:</span> {selectedSong?.leadSinger || 'Unknown Artist'}
                 </div>
-                {selectedSong?.writer && (
-                  <div className="border-b border-white/30 pb-1">
-                    <span className="font-semibold uppercase">WRITER:</span> {selectedSong.writer}
-                  </div>
-                )}
+                <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
+                  {selectedSong?.writer && (
+                    <span><span className="font-semibold uppercase">WRITER:</span> {selectedSong.writer}</span>
+                  )}
+                  <span className="font-bold">x{(selectedSong?.history?.filter(entry => entry.type === 'metadata').length || 0) + 1}</span>
+                </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
                   {selectedSong?.conductor && (
                     <span><span className="font-semibold uppercase">CONDUCTOR:</span> {selectedSong.conductor}</span>
@@ -251,56 +574,18 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
         </div>
 
         {/* Content Area - Scrollable */}
-        <div className="flex-1 px-6 py-4 pb-24">
+        <div className="flex-1 px-6 py-4 pb-24 overflow-y-auto">
           {activeTab === 'lyrics' && (
             <div className="max-w-none">
               <div className="text-gray-900 leading-relaxed space-y-6 text-sm text-left font-poppins">
                 {selectedSong?.lyrics ? (
-                  <>
-                    {selectedSong.lyrics.verse1 && (
-                      <>
-                        <div className="text-gray-600 text-sm font-medium mb-4 uppercase tracking-wider font-poppins">[Verse 1]</div>
-                        <div className="space-y-3">
-                          {selectedSong.lyrics.verse1.split('\n').map((line: string, index: number) => (
-                            <p key={index} className="text-gray-900 leading-loose italic">{line}</p>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    
-                    {selectedSong.lyrics.chorus && (
-                      <>
-                        <div className="text-gray-600 text-sm font-medium mb-4 mt-8 uppercase tracking-wider font-poppins">[Chorus]</div>
-                        <div className="space-y-3">
-                          {selectedSong.lyrics.chorus.split('\n').map((line: string, index: number) => (
-                            <p key={index} className="text-gray-900 leading-loose font-medium italic">{line}</p>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    
-                    {selectedSong.lyrics.verse2 && (
-                      <>
-                        <div className="text-gray-600 text-sm font-medium mb-4 mt-8 uppercase tracking-wider font-poppins">[Verse 2]</div>
-                        <div className="space-y-3">
-                          {selectedSong.lyrics.verse2.split('\n').map((line: string, index: number) => (
-                            <p key={index} className="text-gray-900 leading-loose italic">{line}</p>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    
-                    {selectedSong.lyrics.bridge && (
-                      <>
-                        <div className="text-gray-600 text-sm font-medium mb-4 mt-8 uppercase tracking-wider font-poppins">[Bridge]</div>
-                        <div className="space-y-3">
-                          {selectedSong.lyrics.bridge.split('\n').map((line: string, index: number) => (
-                            <p key={index} className="text-gray-900 leading-loose italic">{line}</p>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </>
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: selectedSong.lyrics }}
+                    style={{
+                      lineHeight: '1.8',
+                      fontSize: '14px'
+                    }}
+                  />
                 ) : (
                   <div className="text-center py-8">
                     <div className="text-gray-500 text-sm mb-2">No Lyrics Available</div>
@@ -313,22 +598,23 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
           {activeTab === 'solfas' && (
             <div className="max-w-none">
-              <div className="text-gray-900 leading-relaxed space-y-6 text-lg text-center">
-                <div className="text-gray-600 text-sm font-medium mb-4 uppercase tracking-wider">[Solfas]</div>
-                <div className="space-y-3 font-mono">
-                  <p className="text-gray-900 leading-loose">Do Re Mi Fa Sol La Ti Do</p>
-                  <p className="text-gray-900 leading-loose">Sol Sol La Ti Do Ti La Sol</p>
-                  <p className="text-gray-900 leading-loose">Mi Mi Fa Sol La Sol Fa Mi</p>
-                  <p className="text-gray-900 leading-loose">Re Mi Fa Sol La Ti Do Re</p>
-                </div>
-                
-                <div className="text-gray-600 text-sm font-medium mb-4 mt-8 uppercase tracking-wider">[Chorus - Solfas]</div>
-                <div className="space-y-3 font-mono">
-                  <p className="text-gray-900 leading-loose font-medium">Do Do Re Mi Fa Sol La Ti</p>
-                  <p className="text-gray-900 leading-loose font-medium">Ti La Sol Fa Mi Re Do Re</p>
-                  <p className="text-gray-900 leading-loose font-medium">Mi Fa Sol La Ti Do Re Mi</p>
-                  <p className="text-gray-900 leading-loose font-medium">Fa Sol La Ti Do Ti La Sol</p>
-                </div>
+              <div className="text-gray-900 leading-relaxed space-y-6 text-sm text-left font-poppins">
+                {selectedSong?.solfas ? (
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: selectedSong.solfas }}
+                    style={{
+                      lineHeight: '1.8',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                      fontStyle: 'italic'
+                    }}
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500 text-sm mb-2">No Solfas Available</div>
+                    <div className="text-gray-400 text-xs">Solfas notation will be displayed here when available</div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -336,8 +622,11 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           {activeTab === 'comments' && (
             <div className="space-y-3">
               {selectedSong?.comments && selectedSong.comments.length > 0 ? (
+                // Show only the latest pastor comment in main Comments tab
                 selectedSong.comments
+                  .filter((comment: any) => comment.author === 'Pastor')
                   .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .slice(0, 1) // Only show the latest one
                   .map((comment: any) => (
                     <div key={comment.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                       <div className="flex items-start justify-between mb-2">
@@ -347,21 +636,425 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                         </div>
                       </div>
                       <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-xs text-gray-500">
+                          💡 <strong>Tip:</strong> View all pastor comments in History &gt; Pastor Comments
+                        </p>
+                      </div>
                     </div>
                   ))
               ) : (
                 <div className="text-center py-8">
-                  <div className="text-gray-500 text-sm mb-2">No Comments Yet</div>
-                  <div className="text-gray-400 text-xs">Comments will appear here</div>
+                  <div className="text-gray-500 text-sm mb-2">No Pastor Comments Yet</div>
+                  <div className="text-gray-400 text-xs">Latest pastor comments will appear here</div>
                 </div>
               )}
             </div>
           )}
 
           {activeTab === 'history' && (
-            <div className="text-center py-8">
-              <div className="text-gray-500 text-sm mb-2">History</div>
-              <div className="text-gray-400 text-xs">Song history will be displayed here</div>
+            <div className="space-y-4">
+              {/* History Sub-categories */}
+              <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+                <button
+                  onClick={() => setActiveHistoryTab('lyrics')}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    activeHistoryTab === 'lyrics'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-white/90 hover:shadow-sm border border-slate-200/50'
+                  }`}
+                >
+                  Lyrics
+                </button>
+                <button
+                  onClick={() => setActiveHistoryTab('audio')}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    activeHistoryTab === 'audio'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-white/90 hover:shadow-sm border border-slate-200/50'
+                  }`}
+                >
+                  Audio
+                </button>
+                <button
+                  onClick={() => setActiveHistoryTab('solfas')}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    activeHistoryTab === 'solfas'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-white/90 hover:shadow-sm border border-slate-200/50'
+                  }`}
+                >
+                  Solfas
+                </button>
+                <button
+                  onClick={() => setActiveHistoryTab('comments')}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    activeHistoryTab === 'comments'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-white/90 hover:shadow-sm border border-slate-200/50'
+                  }`}
+                >
+                  Pastor Comments
+                </button>
+                <button
+                  onClick={() => setActiveHistoryTab('metadata')}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    activeHistoryTab === 'metadata'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-white/90 hover:shadow-sm border border-slate-200/50'
+                  }`}
+                >
+                  Metadata
+                </button>
+              </div>
+
+              {/* History Content */}
+              <div className="min-h-[200px]">
+                {activeHistoryTab === 'lyrics' && (
+                  <div className="space-y-3">
+                    {/* History entries - all using same design */}
+                    {getHistoryData('lyrics').map((entry) => (
+                      <div key={entry.id} className="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                        <button
+                          onClick={() => handleToggleHistoryCard(entry.id)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-white/50 transition-all duration-200 rounded-2xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
+                              <BookOpen className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {collapsedHistoryCards.has(entry.id) ? (
+                              <ChevronDown className="w-5 h-5 text-slate-400" />
+                            ) : (
+                              <ChevronUp className="w-5 h-5 text-slate-400" />
+                            )}
+                          </div>
+                        </button>
+                        {!collapsedHistoryCards.has(entry.id) && (
+                          <div className="px-4 pb-4">
+                            <div className="text-sm text-slate-700">
+                              <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
+                                <div dangerouslySetInnerHTML={{ __html: entry.content }} />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Show empty state if no history available */}
+                    {getHistoryData('lyrics').length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="text-slate-500 text-sm mb-2">No Lyrics History</div>
+                        <div className="text-slate-400 text-xs">Previous lyrics versions will appear here when available</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeHistoryTab === 'audio' && (
+                  <div className="space-y-3">
+                    {/* Show history entries from the history array */}
+                    {getHistoryData('audio').map((entry) => (
+                      <div key={entry.id} className="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                        <button
+                          onClick={() => handleToggleHistoryCard(entry.id)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-white/50 transition-all duration-200 rounded-2xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
+                              <Music className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {collapsedHistoryCards.has(entry.id) ? (
+                              <ChevronDown className="w-5 h-5 text-slate-400" />
+                            ) : (
+                              <ChevronUp className="w-5 h-5 text-slate-400" />
+                            )}
+                          </div>
+                        </button>
+                        {!collapsedHistoryCards.has(entry.id) && (
+                          <div className="px-4 pb-4">
+                            <div className="text-sm text-slate-700">
+                              <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    onClick={() => handleHistoryAudioPlayPause(entry.id)}
+                                    className="w-10 h-10 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center"
+                                  >
+                                    {historyAudioStates[entry.id]?.isPlaying ? (
+                                      <Pause className="w-5 h-5" />
+                                    ) : (
+                                      <Play className="w-5 h-5 ml-0.5" />
+                                    )}
+                                  </button>
+                                  <div className="flex-1">
+                                    <div className="text-sm font-medium text-slate-800">Previous Audio Version</div>
+                                    <div className="text-xs text-slate-500 mt-2 bg-slate-100 px-2 py-1 rounded-full inline-block">
+                                      {formatTime(historyAudioStates[entry.id]?.currentTime || 0)} / {formatTime(historyAudioStates[entry.id]?.duration || 0)}
+                                    </div>
+                                  </div>
+                                </div>
+                                <audio
+                                  ref={el => {
+                                    if (el) historyAudioRefs.current[entry.id] = el;
+                                  }}
+                                  src={entry.content}
+                                  onTimeUpdate={() => handleHistoryAudioTimeUpdate(entry.id)}
+                                  onLoadedMetadata={() => handleHistoryAudioLoadedMetadata(entry.id)}
+                                  onEnded={() => handleHistoryAudioEnded(entry.id)}
+                                  preload="metadata"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Show empty state if no history available */}
+                    {getHistoryData('audio').length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="text-slate-500 text-sm mb-2">No Audio History</div>
+                        <div className="text-slate-400 text-xs">Previous audio versions will appear here when available</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeHistoryTab === 'solfas' && (
+                  <div className="space-y-3">
+                    {/* Show older solfas versions if any exist */}
+                    {getOlderSolfas().length > 0 ? (
+                      getOlderSolfas().map((solfas, index) => (
+                        <div key={`solfas-${index}`} className="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                          <button
+                            onClick={() => handleToggleHistoryCard(`solfas-${index}`)}
+                            className="w-full flex items-center justify-between p-4 hover:bg-white/50 transition-all duration-200 rounded-2xl"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
+                                <Music className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date()).date} {formatDateTime(new Date()).time}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {collapsedHistoryCards.has(`solfas-${index}`) ? (
+                                <ChevronDown className="w-5 h-5 text-slate-400" />
+                              ) : (
+                                <ChevronUp className="w-5 h-5 text-slate-400" />
+                              )}
+                            </div>
+                          </button>
+                          {!collapsedHistoryCards.has(`solfas-${index}`) && (
+                            <div className="px-4 pb-4">
+                              <div className="text-sm text-slate-700">
+                                <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
+                                  <div dangerouslySetInnerHTML={{ __html: solfas }} />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : null}
+
+                    {/* Show history entries from the history array */}
+                    {getHistoryData('solfas').map((entry) => (
+                      <div key={entry.id} className="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                        <button
+                          onClick={() => handleToggleHistoryCard(entry.id)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-white/50 transition-all duration-200 rounded-2xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
+                              <Music className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {collapsedHistoryCards.has(entry.id) ? (
+                              <ChevronDown className="w-5 h-5 text-slate-400" />
+                            ) : (
+                              <ChevronUp className="w-5 h-5 text-slate-400" />
+                            )}
+                          </div>
+                        </button>
+                        {!collapsedHistoryCards.has(entry.id) && (
+                          <div className="px-4 pb-4">
+                            <div className="text-sm text-slate-700">
+                              <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
+                                <div dangerouslySetInnerHTML={{ __html: entry.content }} />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Show empty state if no history available */}
+                    {getOlderSolfas().length === 0 && getHistoryData('solfas').length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="text-slate-500 text-sm mb-2">No Solfas History</div>
+                        <div className="text-slate-400 text-xs">Previous solfas versions will appear here when available</div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+
+                {activeHistoryTab === 'comments' && (
+                  <div className="space-y-3">
+                    {/* Show older comments (all except the latest) */}
+                    {getOlderComments().map((comment, index) => (
+                      <div key={comment.id} className="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                        <button
+                          onClick={() => handleToggleHistoryCard(comment.id)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-white/50 transition-all duration-200 rounded-2xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
+                              <Users className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(comment.date)).date} {formatDateTime(new Date(comment.date)).time}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {collapsedHistoryCards.has(comment.id) ? (
+                              <ChevronDown className="w-5 h-5 text-slate-400" />
+                            ) : (
+                              <ChevronUp className="w-5 h-5 text-slate-400" />
+                            )}
+                          </div>
+                        </button>
+                        {!collapsedHistoryCards.has(comment.id) && (
+                          <div className="px-4 pb-4">
+                            <div className="text-sm text-slate-700">
+                              <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
+                                <p className="font-medium text-slate-800">{comment.author}</p>
+                                <p className="text-sm text-slate-700 mt-2">{comment.text}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Also show history entries from the history array */}
+                    {getHistoryData('comments').map((entry) => (
+                      <div key={entry.id} className="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                        <button
+                          onClick={() => handleToggleHistoryCard(entry.id)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-white/50 transition-all duration-200 rounded-2xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
+                              <Users className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {collapsedHistoryCards.has(entry.id) ? (
+                              <ChevronDown className="w-5 h-5 text-slate-400" />
+                            ) : (
+                              <ChevronUp className="w-5 h-5 text-slate-400" />
+                            )}
+                          </div>
+                        </button>
+                        {!collapsedHistoryCards.has(entry.id) && (
+                          <div className="px-4 pb-4">
+                            <div className="text-sm text-slate-700">
+                              <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
+                                <p className="font-medium text-slate-800">Pastor</p>
+                                <p className="text-sm text-slate-700 mt-2">{entry.content}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Show empty state if no history available */}
+                    {getOlderComments().length === 0 && getHistoryData('comments').length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="text-slate-500 text-sm mb-2">No Comments History</div>
+                        <div className="text-slate-400 text-xs">Previous comments will appear here when available</div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+
+                {activeHistoryTab === 'metadata' && (
+                  <div className="space-y-3">
+                    {/* Metadata history entries */}
+                    {getHistoryData('metadata').map((entry) => (
+                      <div key={entry.id} className="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                        <button
+                          onClick={() => handleToggleHistoryCard(entry.id)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-white/50 transition-all duration-200 rounded-2xl"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
+                              <Settings className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {collapsedHistoryCards.has(entry.id) ? (
+                              <ChevronDown className="w-5 h-5 text-slate-400" />
+                            ) : (
+                              <ChevronUp className="w-5 h-5 text-slate-400" />
+                            )}
+                          </div>
+                        </button>
+                        {!collapsedHistoryCards.has(entry.id) && (
+                          <div className="px-4 pb-4">
+                            <div className="text-sm text-slate-700">
+                              <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
+                                <div className="space-y-2">
+                                  {entry.content.split(' | ').map((change, index) => (
+                                    <div key={index} className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                      <span className="text-sm text-slate-700">{change}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Empty state for metadata history */}
+                    {getHistoryData('metadata').length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="text-slate-500 text-sm mb-2">No Metadata History</div>
+                        <div className="text-slate-400 text-xs">Previous metadata changes will appear here when available</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -372,14 +1065,19 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           {/* Progress Bar */}
           <div className="mb-2">
             <div 
-              className="w-full h-1 bg-gray-300 rounded-full relative cursor-pointer hover:h-1.5 transition-all duration-200"
+              className="progress-bar w-full h-1 bg-gray-300 rounded-full relative cursor-pointer hover:h-1.5 transition-all duration-200 select-none"
               onClick={handleProgressClick}
+              onMouseDown={handleProgressMouseDown}
+              onMouseMove={handleProgressMouseMove}
+              onMouseUp={handleProgressMouseUp}
             >
               <div 
                 className="h-full bg-gray-600 rounded-full relative transition-all duration-200"
                 style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }}
               >
-                <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-gray-600 rounded-full hover:w-4 hover:h-4 transition-all duration-200"></div>
+                <div className={`absolute right-0 top-1/2 transform -translate-y-1/2 rounded-full transition-all duration-200 ${
+                  isDragging ? 'w-4 h-4 bg-blue-600' : 'w-3 h-3 bg-gray-600 hover:w-4 hover:h-4'
+                }`}></div>
               </div>
             </div>
             <div className="flex justify-between mt-1">
@@ -413,10 +1111,60 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
             {/* Center Play/Pause Button */}
             <button
-              onClick={togglePlayPause}
-              className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🎵 Button clicked - Current state:', { 
+                  isPlaying, 
+                  isLoading, 
+                  hasError,
+                  audioSrc: audioRef.current?.src,
+                  audioReadyState: audioRef.current?.readyState,
+                  audioPaused: audioRef.current?.paused
+                });
+                
+                // Pause all history audios first
+                Object.keys(historyAudioRefs.current).forEach(id => {
+                  if (historyAudioRefs.current[id]) {
+                    historyAudioRefs.current[id]!.pause();
+                  }
+                });
+                
+                // Direct test - bypass the context for debugging
+                if (audioRef.current) {
+                  if (audioRef.current.paused) {
+                    console.log('🎵 Direct play attempt');
+                    audioRef.current.play().then(() => {
+                      console.log('✅ Direct play successful');
+                    }).catch(error => {
+                      console.error('❌ Direct play failed:', error);
+                    });
+                  } else {
+                    console.log('🎵 Direct pause attempt');
+                    audioRef.current.pause();
+                    console.log('✅ Direct pause successful');
+                  }
+                } else {
+                  console.error('❌ No audioRef.current available');
+                }
+                
+                // Also call the context method
+                togglePlayPause();
+              }}
+              disabled={isLoading || hasError}
+              className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-sm ${
+                hasError 
+                  ? 'bg-red-500 cursor-not-allowed' 
+                  : isLoading 
+                    ? 'bg-gray-400 cursor-wait' 
+                    : 'bg-gray-600'
+              }`}
             >
-              {isPlaying ? (
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : hasError ? (
+                <div className="w-4 h-4 text-white text-xs">!</div>
+              ) : isPlaying ? (
                 <Pause className="w-4 h-4 text-white" />
               ) : (
                 <Play className="w-4 h-4 text-white ml-0.5" />
@@ -446,5 +1194,6 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import './globals.css'
 import PWAInstall from '@/components/PWAInstall'
 import { AudioProvider } from '@/contexts/AudioContext'
 import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
+import RealtimeNotifications from '@/components/RealtimeNotifications'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -95,6 +96,7 @@ export default function RootLayout({
           </main>
           <PWAInstall />
           <GlobalMiniPlayer />
+          <RealtimeNotifications />
         </AudioProvider>
       </body>
     </html>

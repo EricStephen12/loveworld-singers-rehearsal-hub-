@@ -4,7 +4,13 @@ import { useState } from 'react'
 import { Music, Eye, EyeOff } from 'lucide-react'
 
 interface AuthScreenProps {
-  onComplete: (socialData?: Record<string, unknown>) => void
+  onComplete: (socialData?: {
+    socialProvider: string
+    socialId: string
+    firstName: string
+    lastName: string
+    email: string
+  }) => void
 
 
 

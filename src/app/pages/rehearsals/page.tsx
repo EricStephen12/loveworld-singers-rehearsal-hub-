@@ -1,21 +1,35 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { ChevronRight, Calendar, Users, Music, Clock, MapPin, Bell } from 'lucide-react'
+import { ChevronRight, Calendar, Users, Music, Clock, MapPin, Bell, Search, X, ArrowRight, Flag, Menu } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
+import { useGlobalSearch } from '@/hooks/useGlobalSearch'
 
 export default function RehearsalsPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const router = useRouter()
+  
+  // Use global search hook
+  const { searchQuery, setSearchQuery, searchResults, hasResults } = useGlobalSearch()
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
   }
+
+  // Focus the input when search opens
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      // slight delay to allow element to mount before focusing
+      const id = setTimeout(() => searchInputRef.current?.focus(), 50)
+      return () => clearTimeout(id)
+    }
+  }, [isSearchOpen])
 
   const handleTitleClick = () => {
     router.push('/home')
@@ -87,7 +101,7 @@ export default function RehearsalsPage() {
       title: 'Ongoing Rehearsals',
       description: 'Join active rehearsal sessions',
       icon: Users,
-      href: '/pages/praise-night',
+      href: '/pages/praise-night?category=ongoing',
       gradient: 'from-emerald-600 via-green-600 to-lime-600',
       iconBg: 'bg-emerald-100',
       iconColor: 'text-emerald-600'
@@ -97,7 +111,7 @@ export default function RehearsalsPage() {
       title: 'Vocal Warm-ups',
       description: 'Practice vocal exercises and breathing techniques',
       icon: Music,
-      href: '#',
+      href: '/pages/praise-night?category=unassigned',
       gradient: 'from-purple-600 via-indigo-600 to-blue-600',
       iconBg: 'bg-purple-100',
       iconColor: 'text-purple-600'
@@ -107,7 +121,7 @@ export default function RehearsalsPage() {
       title: 'Pre-Rehearsals',
       description: 'Prepare for upcoming rehearsal sessions',
       icon: Calendar,
-      href: '#',
+      href: '/pages/praise-night?category=pre-rehearsal',
       gradient: 'from-blue-600 via-cyan-600 to-teal-600',
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600'
@@ -117,7 +131,7 @@ export default function RehearsalsPage() {
       title: 'Rehearsal Reviews and Assessments',
       description: 'Review performance and get feedback',
       icon: Clock,
-      href: '#',
+      href: '/pages/praise-night?category=unassigned',
       gradient: 'from-amber-600 via-orange-600 to-red-600',
       iconBg: 'bg-amber-100',
       iconColor: 'text-amber-600'
@@ -127,7 +141,7 @@ export default function RehearsalsPage() {
       title: 'Ministry Review and Assessment',
       description: 'Comprehensive ministry performance evaluation',
       icon: Users,
-      href: '#',
+      href: '/pages/praise-night?category=unassigned',
       gradient: 'from-indigo-600 via-purple-600 to-pink-600',
       iconBg: 'bg-indigo-100',
       iconColor: 'text-indigo-600'
@@ -137,7 +151,7 @@ export default function RehearsalsPage() {
       title: 'Archives',
       description: 'Access past rehearsal recordings and materials',
       icon: MapPin,
-      href: '#',
+      href: '/pages/praise-night?category=archive',
       gradient: 'from-rose-600 via-pink-600 to-purple-600',
       iconBg: 'bg-rose-100',
       iconColor: 'text-rose-600'
@@ -146,12 +160,179 @@ export default function RehearsalsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-slate-50">
-      <ScreenHeader 
-        title="Rehearsals" 
-        onMenuClick={toggleMenu} 
-        rightImageSrc="/logo.png"
-        onTitleClick={handleTitleClick}
-      />
+      {/* Main Content Container with Responsive Max Width */}
+      <div className="mx-auto max-w-2xl">
+        {/* Enhanced Header with Search Overlay */}
+        <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
+          <div className="relative">
+            {/* Normal Header Content */}
+            <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
+              isSearchOpen ? 'opacity-0' : 'opacity-100'
+            }`}>
+              {/* Left Section - Menu Button */}
+              <div className="flex items-center">
+                <button 
+                  onClick={toggleMenu}
+                  className="flex items-center p-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 hover:bg-gray-100 active:scale-95"
+                  aria-label="Open menu"
+                  style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+                >
+                  <Menu className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+              
+              {/* Center - Title */}
+              <div className="absolute left-1/2 transform -translate-x-1/2">
+                <button 
+                  onClick={handleTitleClick}
+                  className="text-base sm:text-lg font-outfit-semibold text-gray-800 hover:text-gray-900 active:scale-95 transition-all duration-200"
+                >
+                  Rehearsals
+                </button>
+              </div>
+              
+              {/* Right Section - Search Button and Logo */}
+              <div className="flex items-center space-x-1">
+                {/* Search Button */}
+                <button
+                  onClick={() => setIsSearchOpen((v) => !v)}
+                  aria-label="Toggle search"
+                  className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90"
+                  style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+                >
+                  <Search className="w-5 h-5 text-gray-600 transition-all duration-200" />
+                </button>
+
+                {/* Logo */}
+                <div className="flex items-center">
+                  <div className="relative">
+                    <img 
+                      src="/logo.png" 
+                      alt="LoveWorld Logo" 
+                      className="w-10 h-10 object-contain transition-transform duration-200 hover:scale-105"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    {/* Subtle glow effect */}
+                    <div className="absolute inset-0 w-10 h-10 bg-purple-500/10 rounded-full blur-sm -z-10"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Header Search Overlay */}
+            <div className={`absolute inset-0 bg-white/95 backdrop-blur-xl transition-all duration-300 ease-out ${
+              isSearchOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
+            }`}>
+              <div className="flex items-center justify-between px-4 py-3 h-full">
+                {/* Search Input */}
+                <div className="flex-1 relative">
+                  <input
+                    ref={searchInputRef}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    type="text"
+                    placeholder="Search songs, artists, events..."
+                    inputMode="search"
+                    aria-label="Search"
+                    className="w-full text-lg bg-transparent px-0 py-3 text-gray-800 placeholder-gray-400 border-0 outline-none appearance-none shadow-none ring-0 focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none font-poppins-medium"
+                    style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+                  />
+                  
+                  {/* iOS-style search underline */}
+                  <div className="absolute left-0 right-0 bottom-0 h-px bg-gray-300/40" />
+                  
+                  {/* iOS-style active underline */}
+                  <div className="absolute left-0 bottom-0 h-0.5 bg-purple-500 w-full shadow-sm" 
+                       style={{ boxShadow: '0 0 8px rgba(147, 51, 234, 0.4)' }} />
+                </div>
+                
+                {/* Close Button */}
+                <button
+                  onClick={() => {
+                    setIsSearchOpen(false)
+                    setSearchQuery('')
+                  }}
+                  aria-label="Close search"
+                  className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90 ml-4"
+                  style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+                >
+                  <X className="w-6 h-6 text-gray-700 transition-all duration-200" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Results Overlay */}
+        {isSearchOpen && hasResults && (
+          <div className="absolute top-full left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl border-b border-gray-100/50 max-h-96 overflow-y-auto">
+            <div className="px-4 py-2">
+              <div className="text-xs text-gray-500 mb-2 font-medium">
+                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+              </div>
+              <div className="space-y-1">
+                {searchResults.map((result) => (
+                  <Link
+                    key={result.id}
+                    href={result.url}
+                    onClick={() => {
+                      setIsSearchOpen(false)
+                      setSearchQuery('')
+                    }}
+                    className="block p-3 rounded-xl hover:bg-gray-100/70 active:bg-gray-200/90 transition-all duration-200 group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          {result.type === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
+                          {result.type === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+                          {result.type === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                          <h4 className="font-medium text-gray-900 text-sm truncate group-hover:text-purple-700 transition-colors">
+                            {result.title}
+                          </h4>
+                          {result.status && (
+                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium flex-shrink-0 ${
+                              result.status === 'heard' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-orange-100 text-orange-700'
+                            }`}>
+                              {result.status}
+                            </span>
+                          )}
+                        </div>
+                        {result.subtitle && (
+                          <p className="text-xs text-purple-600 font-medium mb-0.5">
+                            {result.subtitle}
+                          </p>
+                        )}
+                        {result.description && (
+                          <p className="text-xs text-gray-500 truncate">
+                            {result.description}
+                          </p>
+                        )}
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0 ml-2" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* No Results Message */}
+        {isSearchOpen && searchQuery.trim() && !hasResults && (
+          <div className="absolute top-full left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl border-b border-gray-100/50">
+            <div className="px-4 py-6 text-center">
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 font-medium">No results found</p>
+              <p className="text-xs text-gray-400 mt-1">Try searching for songs, artists, or events</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
         {/* Image Carousel */}

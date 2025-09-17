@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 
 type ScreenHeaderProps = {
   title: string
+  subtitle?: string
   onMenuClick?: () => void
   rightImageSrc?: string
   showDivider?: boolean
@@ -15,7 +16,7 @@ type ScreenHeaderProps = {
   timer?: React.ReactNode
 }
 
-export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', showDivider = true, rightButtons, leftButtons, onTitleClick, timer }: ScreenHeaderProps) {
+export function ScreenHeader({ title, subtitle, onMenuClick, rightImageSrc = '/logo.png', showDivider = true, rightButtons, leftButtons, onTitleClick, timer }: ScreenHeaderProps) {
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
 
@@ -30,7 +31,7 @@ export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', 
 
   return (
     <div className={`sticky top-0 z-50 bg-white/80 backdrop-blur-xl ${showDivider ? 'border-b border-gray-100/50' : ''}`}>
-      <div className="flex items-center justify-between p-4 relative">
+      <div className="flex items-center justify-between p-3 relative">
         {/* Left side - Menu button and left buttons */}
         <div className="flex items-center space-x-2">
           <button 
@@ -57,6 +58,11 @@ export function ScreenHeader({ title, onMenuClick, rightImageSrc = '/logo.png', 
           >
             {title}
           </button>
+          {subtitle && (
+            <div className={`text-xs sm:text-sm text-gray-600 font-medium transition-all duration-1000 ease-out delay-250 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+              {subtitle}
+            </div>
+          )}
           {timer && (
             <div className={`mt-0.5 transition-all duration-1000 ease-out delay-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
               {timer}

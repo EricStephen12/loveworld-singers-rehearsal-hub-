@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Play, Pause } from "lucide-react";
-import { PraiseNightSong } from "@/data/praise-night-songs";
+import { PraiseNightSong } from "@/types/supabase";
 
 interface MiniPlayerProps {
   currentSong: PraiseNightSong | null;

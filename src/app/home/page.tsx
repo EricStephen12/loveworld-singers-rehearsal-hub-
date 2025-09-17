@@ -3,15 +3,18 @@
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp } from 'lucide-react'
+import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp, ArrowRight, Clock } from 'lucide-react'
 import { getMenuItems } from '@/config/menuItems'
+import { useGlobalSearch } from '@/hooks/useGlobalSearch'
 
 export default function HomePage() {
   const router = useRouter()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  
+  // Use global search hook
+  const { searchQuery, setSearchQuery, searchResults, hasResults } = useGlobalSearch()
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
   const [openAbout, setOpenAbout] = useState<number | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -192,7 +195,7 @@ export default function HomePage() {
       {/* Main Content Container with Responsive Max Width */}
       <div className="mx-auto max-w-2xl">
         {/* Enhanced iOS Style Header */}
-        <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
+        <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
           <div className="relative">
             {/* Normal Header Content */}
             <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
@@ -259,7 +262,7 @@ export default function HomePage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   type="text"
-                  placeholder="Search"
+                  placeholder="Search songs, artists, events..."
                   inputMode="search"
                   aria-label="Search"
                   className="w-full text-lg bg-transparent px-0 py-3 text-gray-800 placeholder-gray-400 border-0 outline-none appearance-none shadow-none ring-0 focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none font-poppins-medium"
@@ -276,7 +279,10 @@ export default function HomePage() {
               
               {/* Close Button */}
               <button
-                onClick={() => setIsSearchOpen(false)}
+                onClick={() => {
+                  setIsSearchOpen(false)
+                  setSearchQuery('')
+                }}
                 aria-label="Close search"
                 className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90 ml-4"
                 style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
@@ -286,6 +292,71 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
+        {/* Search Results Overlay */}
+        {isSearchOpen && hasResults && (
+          <div className="absolute top-full left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl border-b border-gray-100/50 max-h-96 overflow-y-auto">
+            <div className="px-4 py-2">
+              <div className="text-xs text-gray-500 mb-2 font-medium">
+                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+              </div>
+              <div className="space-y-1">
+                {searchResults.map((result) => (
+                  <Link
+                    key={result.id}
+                    href={result.url}
+                    onClick={() => setIsSearchOpen(false)}
+                    className="block p-3 rounded-xl hover:bg-gray-100/70 active:bg-gray-200/90 transition-all duration-200 group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          {result.type === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
+                          {result.type === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+                          {result.type === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                          <h4 className="font-medium text-gray-900 text-sm truncate group-hover:text-purple-700 transition-colors">
+                            {result.title}
+                          </h4>
+                          {result.status && (
+                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium flex-shrink-0 ${
+                              result.status === 'heard' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-orange-100 text-orange-700'
+                            }`}>
+                              {result.status}
+                            </span>
+                          )}
+                        </div>
+                        {result.subtitle && (
+                          <p className="text-xs text-purple-600 font-medium mb-0.5">
+                            {result.subtitle}
+                          </p>
+                        )}
+                        {result.description && (
+                          <p className="text-xs text-gray-500 truncate">
+                            {result.description}
+                          </p>
+                        )}
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0 ml-2" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* No Results Message */}
+        {isSearchOpen && searchQuery.trim() && !hasResults && (
+          <div className="absolute top-full left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl border-b border-gray-100/50">
+            <div className="px-4 py-6 text-center">
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 font-medium">No results found</p>
+              <p className="text-xs text-gray-400 mt-1">Try searching for songs, artists, or events</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Hero Banner - Carousel */}

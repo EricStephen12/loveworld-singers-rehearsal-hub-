@@ -16,7 +16,13 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   const [showAuth, setShowAuth] = useState(false)
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
   const [showSubscription, setShowSubscription] = useState(false)
-  const [socialData, setSocialData] = useState(null)
+  const [socialData, setSocialData] = useState<{
+    socialProvider: string
+    socialId: string
+    firstName: string
+    lastName: string
+    email: string
+  } | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -76,7 +82,13 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     setShowAuth(true)
   }
 
-  const handleAuthComplete = (socialData = null) => {
+  const handleAuthComplete = (socialData?: {
+    socialProvider: string
+    socialId: string
+    firstName: string
+    lastName: string
+    email: string
+  }) => {
     localStorage.setItem('isAuthenticated', 'true')
     if (socialData) {
       setSocialData(socialData)

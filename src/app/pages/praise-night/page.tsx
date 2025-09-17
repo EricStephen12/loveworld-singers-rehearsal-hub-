@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,18 +11,50 @@ import Image from "next/image";
 import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2 } from "lucide-react";
 import SongDetailModal from "@/components/SongDetailModal";
 import Link from "next/link";
-import { getCurrentPraiseNight, getAllPraiseNights, setCurrentPraiseNight, getCurrentSongs, PraiseNightSong, PraiseNight } from "@/data/praise-night-songs";
-import { categoryManager } from "@/data/categories";
-import { offlineManager } from "@/utils/offlineManager";
+import { PraiseNightSong, PraiseNight } from "@/types/supabase";
+import { useRealtimeData } from "@/hooks/useRealtimeData";
+import { OfflineBanner } from "@/components/OfflineIndicator";
 import ScreenHeader from "@/components/ScreenHeader";
 import SharedDrawer from "@/components/SharedDrawer";
 import { getMenuItems } from "@/config/menuItems";
 import { useAudio } from "@/contexts/AudioContext";
 
-export default function PraiseNightPage() {
-  const [currentPraiseNight, setCurrentPraiseNightState] = useState(getCurrentPraiseNight());
-  const [allPraiseNights] = useState(getAllPraiseNights());
+function PraiseNightPageContent() {
+  const searchParams = useSearchParams();
+  const categoryFilter = searchParams.get('category');
+  
+  // Use real-time Supabase data for instant updates
+  const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs } = useRealtimeData();
+  const [currentPraiseNight, setCurrentPraiseNightState] = useState<PraiseNight | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  
+  // Filter praise nights by category if specified
+  const filteredPraiseNights = useMemo(() => {
+    if (loading || !allPraiseNights) return [];
+    
+    if (!categoryFilter) {
+      // When no category filter, exclude unassigned pages from regular view
+      return allPraiseNights.filter(praiseNight => praiseNight.category !== 'unassigned');
+    }
+    return allPraiseNights.filter(praiseNight => praiseNight.category === categoryFilter);
+  }, [allPraiseNights, categoryFilter, loading]);
+
+  // Auto-select first page when filtering by category or when data loads
+  useEffect(() => {
+    if (categoryFilter && filteredPraiseNights.length > 0) {
+      const firstPage = filteredPraiseNights[0];
+      if (!currentPraiseNight || firstPage.id !== currentPraiseNight.id) {
+        setCurrentPraiseNightState(firstPage);
+      }
+    } else if (!categoryFilter && filteredPraiseNights.length > 0 && !currentPraiseNight) {
+      // Auto-select first page when no category filter and no current page
+      const firstPage = filteredPraiseNights[0];
+      setCurrentPraiseNightState(firstPage);
+    }
+  }, [categoryFilter, filteredPraiseNights, currentPraiseNight]);
+
+  // Real-time data automatically loads songs, so we don't need the manual loading effect anymore
+  
   const [collapsedSections, setCollapsedSections] = useState<{[key: string]: {[key: string]: boolean}}>({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
@@ -30,6 +63,36 @@ export default function PraiseNightPage() {
   
   // Add missing state variables that are used but not defined
   const [activeTab, setActiveTab] = useState('lyrics');
+
+  // Song categories - get from Supabase data
+  const songCategories = useMemo(() => {
+    if (!currentPraiseNight?.songs) return [];
+    const uniqueCategories = [...new Set(currentPraiseNight.songs.map(song => song.category))];
+    return uniqueCategories;
+  }, [currentPraiseNight?.songs]);
+
+  // Categories to show in horizontal bar (first 2)
+  const mainCategories = songCategories.slice(0, 2);
+  // Categories to keep in FAB (remaining ones)
+  const otherCategories = songCategories.slice(2);
+
+  // Filter states
+  const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard');
+  const [activeCategory, setActiveCategory] = useState<string>(''); // Will be set when categories load
+  const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
+
+  // Set active category when categories are loaded
+  useEffect(() => {
+    if (songCategories.length > 0 && !activeCategory) {
+      setActiveCategory(songCategories[0]);
+    }
+  }, [songCategories, activeCategory]);
+  
+  // Song detail modal states
+  const [selectedSong, setSelectedSong] = useState<any>(null);
+  const [isSongDetailOpen, setIsSongDetailOpen] = useState(false);
+  const [selectedSongIndex, setSelectedSongIndex] = useState<number | null>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
   // Listen for global mini player events
   React.useEffect(() => {
@@ -52,6 +115,8 @@ export default function PraiseNightPage() {
 
   // Map selected Praise Night to its e-card image (fallback to a default)
   const ecardSrc = useMemo(() => {
+    if (!currentPraiseNight) return "/Ecards/1000876785.png";
+    
     switch (currentPraiseNight.id) {
       case 16:
         return "/Ecards/1000876785.png";
@@ -60,7 +125,7 @@ export default function PraiseNightPage() {
       default:
         return "/Ecards/1000876785.png";
     }
-  }, [currentPraiseNight.id]);
+  }, [currentPraiseNight]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -88,6 +153,8 @@ export default function PraiseNightPage() {
 
   // Initialize countdown and make it count down
   useEffect(() => {
+    if (!currentPraiseNight) return;
+    
     // Get countdown from current praise night with fallback
     const initialCountdown = currentPraiseNight.countdown || {
       days: 11,
@@ -131,7 +198,7 @@ export default function PraiseNightPage() {
     
     // Cleanup interval on unmount
     return () => clearInterval(timer);
-  }, [currentPraiseNight.id])
+  }, [currentPraiseNight])
 
   // Handle category selection and close drawer
   const handleCategorySelect = (category: string) => {
@@ -144,7 +211,7 @@ export default function PraiseNightPage() {
     setSelectedSongIndex(index); // Set the selected song index
     setSelectedSong({...song, imageIndex: index});
     setIsSongDetailOpen(true);
-    setCurrentSong(song, false); // Set the current song in global audio context
+    setCurrentSong(song, false); // Set the current song in global audio context WITHOUT auto-play
     
     // Dispatch event to hide mini player
     window.dispatchEvent(new CustomEvent('songDetailOpen'));
@@ -158,10 +225,8 @@ export default function PraiseNightPage() {
     
     // Set the current song with auto-play enabled (only if it has audio)
     if (song.audioFile && song.audioFile.trim() !== '') {
-      console.log('Setting song with auto-play:', song.title);
       setCurrentSong(song, true); // Enable auto-play
     } else {
-      console.log('Song has no audio file, setting without auto-play:', song.title);
       setCurrentSong(song, false); // No auto-play
     }
     
@@ -195,20 +260,11 @@ export default function PraiseNightPage() {
     window.dispatchEvent(new CustomEvent('songDetailClose'));
   };
 
-
   // Format single digit numbers with leading zero
   const formatNumber = (num: number) => {
     if (isNaN(num) || num === undefined || num === null) return '00';
     return num < 10 ? `0${num}` : num.toString();
   }
-
-  // Song categories - now using category manager
-  const songCategories = categoryManager.getCategoryNames();
-
-  // Categories to show in horizontal bar (first 2)
-  const mainCategories = songCategories.slice(0, 2);
-  // Categories to keep in FAB (remaining ones)
-  const otherCategories = songCategories.slice(2);
 
   // Icon mapping for categories - now using category manager
   const getCategoryIcon = (categoryName: string) => {
@@ -230,40 +286,9 @@ export default function PraiseNightPage() {
     return iconMap[category.icon] || Music;
   };
 
-  // Get centralized song data from the current praise night (client-side only)
-  const [centralizedSongs, setCentralizedSongs] = useState<PraiseNightSong[]>([]);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
-  
-  useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') return;
-    
-    // Load data with offline support
-    const loadSongs = async () => {
-      try {
-        // Force refresh by getting fresh data directly from centralized source
-        const freshSongs = getCurrentSongs();
-        setCentralizedSongs(freshSongs);
-        
-        // Update cache with fresh data
-        await offlineManager.cacheData('praise-night-songs', freshSongs);
-        
-        setIsDataLoaded(true);
-        console.log('Songs loaded with fresh data from centralized source');
-      } catch (error) {
-        console.error('Failed to load songs:', error);
-        // Fallback to direct function call
-        const fallbackSongs = getCurrentSongs();
-        setCentralizedSongs(fallbackSongs);
-        setIsDataLoaded(true);
-      }
-    };
-
-    loadSongs();
-  }, [currentPraiseNight]);
-  
-  // Data already matches UI format, no transformation needed
-  const songData = centralizedSongs;
+  // Use songs directly from currentPraiseNight (Supabase data)
+  const songData = currentPraiseNight?.songs || [];
+  const isDataLoaded = !loading && currentPraiseNight !== null;
 
   // Fallback data if no centralized songs available
   const fallbackSongData = [
@@ -284,8 +309,7 @@ export default function PraiseNightPage() {
       key: "G Major",
       tempo: "72 BPM",
       comments: "This song should be sung with deep reverence and heartfelt emotion. Allow the congregation to really feel the weight of God's amazing grace."
-    },
-    // ... other fallback songs would go here
+    }
   ];
 
   // Use centralized data if available, otherwise show empty state
@@ -296,17 +320,6 @@ export default function PraiseNightPage() {
     // This will trigger a re-render when currentPraiseNight changes
     // The getCurrentSongs() call will get the new data
   }, [currentPraiseNight]);
-
-  // Filter states
-  const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard');
-  const [activeCategory, setActiveCategory] = useState<string>(songCategories[0]); // Default to first category
-  const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
-  
-  // Song detail modal states
-  const [selectedSong, setSelectedSong] = useState<any>(null);
-  const [isSongDetailOpen, setIsSongDetailOpen] = useState(false);
-  const [selectedSongIndex, setSelectedSongIndex] = useState<number | null>(null);
-  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
   // Filter songs based on selected category and status
   const filteredSongs = finalSongData.filter(song => 
@@ -319,9 +332,9 @@ export default function PraiseNightPage() {
   const categoryTotalCount = categoryHeardCount + categoryUnheardCount;
 
   const switchPraiseNight = (praiseNight: PraiseNight) => {
-    setCurrentPraiseNight(praiseNight.id);
     setCurrentPraiseNightState(praiseNight);
     setShowDropdown(false);
+    // Real-time data automatically includes all songs, no need to load manually
   };
 
   // Search input focus from header search button
@@ -343,6 +356,33 @@ export default function PraiseNightPage() {
     setIsSearchOpen(false);
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading praise nights...</p>
+      </div>
+    </div>
+  );
+}
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-600" />
+      </div>
+          <p className="text-red-600 font-medium mb-2">Error loading data</p>
+          <p className="text-slate-600 text-sm">{error}</p>
+      </div>
+    </div>
+  );
+}
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50">
       <style jsx global>{`
@@ -433,10 +473,10 @@ export default function PraiseNightPage() {
       
       {/* Shared Screen Header with Search Button and Timer */}
       <ScreenHeader 
-        title={currentPraiseNight.name} 
+        title={categoryFilter === 'archive' ? 'Archives' : (currentPraiseNight?.name || 'Loading...')}
         onMenuClick={toggleMenu} 
         rightImageSrc="/logo.png"
-        timer={
+        timer={categoryFilter !== 'archive' && (
           <div className="flex items-center gap-0.5 text-xs">
             <span className="font-bold text-gray-700">{formatNumber(timeLeft.days)}d</span>
             <span className="text-gray-500 font-bold">:</span>
@@ -446,8 +486,8 @@ export default function PraiseNightPage() {
             <span className="text-gray-500 font-bold">:</span>
             <span className="font-bold text-gray-700">{formatNumber(timeLeft.seconds)}s</span>
             </div>
-        }
-        leftButtons={
+        )}
+        leftButtons={categoryFilter !== 'archive' && (
                             <button
               aria-label="Switch Praise Night"
               onClick={() => setShowDropdown(!showDropdown)}
@@ -455,7 +495,7 @@ export default function PraiseNightPage() {
             >
               <ChevronDown className="w-4 h-4" />
             </button>
-        }
+        )}
         rightButtons={
             <button
               aria-label="Search"
@@ -467,26 +507,46 @@ export default function PraiseNightPage() {
         }
       />
 
-      {/* Header-level Praise Night Dropdown */}
-      {showDropdown && (
+        {/* Header-level Praise Night Dropdown - Hide for archive */}
+        {showDropdown && categoryFilter !== 'archive' && (
         <>
           <div 
             className="fixed inset-0 bg-black/20 z-[60]"
             onClick={() => setShowDropdown(false)}
           />
           <div className="fixed right-3 left-3 sm:right-4 sm:left-auto top-16 sm:top-16 z-[70] w-auto sm:w-64 max-w-2xl mx-auto sm:mx-0 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden max-h-64 overflow-y-auto">
-            {allPraiseNights.map((praiseNight) => (
+            {filteredPraiseNights.length > 0 ? (
+              filteredPraiseNights.map((praiseNight) => (
               <button
                 key={praiseNight.id}
                 onClick={() => switchPraiseNight(praiseNight)}
                 className={`w-full px-3 sm:px-4 py-2 sm:py-3 text-left hover:bg-slate-50 transition-colors ${
-                  praiseNight.id === currentPraiseNight.id ? 'bg-purple-50 text-purple-700 border-l-4 border-purple-500' : ''
+                  praiseNight.id === currentPraiseNight?.id ? 'bg-purple-50 text-purple-700 border-l-4 border-purple-500' : ''
                 }`}
               >
                 <div className="font-semibold text-sm sm:text-base">{praiseNight.name}</div>
                 <div className="text-xs sm:text-sm text-slate-600">{praiseNight.location} • {praiseNight.date}</div>
               </button>
-            ))}
+              ))
+            ) : (
+              <div className="px-3 sm:px-4 py-12 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="text-slate-500 text-sm mb-2 font-medium">
+                  {categoryFilter === 'pre-rehearsal' && 'No Pre-Rehearsal pages yet'}
+                  {categoryFilter === 'ongoing' && 'No Ongoing pages yet'}
+                  {categoryFilter === 'archive' && 'No Archived pages yet'}
+                  {categoryFilter === 'unassigned' && 'No Unassigned pages yet'}
+                  {!categoryFilter && 'No pages available'}
+                </div>
+                <div className="text-slate-400 text-xs">
+                  {categoryFilter ? 'Pages will appear here when added to this category' : 'Create your first page to get started'}
+                </div>
+              </div>
+            )}
               </div>
         </>
       )}
@@ -518,7 +578,70 @@ export default function PraiseNightPage() {
 
       {/* Content Container with Responsive Max Width */}
       <div className="mx-auto max-w-2xl px-3 sm:px-4 py-2 sm:py-4 relative">
-        {/* E-card with embedded switcher below (single image, no slide) */}
+        {/* Offline Banner */}
+        <OfflineBanner />
+        {/* Archive Cards Grid - Special layout for archive category */}
+        {categoryFilter === 'archive' && (
+          <div className="mb-6">
+            {filteredPraiseNights.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                {filteredPraiseNights.map((praiseNight) => (
+                  <button
+                    key={praiseNight.id}
+                    onClick={() => {
+                      setCurrentPraiseNightState(praiseNight);
+                      // Real-time data automatically includes all songs
+                    }}
+                    className={`group relative bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
+                      currentPraiseNight?.id === praiseNight.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                    }`}
+                  >
+                    {/* Banner Image */}
+                    <div className="aspect-[4/3] bg-gradient-to-br from-purple-500 to-pink-500 relative overflow-hidden">
+                      {praiseNight.bannerImage ? (
+                        <img 
+                          src={praiseNight.bannerImage} 
+                          alt={praiseNight.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // Fallback to gradient if image fails to load
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                          <span className="text-white font-bold text-lg">PN{praiseNight.id}</span>
+                        </div>
+                      )}
+                      {/* Overlay on hover */}
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                    </div>
+                    
+                    {/* Page Info */}
+                    <div className="p-3">
+                      <h3 className="font-semibold text-sm text-gray-900 truncate">{praiseNight.name}</h3>
+                      <p className="text-xs text-gray-600 mt-1">{praiseNight.date}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{praiseNight.location}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="text-slate-500 text-sm mb-2 font-medium">No Archived pages yet</div>
+                <div className="text-slate-400 text-xs">Pages will appear here when added to this category</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* E-card with embedded switcher below (single image, no slide) - Hide for archive */}
+        {categoryFilter !== 'archive' && currentPraiseNight && (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-2 sm:mb-3 max-w-md sm:max-w-lg mx-auto shadow-2xl shadow-black/20 ring-1 ring-black/5 breathe-animation">
           <div className="relative h-35 sm:h-43 md:h-51">
             <Image
@@ -532,8 +655,10 @@ export default function PraiseNightPage() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
               </div>
                 </div>
-
-        {/* Pills under timer */}
+        )}
+          
+        {/* Pills under timer - Hide for archive */}
+        {categoryFilter !== 'archive' && currentPraiseNight && (
         <div className="mb-4 sm:mb-6">
           <div 
             className="-mx-3 px-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
@@ -607,12 +732,14 @@ export default function PraiseNightPage() {
             </div>
             </div>
           </div>
+        )}
           
-        {/* Status Filter buttons/pills with category-specific count */}
+        {/* Status Filter buttons/pills with category-specific count - Hide for archive */}
+        {categoryFilter !== 'archive' && currentPraiseNight && (
         <div className="mb-4 sm:mb-6 flex items-center justify-between px-4">
           <button 
             onClick={() => setActiveFilter('heard')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 shadow-sm border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 shadow-sm border whitespace-nowrap ${
               activeFilter === 'heard' 
                 ? 'bg-green-100 hover:bg-green-200 text-green-800 border-green-300' 
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
@@ -629,7 +756,7 @@ export default function PraiseNightPage() {
         
           <button 
             onClick={() => setActiveFilter('unheard')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 shadow-sm border ${
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 shadow-sm border whitespace-nowrap ${
               activeFilter === 'unheard' 
                 ? 'bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300' 
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
@@ -638,8 +765,10 @@ export default function PraiseNightPage() {
             Unheard ({categoryUnheardCount})
           </button>
         </div>
+        )}
 
-        {/* Song Title Cards - Scrollable */}
+        {/* Song Title Cards - Scrollable - Hide for archive */}
+        {categoryFilter !== 'archive' && currentPraiseNight && (
         <div className="px-1 py-4 max-h-96 overflow-y-auto">
           {filteredSongs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -651,10 +780,10 @@ export default function PraiseNightPage() {
             filteredSongs.map((song, index) => (
               <div
                 key={index}
-                onClick={() => {
-                  // Always open modal and start playing
-                  handleSongSwitch(song, index);
-                }}
+                  onClick={() => {
+                    // Open modal without auto-play
+                    handleSongClick(song, index);
+                  }}
                 className={`bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group mb-3 w-full cursor-pointer ${
                   selectedSongIndex === index 
                     ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-200/50 bg-purple-50/30' 
@@ -674,11 +803,17 @@ export default function PraiseNightPage() {
                        {song.title}
           </h3>
                      <p className="text-xs text-slate-500 mt-0.5 leading-tight font-bold">
-                        Singer: {song.leadSinger ? song.leadSinger.split(',')[0].trim() : 'Unknown'}
+                          Singer: {song.leadSinger ? song.leadSinger.split(',')[0].trim() : 'Unknown'}
                      </p>
         </div>
                 </div>
-                 <div className="flex items-center">
+                 <div className="flex items-center gap-2">
+                   {/* Rehearsal Count */}
+                   <div className="px-2 py-1 bg-purple-100 rounded-full">
+                     <span className="text-xs font-bold text-purple-600">
+                       x{(song.history?.filter(entry => entry.type === 'metadata').length || 0) + 1}
+                     </span>
+                   </div>
                    <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-slate-200 transition-colors">
                      <ChevronRight className="w-3 h-3 text-slate-500 group-hover:translate-x-0.5 transition-all duration-200" />
                     </div>
@@ -688,46 +823,58 @@ export default function PraiseNightPage() {
             ))
           )}
         </div>
+        )}
         
         {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
       </div>
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* Bottom Bar with Categories and FAB - Same Row */}
+      {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category */}
+      {filteredPraiseNights.length > 0 && (
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
-        <div className="w-full flex items-center px-6 py-4 gap-4">
+        <div className="w-full flex items-center px-4 sm:px-6 py-4 gap-2 sm:gap-4">
           {/* Category buttons with text */}
           {mainCategories.map((category, index) => (
             <div key={category} className="relative flex-1">
             <button
               onClick={() => handleCategorySelect(category)}
-                className={`w-full px-3 py-2 rounded-xl text-[10px] font-semibold transition-all duration-200 text-center whitespace-nowrap ${
+                className={`w-full px-2 sm:px-4 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap ${
                 activeCategory === category
                   ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                   : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
               }`}
             >
-              {category}
+              <span className="hidden sm:inline">{category}</span>
+              <span className="sm:hidden">
+                {category === 'Pre-rehearsal' ? 'Pre' : 
+                 category === 'Ongoing' ? 'Live' : 
+                 category === 'Archive' ? 'Past' : category}
+              </span>
             </button>
             </div>
           ))}
           
           {/* FAB with Plus Icon and Tooltip */}
-          <div className="relative flex-1 flex justify-center">
+          <div className="relative flex-1 flex flex-col items-center min-w-0">
+            {/* Other Categories indicator above FAB */}
+            <div className="text-xs text-purple-400 font-medium mb-1 text-center whitespace-nowrap px-1">
+              <span className="hidden sm:inline">Other Categories</span>
+              <span className="sm:hidden">More</span>
+            </div>
           <button
             onClick={() => setIsCategoryDrawerOpen(true)}
-              onMouseEnter={() => setHoveredCategory("Other Categories")}
-              onMouseLeave={() => setHoveredCategory(null)}
-              className="w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
-            >
-              <Image
-                src="/click-icon.png"
-                alt="Click for more categories"
-                width={20}
-                height={20}
-                className="w-5 h-5"
-              />
+                onMouseEnter={() => setHoveredCategory("Other Categories")}
+                onMouseLeave={() => setHoveredCategory(null)}
+                className="w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
+              >
+                <Image
+                  src="/click-icon.png"
+                  alt="Click for more categories"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5"
+                />
           </button>
             
             {/* iOS-style Tooltip for FAB */}
@@ -741,13 +888,14 @@ export default function PraiseNightPage() {
                   {/* iOS-style arrow */}
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2">
                     <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
-                  </div>
-                </div>
-              </div>
-            )}
         </div>
         </div>
       </div>
+            )}
+          </div>
+        </div>
+      </div>
+      )}
 
       {/* Category Filter Drawer */}
       {isCategoryDrawerOpen && (
@@ -808,13 +956,29 @@ export default function PraiseNightPage() {
           isOpen={isSongDetailOpen} 
           onClose={handleCloseSongDetail}
           currentFilter={activeFilter}
+          songs={songData}
           onSongChange={(newSong) => {
             setSelectedSong(newSong);
-            setCurrentSong(newSong, false);
+            // Don't auto-play here since the modal handles it
           }}
         />
       )}
 
-    </div>
+                          </div>
+  );
+}
+
+export default function PraiseNightPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
+                      <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+                        </div>
+                      </div>
+    }>
+      <PraiseNightPageContent />
+    </Suspense>
   );
 }
