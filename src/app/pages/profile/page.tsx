@@ -64,6 +64,39 @@ export default function ProfilePage() {
     }
   }, [localProfile?.id])
 
+  // Set client-side flag
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // Auto-generate QR code every 5 minutes (client-side only)
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return
+    
+    // Generate initial QR code
+    generateQRCode()
+
+    // Set up interval to regenerate every 5 minutes
+    const interval = setInterval(() => {
+      generateQRCode()
+    }, 300000) // 5 minutes
+
+    return () => clearInterval(interval)
+  }, [localProfile?.id])
+
+  // Countdown timer (client-side only)
+  useEffect(() => {
+    if (typeof window === 'undefined') return // Skip on server
+    
+    if (timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft(prev => prev - 1)
+      }, 1000)
+      
+      return () => clearInterval(timer)
+    }
+  }, [timeLeft])
 
   // Show loading state
   if (isLoading) {
