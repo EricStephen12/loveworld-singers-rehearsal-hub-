@@ -25,6 +25,9 @@ export default function ProfilePage() {
   const { profile, isProfileComplete, signOut, isLoading, refreshProfile } = useAuth()
   const [localProfile, setLocalProfile] = useState(profile)
 
+  // Use the most available profile data (localProfile first, then profile from context)
+  const currentProfile = localProfile || profile
+
   // Set client flag to prevent hydration issues
   useEffect(() => {
     setIsClient(true)
@@ -78,9 +81,6 @@ export default function ProfilePage() {
     router.push('/auth')
   }
 
-  // Use the most available profile data (localProfile first, then profile from context)
-  const currentProfile = localProfile || profile
-  
   // Real user data from profile (use currentProfile for immediate loading)
   const userProfile = {
     // Personal Information
