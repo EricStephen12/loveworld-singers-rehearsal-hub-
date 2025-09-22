@@ -71,15 +71,17 @@ export default function ProfilePage() {
 
   // Auto-generate QR code every 5 minutes (client-side only)
   useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') return
+    // Only run on client side and when profile is available
+    if (typeof window === 'undefined' || !localProfile?.id) return
     
     // Generate initial QR code
     generateQRCode()
 
     // Set up interval to regenerate every 5 minutes
     const interval = setInterval(() => {
-      generateQRCode()
+      if (localProfile?.id) {
+        generateQRCode()
+      }
     }, 300000) // 5 minutes
 
     return () => clearInterval(interval)
@@ -151,15 +153,21 @@ export default function ProfilePage() {
 
   // Generate a new QR code (client-side only)
   const generateQRCode = () => {
-    if (typeof window === 'undefined') return // Skip on server
-    
-    if (localProfile?.id) {
-      // Use a more stable approach to prevent hydration issues
-      const now = new Date()
-      const minutes = Math.floor(now.getTime() / 300000) // 5-minute intervals
-      const stableCode = `LW-ATTEND-${localProfile.id.slice(0, 8).toUpperCase()}-${minutes}-STABLE`
-      setQrCode(stableCode)
-      setTimeLeft(300) // 5 minutes
+    try {
+      if (typeof window === 'undefined') return // Skip on server
+      
+      if (localProfile?.id) {
+        // Use a more stable approach to prevent hydration issues
+        const now = new Date()
+        const minutes = Math.floor(now.getTime() / 300000) // 5-minute intervals
+        const stableCode = `LW-ATTEND-${localProfile.id.slice(0, 8).toUpperCase()}-${minutes}-STABLE`
+        setQrCode(stableCode)
+        setTimeLeft(300) // 5 minutes
+      }
+    } catch (error) {
+      console.error('Error generating QR code:', error)
+      // Set a fallback QR code
+      setQrCode('LW-ATTEND-FALLBACK-00000000-STABLE')
     }
   }
 
@@ -421,15 +429,26 @@ export default function ProfilePage() {
           <div className="text-center">
             {isClient && qrCode ? (
               <div className="mb-4">
-                <QRCodeGenerator 
-                  value={qrCode} 
-                  size={200} 
-                  className="mx-auto"
-                />
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <QRCodeGenerator 
+                      value={qrCode} 
+                      size={200} 
+                      className="mx-auto"
+                    />
+                    {/* Fallback if QR code fails */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 hidden" id="qr-fallback">
+                      <div className="text-center">
+                        <QrCode className="w-16 h-16 text-gray-400 mx-auto mb-2" />
+                        <p className="text-xs text-gray-500">QR Code unavailable</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <p className="text-xs text-gray-600 font-mono mt-2">{qrCode}</p>
               </div>
             ) : (
-            <div className="w-32 h-32 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
+              <div className="w-32 h-32 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
                 <QrCode className="w-16 h-16 text-gray-400" />
               </div>
             )}
