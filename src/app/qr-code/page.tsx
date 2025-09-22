@@ -148,8 +148,6 @@ export default function QRScannerPage() {
     <div className="min-h-screen bg-gray-50">
       <ScreenHeader 
         title="QR Code Scanner" 
-        onBack={handleBack}
-        showBackButton={true}
       />
 
       <div className="p-4">

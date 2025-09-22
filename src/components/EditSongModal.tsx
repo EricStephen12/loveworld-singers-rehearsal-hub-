@@ -90,6 +90,29 @@ export default function EditSongModal({
     return text.replace(/\n/g, '<br>');
   };
 
+  // Helper function to handle paste events and strip formatting
+  const handlePaste = (e: React.ClipboardEvent, currentValue: string, setValue: (value: string) => void) => {
+    e.preventDefault();
+    const clipboardData = e.clipboardData || (window as any).clipboardData;
+    const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
+    
+    // Strip any remaining formatting and normalize whitespace
+    const cleanText = pastedText
+      .replace(/\s+/g, ' ') // Replace multiple whitespace with single space
+      .trim(); // Remove leading/trailing whitespace
+    
+    const target = e.target as HTMLInputElement;
+    const start = target.selectionStart || 0;
+    const end = target.selectionEnd || 0;
+    const newValue = currentValue.substring(0, start) + cleanText + currentValue.substring(end);
+    setValue(newValue);
+    
+    // Set cursor position after pasted text
+    setTimeout(() => {
+      target.selectionStart = target.selectionEnd = start + cleanText.length;
+    }, 0);
+  };
+
   // Initialize form when song changes
   useEffect(() => {
     if (song) {
@@ -404,21 +427,7 @@ export default function EditSongModal({
                           type="text"
                           value={songTitle}
                           onChange={(e) => setSongTitle(e.target.value)}
-                          onPaste={(e) => {
-                            e.preventDefault();
-                            const clipboardData = e.clipboardData || (window as any).clipboardData;
-                            const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
-                            const target = e.target as HTMLInputElement;
-                            const start = target.selectionStart || 0;
-                            const end = target.selectionEnd || 0;
-                            const currentValue = songTitle;
-                            const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
-                            setSongTitle(newValue);
-                            // Set cursor position after pasted text
-                            setTimeout(() => {
-                              target.selectionStart = target.selectionEnd = start + pastedText.length;
-                            }, 0);
-                          }}
+                          onPaste={(e) => handlePaste(e, songTitle, setSongTitle)}
                           dir="ltr"
                           style={{ textAlign: 'left', direction: 'ltr' }}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 text-lg font-medium"
@@ -488,6 +497,7 @@ export default function EditSongModal({
                           type="text"
                           value={songKey}
                           onChange={(e) => setSongKey(e.target.value)}
+                          onPaste={(e) => handlePaste(e, songKey, setSongKey)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
                           placeholder="e.g., C, G, F#"
                         />
@@ -501,6 +511,7 @@ export default function EditSongModal({
                           type="text"
                           value={songTempo}
                           onChange={(e) => setSongTempo(e.target.value)}
+                          onPaste={(e) => handlePaste(e, songTempo, setSongTempo)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
                           placeholder="e.g., 120 BPM"
                         />
@@ -629,6 +640,7 @@ export default function EditSongModal({
                           type="text"
                           value={songLeadSinger}
                           onChange={(e) => setSongLeadSinger(e.target.value)}
+                          onPaste={(e) => handlePaste(e, songLeadSinger, setSongLeadSinger)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
                           placeholder="Enter lead singer name"
                         />
@@ -642,6 +654,7 @@ export default function EditSongModal({
                           type="text"
                           value={songWriter}
                           onChange={(e) => setSongWriter(e.target.value)}
+                          onPaste={(e) => handlePaste(e, songWriter, setSongWriter)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
                           placeholder="Enter writer name"
                         />
@@ -655,6 +668,7 @@ export default function EditSongModal({
                           type="text"
                           value={songConductor}
                           onChange={(e) => setSongConductor(e.target.value)}
+                          onPaste={(e) => handlePaste(e, songConductor, setSongConductor)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
                           placeholder="Enter conductor name"
                         />
@@ -668,6 +682,7 @@ export default function EditSongModal({
                           type="text"
                           value={songLeadKeyboardist}
                           onChange={(e) => setSongLeadKeyboardist(e.target.value)}
+                          onPaste={(e) => handlePaste(e, songLeadKeyboardist, setSongLeadKeyboardist)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
                           placeholder="Enter lead keyboardist name"
                         />
@@ -681,6 +696,7 @@ export default function EditSongModal({
                           type="text"
                           value={songLeadGuitarist}
                           onChange={(e) => setSongLeadGuitarist(e.target.value)}
+                          onPaste={(e) => handlePaste(e, songLeadGuitarist, setSongLeadGuitarist)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
                           placeholder="Enter lead guitarist name"
                         />
@@ -694,6 +710,7 @@ export default function EditSongModal({
                           type="text"
                           value={songDrummer}
                           onChange={(e) => setSongDrummer(e.target.value)}
+                          onPaste={(e) => handlePaste(e, songDrummer, setSongDrummer)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
                           placeholder="Enter drummer name"
                         />
@@ -805,21 +822,7 @@ Do Re Mi Fa Sol La Ti Do"
                             <textarea
                               value={newComment}
                               onChange={(e) => setNewComment(e.target.value)}
-                              onPaste={(e) => {
-                                e.preventDefault();
-                                const clipboardData = e.clipboardData || (window as any).clipboardData;
-                                const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
-                                const target = e.target as HTMLTextAreaElement;
-                                const start = target.selectionStart;
-                                const end = target.selectionEnd;
-                                const currentValue = newComment;
-                                const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
-                                setNewComment(newValue);
-                                // Set cursor position after pasted text
-                                setTimeout(() => {
-                                  target.selectionStart = target.selectionEnd = start + pastedText.length;
-                                }, 0);
-                              }}
+                              onPaste={(e) => handlePaste(e, newComment, setNewComment)}
                               rows={3}
                               dir="ltr"
                               style={{ textAlign: 'left', direction: 'ltr' }}

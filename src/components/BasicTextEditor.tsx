@@ -38,6 +38,38 @@ export default function BasicTextEditor({
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    
+    // Get plain text from clipboard
+    const clipboardData = e.clipboardData || (window as any).clipboardData;
+    const pastedText = clipboardData.getData('text/plain');
+    
+    if (pastedText && editorRef.current) {
+      // Get current selection
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        
+        // Delete selected content
+        range.deleteContents();
+        
+        // Insert plain text
+        const textNode = document.createTextNode(pastedText);
+        range.insertNode(textNode);
+        
+        // Move cursor to end of inserted text
+        range.setStartAfter(textNode);
+        range.setEndAfter(textNode);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // Trigger input event to update state
+        setTimeout(handleInput, 10);
+      }
+    }
+  };
+
   const formatText = (command: string, value?: string) => {
     if (editorRef.current) {
       editorRef.current.focus();
@@ -82,6 +114,7 @@ export default function BasicTextEditor({
         id={id}
         contentEditable
         onInput={handleInput}
+        onPaste={handlePaste}
         className="min-h-[200px] p-4 focus:outline-none"
         style={{
           fontFamily: 'inherit',
