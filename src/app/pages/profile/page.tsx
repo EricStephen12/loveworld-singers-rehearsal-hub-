@@ -16,8 +16,9 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [qrCode, setQrCode] = useState('')
-  const [timeLeft, setTimeLeft] = useState(300) // 5 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(0) // Will be set when QR is generated
   const [isClient, setIsClient] = useState(false)
+  const [qrGenerated, setQrGenerated] = useState(false)
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([])
   const [attendanceStats, setAttendanceStats] = useState({ total: 0, present: 0, late: 0, absent: 0, rate: 0 })
   const router = useRouter()
@@ -29,28 +30,7 @@ export default function ProfilePage() {
     setIsClient(true)
   }, [])
 
-  // Ensure profile loads immediately when component mounts
-  useEffect(() => {
-    const loadProfileImmediately = async () => {
-      if (!profile && !isLoading) {
-        console.log('Loading profile immediately...')
-        try {
-          const { AuthService } = await import('@/lib/auth-service')
-          const userProfile = await AuthService.getCurrentUserProfile()
-          console.log('Immediate profile load result:', userProfile)
-          setLocalProfile(userProfile)
-        } catch (error) {
-          console.error('Immediate profile load error:', error)
-        }
-      } else if (profile) {
-        setLocalProfile(profile)
-      }
-    }
-
-    loadProfileImmediately()
-  }, [profile, isLoading])
-
-  // Update local profile when context profile changes
+  // Simplified profile loading - just use what's available from context
   useEffect(() => {
     if (profile) {
       setLocalProfile(profile)
@@ -64,29 +44,6 @@ export default function ProfilePage() {
     }
   }, [localProfile?.id])
 
-  // Set client-side flag
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  // Auto-generate QR code every 5 minutes (client-side only)
-  useEffect(() => {
-    // Only run on client side and when profile is available
-    if (typeof window === 'undefined' || !localProfile?.id) return
-    
-    // Generate initial QR code
-    generateQRCode()
-
-    // Set up interval to regenerate every 5 minutes
-    const interval = setInterval(() => {
-      if (localProfile?.id) {
-        generateQRCode()
-      }
-    }, 300000) // 5 minutes
-
-    return () => clearInterval(interval)
-  }, [localProfile?.id])
-
   // Countdown timer (client-side only)
   useEffect(() => {
     if (typeof window === 'undefined') return // Skip on server
@@ -97,11 +54,15 @@ export default function ProfilePage() {
       }, 1000)
       
       return () => clearInterval(timer)
+    } else if (timeLeft === 0 && qrGenerated) {
+      // QR code expired
+      setQrCode('')
+      setQrGenerated(false)
     }
-  }, [timeLeft])
+  }, [timeLeft, qrGenerated])
 
-  // Show loading state
-  if (isLoading) {
+  // Show loading state only if we have no profile data at all
+  if (isLoading && !localProfile) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -157,17 +118,20 @@ export default function ProfilePage() {
       if (typeof window === 'undefined') return // Skip on server
       
       if (localProfile?.id) {
-        // Use a more stable approach to prevent hydration issues
+        // Generate a unique QR code with timestamp
         const now = new Date()
-        const minutes = Math.floor(now.getTime() / 300000) // 5-minute intervals
-        const stableCode = `LW-ATTEND-${localProfile.id.slice(0, 8).toUpperCase()}-${minutes}-STABLE`
-        setQrCode(stableCode)
+        const timestamp = now.getTime()
+        const code = `LW-ATTEND-${localProfile.id.slice(0, 8).toUpperCase()}-${timestamp}`
+        setQrCode(code)
         setTimeLeft(300) // 5 minutes
+        setQrGenerated(true)
       }
     } catch (error) {
       console.error('Error generating QR code:', error)
       // Set a fallback QR code
-      setQrCode('LW-ATTEND-FALLBACK-00000000-STABLE')
+      setQrCode('LW-ATTEND-FALLBACK-00000000')
+      setTimeLeft(300)
+      setQrGenerated(true)
     }
   }
 
@@ -420,14 +384,16 @@ export default function ProfilePage() {
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Attendance Check-in</h3>
-            <div className="flex items-center space-x-1 text-xs text-gray-500">
-              <Clock className="w-3 h-3" />
-              <span>Expires in {timeLeft}s</span>
-            </div>
+            {qrGenerated && timeLeft > 0 && (
+              <div className="flex items-center space-x-1 text-xs text-gray-500">
+                <Clock className="w-3 h-3" />
+                <span>Expires in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+              </div>
+            )}
           </div>
           
           <div className="text-center">
-            {isClient && qrCode ? (
+            {qrGenerated && qrCode ? (
               <div className="mb-4">
                 <div className="flex justify-center">
                   <div className="relative">
@@ -446,13 +412,28 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <p className="text-xs text-gray-600 font-mono mt-2">{qrCode}</p>
+                <button
+                  onClick={generateQRCode}
+                  className="mt-3 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Generate New QR Code
+                </button>
               </div>
             ) : (
-              <div className="w-32 h-32 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <QrCode className="w-16 h-16 text-gray-400" />
+              <div className="text-center">
+                <div className="w-32 h-32 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                  <QrCode className="w-16 h-16 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-600 mb-4">Generate a QR code for attendance check-in</p>
+                <button
+                  onClick={generateQRCode}
+                  className="px-6 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Generate QR Code
+                </button>
+                <p className="text-xs text-gray-500 mt-2">QR code expires in 5 minutes</p>
               </div>
             )}
-            
           </div>
         </div>
       </div>
