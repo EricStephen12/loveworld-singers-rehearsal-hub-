@@ -39,10 +39,10 @@ export default function ProfilePage() {
 
   // Load attendance data when profile is available
   useEffect(() => {
-    if (localProfile?.id) {
+    if (currentProfile?.id) {
       loadAttendanceData()
     }
-  }, [localProfile?.id])
+  }, [currentProfile?.id])
 
   // Countdown timer (client-side only)
   useEffect(() => {
@@ -61,8 +61,8 @@ export default function ProfilePage() {
     }
   }, [timeLeft, qrGenerated])
 
-  // Show loading state only if we have no profile data at all
-  if (isLoading && !localProfile) {
+  // Show loading state only if we have absolutely no profile data and it's still loading
+  if (isLoading && !localProfile && !profile) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -78,37 +78,40 @@ export default function ProfilePage() {
     router.push('/auth')
   }
 
-  // Real user data from profile (use localProfile for immediate loading)
+  // Use the most available profile data (localProfile first, then profile from context)
+  const currentProfile = localProfile || profile
+  
+  // Real user data from profile (use currentProfile for immediate loading)
   const userProfile = {
     // Personal Information
-    firstName: localProfile?.first_name || '',
-    middleName: localProfile?.middle_name || '',
-    lastName: localProfile?.last_name || '',
-    fullName: `${localProfile?.first_name || ''} ${localProfile?.middle_name || ''} ${localProfile?.last_name || ''}`.trim(),
-    email: localProfile?.email || '',
-    phoneNumber: localProfile?.phone_number || '',
-    gender: localProfile?.gender || '',
-    birthday: localProfile?.birthday || '',
+    firstName: currentProfile?.first_name || '',
+    middleName: currentProfile?.middle_name || '',
+    lastName: currentProfile?.last_name || '',
+    fullName: `${currentProfile?.first_name || ''} ${currentProfile?.middle_name || ''} ${currentProfile?.last_name || ''}`.trim(),
+    email: currentProfile?.email || '',
+    phoneNumber: currentProfile?.phone_number || '',
+    gender: currentProfile?.gender || '',
+    birthday: currentProfile?.birthday || '',
     
     // Location Information
-    region: localProfile?.region || '',
-    zone: localProfile?.zone || '',
-    church: localProfile?.church || '',
+    region: currentProfile?.region || '',
+    zone: currentProfile?.zone || '',
+    church: currentProfile?.church || '',
     
     // Ministry Information
-    designation: localProfile?.designation || '',
-    administration: localProfile?.administration || '',
-    socialProvider: localProfile?.social_provider || 'email',
-    socialId: localProfile?.social_id || localProfile?.email || '',
+    designation: currentProfile?.designation || '',
+    administration: currentProfile?.administration || '',
+    socialProvider: currentProfile?.social_provider || 'email',
+    socialId: currentProfile?.social_id || currentProfile?.email || '',
     
     // Additional Profile Data (these would come from other tables in a real app)
     groups: ["Main Choir", "Praise Team"], // TODO: Fetch from user_groups table
-    joinDate: localProfile?.created_at ? new Date(localProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
+    joinDate: currentProfile?.created_at ? new Date(currentProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
     totalRehearsals: 0, // TODO: Calculate from attendance records
     attendanceRate: 0, // TODO: Calculate from attendance records
     lastCheckIn: "Never", // TODO: Get from latest attendance record
     achievements: ["Profile Completed"], // TODO: Fetch from achievements table
-    qrCode: localProfile?.id ? `LW-USER-${localProfile.id.slice(0, 8).toUpperCase()}` : "LW-USER-00000000"
+    qrCode: currentProfile?.id ? `LW-USER-${currentProfile.id.slice(0, 8).toUpperCase()}` : "LW-USER-00000000"
   }
 
 
@@ -117,11 +120,11 @@ export default function ProfilePage() {
     try {
       if (typeof window === 'undefined') return // Skip on server
       
-      if (localProfile?.id) {
+      if (currentProfile?.id) {
         // Generate a unique QR code with timestamp
         const now = new Date()
         const timestamp = now.getTime()
-        const code = `LW-ATTEND-${localProfile.id.slice(0, 8).toUpperCase()}-${timestamp}`
+        const code = `LW-ATTEND-${currentProfile.id.slice(0, 8).toUpperCase()}-${timestamp}`
         setQrCode(code)
         setTimeLeft(300) // 5 minutes
         setQrGenerated(true)
@@ -137,12 +140,12 @@ export default function ProfilePage() {
 
   // Load attendance data
   const loadAttendanceData = async () => {
-    if (!localProfile?.id) return
+    if (!currentProfile?.id) return
 
     try {
       const [history, stats] = await Promise.all([
-        AttendanceService.getUserAttendance(localProfile.id, 5),
-        AttendanceService.getAttendanceStats(localProfile.id)
+        AttendanceService.getUserAttendance(currentProfile.id, 5),
+        AttendanceService.getAttendanceStats(currentProfile.id)
       ])
       
       setAttendanceHistory(history)
@@ -210,17 +213,17 @@ export default function ProfilePage() {
           </div>
           
           <h2 className="text-2xl font-outfit-bold text-gray-800 mb-2">
-            {localProfile ? `${localProfile.first_name || ''} ${localProfile.last_name || ''}`.trim() || 'User' : 'User'}
+            {currentProfile ? `${currentProfile.first_name || ''} ${currentProfile.last_name || ''}`.trim() || 'User' : 'User'}
           </h2>
-          <p className="text-sm text-gray-600 mb-1">@{localProfile?.social_id || 'user'}</p>
-          <p className="text-xs text-gray-500 mb-4">{localProfile?.email || 'user@example.com'}</p>
+          <p className="text-sm text-gray-600 mb-1">@{currentProfile?.social_id || 'user'}</p>
+          <p className="text-xs text-gray-500 mb-4">{currentProfile?.email || 'user@example.com'}</p>
           
           <div className="flex items-center justify-center space-x-2">
             <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-poppins-medium">
-              {localProfile?.designation || 'Member'}
+              {currentProfile?.designation || 'Member'}
             </span>
             <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-poppins-medium">
-              {localProfile?.administration || 'General'}
+              {currentProfile?.administration || 'General'}
             </span>
           </div>
         </div>
