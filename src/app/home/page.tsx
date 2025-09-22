@@ -3,13 +3,13 @@
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp } from 'lucide-react'
+import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import { getMenuItems } from '@/config/menuItems'
+import { useHomeGlobalSearch, HomeSearchResult } from '@/hooks/useHomeGlobalSearch'
 
 export default function HomePage() {
   const router = useRouter()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
@@ -17,6 +17,10 @@ export default function HomePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
+  // Use global search hook for comprehensive search
+  const { searchQuery: globalSearchQuery, setSearchQuery: setGlobalSearchQuery, searchResults, hasResults } = useHomeGlobalSearch()
+  const typedSearchResults = searchResults as HomeSearchResult[]
 
   // Carousel images array
   const carouselImages = [
@@ -95,6 +99,25 @@ export default function HomePage() {
     
     // Redirect to auth screen
     router.push('/auth')
+  }
+
+  // Helper function to get icon component by name
+  const getIconComponent = (iconName: string) => {
+    const iconMap: { [key: string]: any } = {
+      'Search': Search,
+      'Music': Music,
+      'Calendar': Calendar,
+      'User': User,
+      'Bell': Bell,
+      'Users': Users,
+      'Play': Play,
+      'BarChart3': BarChart3,
+      'HelpCircle': HelpCircle,
+      'Flag': Flag,
+      'Info': Info,
+      'Home': Home
+    };
+    return iconMap[iconName] || Search;
   }
 
   const features = [
@@ -253,10 +276,10 @@ export default function HomePage() {
               <div className="flex-1 relative">
                 <input
                   ref={searchInputRef}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={globalSearchQuery}
+                  onChange={(e) => setGlobalSearchQuery(e.target.value)}
                   type="text"
-                  placeholder="Search"
+                  placeholder="Search everything..."
                   inputMode="search"
                   aria-label="Search"
                   className="w-full text-lg bg-transparent px-0 py-3 text-gray-800 placeholder-gray-400 border-0 outline-none appearance-none shadow-none ring-0 focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none font-poppins-medium"
@@ -284,6 +307,71 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* Search Results Overlay */}
+      {isSearchOpen && (
+        <div className="fixed inset-0 z-30 bg-white/95 backdrop-blur-xl pt-20 overflow-y-auto">
+          <div className="px-4 py-4 pb-8">
+            <div className="text-sm text-gray-500 mb-4">
+              {globalSearchQuery ? (
+                `${typedSearchResults.length} result${typedSearchResults.length !== 1 ? 's' : ''} for "${globalSearchQuery}"`
+              ) : (
+                'Start typing to search everything...'
+              )}
+            </div>
+            
+            {typedSearchResults.length > 0 ? (
+              <div className="space-y-3">
+                {typedSearchResults.map((result) => {
+                  const IconComponent = getIconComponent(result.icon || 'Search');
+                  return (
+                    <Link
+                      key={result.id}
+                      href={result.url}
+                      onClick={() => {
+                        setIsSearchOpen(false);
+                        setGlobalSearchQuery('');
+                      }}
+                      className="flex items-center p-4 bg-white rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50/50 transition-all duration-200 active:scale-95 shadow-sm"
+                    >
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                        <IconComponent className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 text-sm truncate group-hover:text-purple-700 transition-colors">
+                          {result.title}
+                        </h4>
+                        {result.subtitle && (
+                          <p className="text-xs text-purple-600 font-medium mt-0.5">
+                            {result.subtitle}
+                          </p>
+                        )}
+                        {result.description && (
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                            {result.description}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : globalSearchQuery ? (
+              <div className="text-center py-12">
+                <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-500 mb-2">No results found</h3>
+                <p className="text-sm text-gray-400">Try searching for songs, features, or events</p>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-500 mb-2">Search Everything</h3>
+                <p className="text-sm text-gray-400">Find songs, events, features, and more</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Hero Banner - Carousel */}
       <div className="px-4 py-6">

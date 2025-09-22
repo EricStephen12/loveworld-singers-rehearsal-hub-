@@ -2,6 +2,7 @@
   "name": "LWSHRP - LoveWorld Singers Rehearsal Hub",
   "short_name": "LWSHRP",
   "description": "LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app",
+  "version": "2.1.0",
   "theme_color": "#ffffff",
   "background_color": "#ffffff",
   "display": "standalone",

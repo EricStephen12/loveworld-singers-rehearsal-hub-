@@ -30,7 +30,7 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: 'LWSHRP - LoveWorld Singers Rehearsal Hub',
   description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
-  manifest: '/manifest.json',
+  manifest: '/manifest.json?v=2.1.0',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

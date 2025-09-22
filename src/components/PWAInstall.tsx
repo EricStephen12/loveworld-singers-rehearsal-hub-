@@ -51,41 +51,43 @@ export default function PWAInstall() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-md mx-auto">
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Download className="w-5 h-5 text-white" />
+    <div className="fixed bottom-4 left-4 right-4 z-50 max-w-sm mx-auto">
+      <div className="bg-white/95 backdrop-blur-xl border border-gray-200/50 rounded-2xl shadow-2xl p-4">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Download className="w-6 h-6 text-white" />
+            </div>
           </div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-gray-900">
-            Install Praise App
-          </h3>
-          <p className="text-xs text-gray-600 mt-1">
-            Install this app on your device for offline access and a better experience.
-          </p>
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={handleInstallClick}
-              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-            >
-              Install
-            </button>
-            <button
-              onClick={() => setShowInstallBanner(false)}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Not now
-            </button>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-semibold text-gray-900 mb-1">
+              Install LWSHRP
+            </h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-4">
+              Install this app on your device for offline access and a better experience.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleInstallClick}
+                className="flex-1 inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95"
+              >
+                Install
+              </button>
+              <button
+                onClick={() => setShowInstallBanner(false)}
+                className="px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              >
+                Not now
+              </button>
+            </div>
           </div>
+          <button
+            onClick={() => setShowInstallBanner(false)}
+            className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <button
-          onClick={() => setShowInstallBanner(false)}
-          className="flex-shrink-0 text-gray-400 hover:text-gray-600"
-        >
-          <X className="w-4 h-4" />
-        </button>
       </div>
     </div>
   )

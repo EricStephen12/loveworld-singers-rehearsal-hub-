@@ -24,10 +24,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   const refreshProfile = async () => {
-    if (user) {
-      const userProfile = await AuthService.getCurrentUserProfile()
-      setProfile(userProfile)
-    }
+    console.log('Refreshing profile...')
+    const userProfile = await AuthService.getCurrentUserProfile()
+    console.log('Refreshed profile:', userProfile)
+    setProfile(userProfile)
   }
 
   const signOut = async () => {
@@ -45,7 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user || null)
       
       if (session?.user) {
-        await refreshProfile()
+        const userProfile = await AuthService.getCurrentUserProfile()
+        setProfile(userProfile)
+        console.log('Initial profile load:', userProfile)
       }
       
       setIsLoading(false)
@@ -60,7 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user || null)
         
         if (session?.user) {
-          await refreshProfile()
+          const userProfile = await AuthService.getCurrentUserProfile()
+          setProfile(userProfile)
+          console.log('Auth change profile load:', userProfile)
         } else {
           setProfile(null)
         }
