@@ -2,66 +2,106 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Music, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { AuthService } from '@/lib/auth-service'
+import type { SignUpData } from '@/types/supabase'
 
 export default function AuthPage() {
   const router = useRouter()
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
-    // Personal Information
     firstName: '',
-    middleName: '',
     lastName: '',
-    gender: '',
-    birthday: '',
-    
-    // Location Information
-    region: '',
-    zone: '',
-    church: '',
-    
-    // Ministry Information
-    designation: '',
-    administration: '',
-    
-    // Contact Information
     email: '',
-    phoneNumber: '',
     password: '',
-    
-    // Social Login
-    socialProvider: '',
-    socialId: ''
+    confirmPassword: ''
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Save authentication status and mark as fully authenticated
-    localStorage.setItem('isAuthenticated', 'true')
-    localStorage.setItem('hasCompletedProfile', 'true')
-    localStorage.setItem('hasSubscribed', 'true')
-    router.push('/success?action=login')
+    setError('')
+    setIsLoading(true)
+    
+    try {
+      if (!isLogin) {
+        // Signup validation
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match')
+          return
+        }
+        if (formData.password.length < 6) {
+          setError('Password must be at least 6 characters')
+          return
+        }
+
+        // Sign up with Supabase
+        const signUpData: SignUpData = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password
+        }
+
+        const result = await AuthService.signUp(signUpData)
+        
+        // Set authentication status in localStorage
+        localStorage.setItem('isAuthenticated', 'true')
+        
+        // DISABLED: Email confirmation is disabled for development
+        // Always go directly to profile completion
+        router.push('/profile-completion')
+      } else {
+        // Sign in with Supabase
+        await AuthService.signIn(formData.email, formData.password)
+        
+        // Set authentication status in localStorage
+        localStorage.setItem('isAuthenticated', 'true')
+        
+        // Check if profile is complete
+        const isComplete = await AuthService.isProfileComplete()
+        console.log('Profile complete status:', isComplete)
+        
+        if (isComplete) {
+          // Set profile completion status
+          localStorage.setItem('hasCompletedProfile', 'true')
+          console.log('Redirecting to /home')
+          router.push('/home')
+        } else {
+          console.log('Redirecting to /profile-completion')
+          router.push('/profile-completion')
+        }
+      }
+    } catch (error: any) {
+      console.error('Auth error:', error)
+      setError(error.message || 'An error occurred during authentication')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleSocialLogin = (provider: string) => {
-    // Mock social login
-    const socialData = {
-      socialProvider: provider,
-      socialId: provider === 'google' ? 'user@gmail.com' : 'user@kingschat.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      email: provider === 'google' ? 'user@gmail.com' : 'user@kingschat.com'
+  const handleSocialLogin = async (provider: string) => {
+    if (provider === 'kingschat') {
+      // KingsChat integration - placeholder for future implementation
+      setError('KingsChat integration coming soon!')
+      return
     }
     
-    setFormData(prev => ({
-      ...prev,
-      ...socialData
-    }))
+    setError('')
+    setIsLoading(true)
     
-    // Save authentication status
-    localStorage.setItem('isAuthenticated', 'true')
-    router.push('/profile-completion')
+    try {
+      // Sign in with Google
+      await AuthService.signInWithGoogle()
+      // The redirect will be handled by the OAuth flow
+    } catch (error: any) {
+      console.error('Social login error:', error)
+      setError(error.message || 'An error occurred during social login')
+      setIsLoading(false)
+    }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -115,53 +155,100 @@ export default function AuthPage() {
 
         {/* Auth Form */}
         <div className="max-w-md mx-auto w-full">
-          {isLogin ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-4">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              {!isLogin && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      name="firstName"
+                      placeholder="First Name"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                      required
+                    />
+                    <input
+                      type="text"
+                      name="lastName"
+                      placeholder="Last Name"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                      required
+                    />
+                  </div>
+                </>
+              )}
+              
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                required
+              />
+              
+              <div className="relative">
                 <input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  value={formData.email}
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="Password"
+                  value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                  className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm pr-12"
                   required
                 />
-                
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {!isLogin && (
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    placeholder="Password"
-                    value={formData.password}
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    placeholder="Confirm Password"
+                    value={formData.confirmPassword}
                     onChange={handleInputChange}
                     className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm pr-12"
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-4 bg-purple-600 text-white font-semibold rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl touch-target hover:bg-purple-700"
-              >
-                Sign In
-              </button>
-            </form>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-600 text-sm mb-6">
-                Choose your preferred sign-up method
-              </p>
+              )}
             </div>
-          )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-4 bg-purple-600 text-white font-semibold rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl touch-target hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isLogin ? 'Sign In' : 'Create Account'}
+            </button>
+          </form>
 
           {/* Divider - Only show for login */}
           {isLogin && (
@@ -181,7 +268,8 @@ export default function AuthPage() {
           <div className={`space-y-3 ${isLogin ? 'mt-6' : 'mt-0'}`}>
             <button
               onClick={() => handleSocialLogin('google')}
-              className="w-full flex items-center justify-center gap-3 py-3 bg-white border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-3 py-3 bg-white border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -194,7 +282,8 @@ export default function AuthPage() {
             
             <button
               onClick={() => handleSocialLogin('kingschat')}
-              className="w-full flex items-center justify-center gap-3 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-3 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="w-5 h-5 bg-white rounded-full flex items-center justify-center">
                 <span className="text-purple-600 font-bold text-sm">K</span>

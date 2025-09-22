@@ -114,19 +114,82 @@ export async function getAllPages(): Promise<PraiseNight[]> {
       }
     }
 
-    const { data: pages, error } = await supabase
+    console.log('🚀 Starting ultra-fast data fetch...');
+    const startTime = performance.now();
+
+    // OPTIMIZATION: Single query with joins for maximum speed
+    const { data: pagesWithSongs, error } = await supabase
       .from('pages')
-      .select('*')
+      .select(`
+        *,
+        songs (
+          id,
+          title,
+          status,
+          category,
+          praisenightid,
+          leadsinger,
+          writer,
+          conductor,
+          key,
+          tempo,
+          leadkeyboardist,
+          leadguitarist,
+          drummer,
+          lyrics,
+          solfas,
+          rehearsalcount,
+          audiofile,
+          mediaid,
+          createdat,
+          updatedat
+        )
+      `)
       .order('id', { ascending: true });
 
     if (error) throw error;
 
+    const loadTime = performance.now() - startTime;
+    console.log(`⚡ Data loaded in ${loadTime.toFixed(2)}ms`);
+
     // Convert database pages to your PraiseNight format
     const praiseNights: PraiseNight[] = [];
     
-    for (const page of pages || []) {
-      // Get songs for this page
-      const songs = await getSongsByPageId(page.id);
+    for (const page of pagesWithSongs || []) {
+      // Process songs in parallel for this page
+      const songs = await Promise.all(
+        (page.songs || []).map(async (song: any) => {
+          // Get audio file from media table if mediaId exists
+          let audioFile = song.audiofile;
+          if (song.mediaid) {
+            const mediaAudioUrl = await getAudioFromMedia(song.mediaid);
+            if (mediaAudioUrl) {
+              audioFile = mediaAudioUrl;
+            }
+          }
+
+          return {
+            id: song.id,
+            title: song.title,
+            status: song.status,
+            category: song.category,
+            leadSinger: song.leadsinger,
+            writtenBy: song.writer,
+            conductor: song.conductor,
+            key: song.key,
+            tempo: song.tempo,
+            leadKeyboardist: song.leadkeyboardist,
+            leadGuitarist: song.leadguitarist,
+            drummer: song.drummer,
+            lyrics: song.lyrics,
+            solfas: song.solfas,
+            rehearsalCount: song.rehearsalcount || 1,
+            audioFile: audioFile,
+            comments: [], // Load comments on demand for better performance
+            history: []   // Load history on demand for better performance
+          };
+        })
+      );
       
       praiseNights.push({
         id: page.id,
@@ -149,6 +212,9 @@ export async function getAllPages(): Promise<PraiseNight[]> {
     if (isOnline) {
       await offlineManager.cacheData('pages', praiseNights);
     }
+
+    const totalTime = performance.now() - startTime;
+    console.log(`🎯 Total processing time: ${totalTime.toFixed(2)}ms`);
 
     return praiseNights;
   } catch (error) {

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function ProfilePage() {
   const [showQRCode, setShowQRCode] = useState(true)
@@ -15,19 +16,15 @@ export default function ProfilePage() {
   const [qrCode, setQrCode] = useState('')
   const [timeLeft, setTimeLeft] = useState(60)
   const router = useRouter()
+  const { profile, isProfileComplete, signOut } = useAuth()
 
-  const handleLogout = () => {
-    // Clear all authentication data from localStorage
-    localStorage.removeItem('isAuthenticated')
-    localStorage.removeItem('hasCompletedProfile')
-    localStorage.removeItem('hasSubscribed')
-    
-    // Redirect to auth screen
+  const handleLogout = async () => {
+    await signOut()
     router.push('/auth')
   }
 
   // Mock user data - in real app this would come from API/context
-  const userProfile = {
+  const mockUserProfile = {
     // Personal Information
     firstName: "John",
     middleName: "Michael",
@@ -116,6 +113,29 @@ export default function ProfilePage() {
         rightImageSrc="/logo.png"
       />
 
+      {/* Profile Completion Banner */}
+      {!isProfileComplete && (
+        <div className="mx-4 mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-amber-800">Complete Your Profile</h3>
+                <p className="text-xs text-amber-600">Add more details to personalize your experience</p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push('/profile-completion')}
+              className="px-3 py-1 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 transition-colors"
+            >
+              Complete
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Profile Header */}
       <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="text-center">
@@ -132,16 +152,18 @@ export default function ProfilePage() {
             </button>
           </div>
           
-          <h2 className="text-2xl font-outfit-bold text-gray-800 mb-2">{userProfile.fullName}</h2>
-          <p className="text-sm text-gray-600 mb-1">{userProfile.socialId}</p>
-          <p className="text-xs text-gray-500 mb-4">{userProfile.email}</p>
+          <h2 className="text-2xl font-outfit-bold text-gray-800 mb-2">
+            {profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User' : 'User'}
+          </h2>
+          <p className="text-sm text-gray-600 mb-1">@{profile?.social_id || 'user'}</p>
+          <p className="text-xs text-gray-500 mb-4">{profile?.email || 'user@example.com'}</p>
           
           <div className="flex items-center justify-center space-x-2">
             <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-poppins-medium">
-              {userProfile.designation}
+              {profile?.designation || 'Member'}
             </span>
             <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-poppins-medium">
-              {userProfile.administration}
+              {profile?.administration || 'General'}
             </span>
           </div>
         </div>
@@ -151,15 +173,15 @@ export default function ProfilePage() {
       <div className="px-4 py-4">
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-purple-600">{userProfile.totalRehearsals}</div>
+            <div className="text-2xl font-bold text-purple-600">{mockUserProfile.totalRehearsals}</div>
             <div className="text-xs text-gray-600">Total Rehearsals</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-green-600">{userProfile.attendanceRate}%</div>
+            <div className="text-2xl font-bold text-green-600">{mockUserProfile.attendanceRate}%</div>
             <div className="text-xs text-gray-600">Attendance Rate</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-blue-600">{userProfile.groups.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{mockUserProfile.groups.length}</div>
             <div className="text-xs text-gray-600">Groups</div>
           </div>
         </div>
@@ -173,9 +195,9 @@ export default function ProfilePage() {
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 mb-4">
             <div className="flex items-center gap-3 mb-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                userProfile.socialProvider === 'google' ? 'bg-blue-500' : 'bg-purple-500'
+                mockUserProfile.socialProvider === 'Google' ? 'bg-blue-500' : 'bg-purple-500'
               }`}>
-                {userProfile.socialProvider === 'google' ? (
+                {mockUserProfile.socialProvider === 'Google' ? (
                   <svg className="w-4 h-4 text-white" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   </svg>
@@ -185,9 +207,9 @@ export default function ProfilePage() {
               </div>
               <div>
                 <p className="text-gray-900 text-sm font-medium">
-                  {userProfile.socialProvider === 'google' ? 'Google Account' : 'KingsChat Account'}
+                  {mockUserProfile.socialProvider === 'Google' ? 'Google Account' : 'KingsChat Account'}
                 </p>
-                <p className="text-gray-600 text-xs">{userProfile.socialId}</p>
+                <p className="text-gray-600 text-xs">{mockUserProfile.socialId}</p>
               </div>
             </div>
           </div>
@@ -203,27 +225,27 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">First Name</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.firstName}</p>
+                <p className="text-sm font-medium text-gray-800 mt-1">{mockUserProfile.firstName}</p>
               </div>
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Middle Name</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.middleName}</p>
+                <p className="text-sm font-medium text-gray-800 mt-1">{mockUserProfile.middleName}</p>
               </div>
             </div>
             
             <div>
               <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Last Name</label>
-              <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.lastName}</p>
+              <p className="text-sm font-medium text-gray-800 mt-1">{mockUserProfile.lastName}</p>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Gender</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.gender}</p>
+                <p className="text-sm font-medium text-gray-800 mt-1">{mockUserProfile.gender}</p>
               </div>
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Birthday</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{new Date(userProfile.birthday).toLocaleDateString()}</p>
+                <p className="text-sm font-medium text-gray-800 mt-1">{new Date(mockUserProfile.birthday).toLocaleDateString()}</p>
               </div>
             </div>
           </div>
@@ -238,16 +260,16 @@ export default function ProfilePage() {
           <div className="space-y-4">
             <div>
               <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Region</label>
-              <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.region}</p>
+              <p className="text-sm font-medium text-gray-800 mt-1">{mockUserProfile.region}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Zone</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.zone}</p>
+                <p className="text-sm font-medium text-gray-800 mt-1">{mockUserProfile.zone}</p>
               </div>
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Church</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.church}</p>
+                <p className="text-sm font-medium text-gray-800 mt-1">{mockUserProfile.church}</p>
               </div>
             </div>
           </div>
@@ -264,7 +286,7 @@ export default function ProfilePage() {
               <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Designation</label>
               <div className="mt-1">
                 <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                  {userProfile.designation}
+                  {mockUserProfile.designation}
                 </span>
               </div>
             </div>
@@ -273,7 +295,7 @@ export default function ProfilePage() {
               <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Administration</label>
               <div className="mt-1">
                 <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                  {userProfile.administration}
+                  {mockUserProfile.administration}
                 </span>
               </div>
             </div>
@@ -281,7 +303,7 @@ export default function ProfilePage() {
             <div>
               <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Groups</label>
               <div className="mt-1 flex flex-wrap gap-2">
-                {userProfile.groups.map((group, index) => (
+                {mockUserProfile.groups.map((group, index) => (
                   <span key={index} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
                     {group}
                   </span>
@@ -300,12 +322,12 @@ export default function ProfilePage() {
           <div className="space-y-4">
             <div>
               <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Email</label>
-              <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.email}</p>
+              <p className="text-sm font-medium text-gray-800 mt-1">{mockUserProfile.email}</p>
             </div>
             
             <div>
               <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Phone Number</label>
-              <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.phoneNumber}</p>
+              <p className="text-sm font-medium text-gray-800 mt-1">{mockUserProfile.phoneNumber}</p>
             </div>
           </div>
         </div>
@@ -388,7 +410,7 @@ export default function ProfilePage() {
           <h3 className="text-sm font-semibold text-gray-800 mb-3">Achievements</h3>
           
           <div className="space-y-2">
-            {userProfile.achievements.map((achievement, index) => (
+            {mockUserProfile.achievements.map((achievement, index) => (
               <div key={index} className="flex items-center space-x-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 <span className="text-sm text-gray-700">{achievement}</span>

@@ -18,14 +18,14 @@ import ScreenHeader from "@/components/ScreenHeader";
 import SharedDrawer from "@/components/SharedDrawer";
 import { getMenuItems } from "@/config/menuItems";
 import { useAudio } from "@/contexts/AudioContext";
-import { useGlobalSearch } from "@/hooks/useGlobalSearch";
+import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch";
 
 function PraiseNightPageContent() {
   const searchParams = useSearchParams();
   const categoryFilter = searchParams.get('category');
 
   // Use real-time Supabase data for instant updates
-  const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs } = useRealtimeData();
+  const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, preloadData } = useRealtimeData();
   const [currentPraiseNight, setCurrentPraiseNightState] = useState<PraiseNight | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -39,6 +39,12 @@ function PraiseNightPageContent() {
     }
     return allPraiseNights.filter(praiseNight => praiseNight.category === categoryFilter);
   }, [allPraiseNights, categoryFilter, loading]);
+
+  // Preload data for instant access
+  useEffect(() => {
+    // Start preloading immediately for instant navigation
+    preloadData();
+  }, [preloadData]);
 
   // Auto-select first page only when no page is selected
   useEffect(() => {
@@ -340,6 +346,7 @@ function PraiseNightPageContent() {
 
   // Use global search hook
   const { searchQuery, setSearchQuery, searchResults, hasResults } = useGlobalSearch();
+  const typedSearchResults = searchResults as SearchResult[];
 
   const onHeaderSearchClick = () => {
     setIsSearchOpen(true);
@@ -356,13 +363,13 @@ function PraiseNightPageContent() {
     setSearchQuery(''); // Clear search query when closing
   };
 
-  // Show loading state
-  if (loading) {
+  // Show loading state only if no cached data is available
+  if (loading && allPraiseNights.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-
+          <p className="text-gray-600 text-sm">Loading program data...</p>
         </div>
       </div>
     );
@@ -586,14 +593,14 @@ function PraiseNightPageContent() {
             <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl px-4 py-2">
               <div className="text-xs text-gray-500 mb-2 font-medium">
                 {searchQuery ? (
-                  `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchQuery}"`
+                  `${typedSearchResults.length} result${typedSearchResults.length !== 1 ? 's' : ''} for "${searchQuery}"`
                 ) : (
                   'Start typing to search songs, artists, or events...'
                 )}
               </div>
-              {searchResults.length > 0 ? (
+              {typedSearchResults.length > 0 ? (
                 <div className="space-y-1">
-                  {searchResults.map((result) => {
+                  {typedSearchResults.map((result) => {
                     // Handle song results differently - open modal directly
                     if (result.type === 'song') {
                       return (
@@ -614,9 +621,9 @@ function PraiseNightPageContent() {
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                {result.type === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
-                                {result.type === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
-                                {result.type === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                                {(result.type as string) === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
+                                {(result.type as string) === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+                                {(result.type as string) === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
                                 <h4 className="font-medium text-gray-900 text-sm truncate group-hover:text-purple-700 transition-colors">
                                   {result.title}
                                 </h4>
@@ -659,9 +666,9 @@ function PraiseNightPageContent() {
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                {result.type === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
-                                {result.type === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
-                                {result.type === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                                {(result.type as string) === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
+                                {(result.type as string) === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+                                {(result.type as string) === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
                                 <h4 className="font-medium text-gray-900 text-sm truncate group-hover:text-purple-700 transition-colors">
                                   {result.title}
                                 </h4>
@@ -1157,7 +1164,7 @@ export default function PraiseNightPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-
+          <p className="text-gray-600 text-sm">Loading program data...</p>
         </div>
       </div>
     }>

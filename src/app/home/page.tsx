@@ -3,18 +3,15 @@
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp, ArrowRight, Clock } from 'lucide-react'
+import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp } from 'lucide-react'
 import { getMenuItems } from '@/config/menuItems'
-import { useGlobalSearch } from '@/hooks/useGlobalSearch'
 
 export default function HomePage() {
   const router = useRouter()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
-  
-  // Use global search hook
-  const { searchQuery, setSearchQuery, searchResults, hasResults } = useGlobalSearch()
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
   const [openAbout, setOpenAbout] = useState<number | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -52,9 +49,8 @@ export default function HomePage() {
     const checkAuth = () => {
       const authStatus = localStorage.getItem('isAuthenticated')
       const hasCompletedProfile = localStorage.getItem('hasCompletedProfile')
-      const hasSubscribed = localStorage.getItem('hasSubscribed')
       
-      if (authStatus === 'true' && hasCompletedProfile === 'true' && hasSubscribed === 'true') {
+      if (authStatus === 'true' && hasCompletedProfile === 'true') {
         setIsAuthenticated(true)
       } else {
         // Redirect to appropriate step
@@ -62,8 +58,6 @@ export default function HomePage() {
           router.push('/auth')
         } else if (hasCompletedProfile !== 'true') {
           router.push('/profile-completion')
-        } else if (hasSubscribed !== 'true') {
-          router.push('/subscription')
         }
       }
       setIsLoading(false)
@@ -193,9 +187,9 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Main Content Container with Responsive Max Width */}
-      <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl">
+      <div className="mx-auto max-w-2xl">
         {/* Enhanced iOS Style Header */}
-        <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
+        <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
           <div className="relative">
             {/* Normal Header Content */}
             <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
@@ -262,7 +256,7 @@ export default function HomePage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   type="text"
-                  placeholder="Search songs, artists, events..."
+                  placeholder="Search"
                   inputMode="search"
                   aria-label="Search"
                   className="w-full text-lg bg-transparent px-0 py-3 text-gray-800 placeholder-gray-400 border-0 outline-none appearance-none shadow-none ring-0 focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none font-poppins-medium"
@@ -279,10 +273,7 @@ export default function HomePage() {
               
               {/* Close Button */}
               <button
-                onClick={() => {
-                  setIsSearchOpen(false)
-                  setSearchQuery('')
-                }}
+                onClick={() => setIsSearchOpen(false)}
                 aria-label="Close search"
                 className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90 ml-4"
                 style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
@@ -292,71 +283,6 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-
-        {/* Search Results Overlay */}
-        {isSearchOpen && hasResults && (
-          <div className="absolute top-full left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl border-b border-gray-100/50 max-h-96 overflow-y-auto">
-            <div className="px-4 py-2">
-              <div className="text-xs text-gray-500 mb-2 font-medium">
-                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
-              </div>
-              <div className="space-y-1">
-                {searchResults.map((result) => (
-                  <Link
-                    key={result.id}
-                    href={result.url}
-                    onClick={() => setIsSearchOpen(false)}
-                    className="block p-3 rounded-xl hover:bg-gray-100/70 active:bg-gray-200/90 transition-all duration-200 group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          {result.type === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
-                          {result.type === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
-                          {result.type === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
-                          <h4 className="font-medium text-gray-900 text-sm truncate group-hover:text-purple-700 transition-colors">
-                            {result.title}
-                          </h4>
-                          {result.status && (
-                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium flex-shrink-0 ${
-                              result.status === 'heard' 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-orange-100 text-orange-700'
-                            }`}>
-                              {result.status}
-                            </span>
-                          )}
-                        </div>
-                        {result.subtitle && (
-                          <p className="text-xs text-purple-600 font-medium mb-0.5">
-                            {result.subtitle}
-                          </p>
-                        )}
-                        {result.description && (
-                          <p className="text-xs text-gray-500 truncate">
-                            {result.description}
-                          </p>
-                        )}
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0 ml-2" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* No Results Message */}
-        {isSearchOpen && searchQuery.trim() && !hasResults && (
-          <div className="absolute top-full left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl border-b border-gray-100/50">
-            <div className="px-4 py-6 text-center">
-              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500 font-medium">No results found</p>
-              <p className="text-xs text-gray-400 mt-1">Try searching for songs, artists, or events</p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Hero Banner - Carousel */}
@@ -390,20 +316,20 @@ export default function HomePage() {
         </div>
 
         {/* Features Grid */}
-        <div className="px-3 pb-4 lg:px-6">
-        <div className="grid grid-cols-3 gap-2 lg:grid-cols-4 xl:grid-cols-5 lg:gap-4">
+        <div className="px-3 pb-4">
+        <div className="grid grid-cols-3 gap-2">
           {features.map((feature, index) => (
             <Link
               key={index}
               href={feature.href}
-              className="group flex flex-col items-center p-2 lg:p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 active:bg-gray-50 border border-gray-100/50 hover:border-purple-200/50"
+              className="group flex flex-col items-center p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 active:bg-gray-50 border border-gray-100/50 hover:border-purple-200/50"
               style={{
                 boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
               }}
             >
-              <div className="relative mb-2 lg:mb-3">
-                <div className="w-8 h-8 lg:w-12 lg:h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg lg:rounded-xl flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-sm">
-                  <feature.icon className="w-4 h-4 lg:w-6 lg:h-6 text-purple-600 group-hover:text-purple-700 transition-colors duration-300" />
+              <div className="relative mb-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-sm">
+                  <feature.icon className="w-4 h-4 text-purple-600 group-hover:text-purple-700 transition-colors duration-300" />
                 </div>
                 {feature.badge && (
                   <div className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 via-red-500 to-red-600 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center font-bold shadow-xl border-2 border-white animate-pulse">
@@ -411,96 +337,91 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-              <span className="text-xs lg:text-sm font-medium text-gray-800 text-center leading-tight group-hover:text-purple-700 transition-colors duration-300">{feature.title}</span>
+              <span className="text-xs font-medium text-gray-800 text-center leading-tight group-hover:text-purple-700 transition-colors duration-300">{feature.title}</span>
             </Link>
           ))}
         </div>
       </div>
 
-        {/* About & FAQ Sections - Two Column Layout on Tablets */}
-        <div className="px-4 pb-6 lg:px-6">
-          <div className="lg:grid lg:grid-cols-2 lg:gap-8">
-            {/* About Section */}
-            <div className="pb-6 lg:pb-0">
-              <h2 className="text-lg lg:text-xl font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
-              <div className="space-y-2 lg:space-y-3">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                  <button 
-                    onClick={() => toggleAbout(0)}
-                    className="w-full p-4 lg:p-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-                  >
-                    <h4 className="text-sm lg:text-base font-medium text-gray-800 pr-2">What is LoveWorld Singers Rehearsal Hub?</h4>
-                    <div className="flex-shrink-0">
-                      {openAbout === 0 ? <ChevronUp className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" /> : <ChevronDown className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" />}
-                    </div>
-                  </button>
-                  {openAbout === 0 && (
-                    <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-gray-100">
-                      <p className="text-sm lg:text-base text-gray-600 leading-relaxed pt-3">A comprehensive platform for managing rehearsal schedules, song collections, and ministry activities. Connect with fellow singers, access audio resources, and stay updated with the latest ministry news.</p>
-                    </div>
-                  )}
-                </div>
+        {/* About Section */}
+        <div className="px-4 pb-6">
+        <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
+        <div className="space-y-2">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <button 
+              onClick={() => toggleAbout(0)}
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+            >
+              <h4 className="text-sm font-medium text-gray-800 pr-2">What is LoveWorld Singers Rehearsal Hub?</h4>
+              <div className="flex-shrink-0">
+                {openAbout === 0 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
               </div>
-            </div>
-
-            {/* FAQ Section */}
-            <div>
-              <h2 className="text-lg lg:text-xl font-outfit-semibold text-gray-800 mb-4">FAQ</h2>
-              <div className="space-y-2 lg:space-y-3">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                  <button 
-                    onClick={() => toggleFAQ(0)}
-                    className="w-full p-4 lg:p-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-                  >
-                    <h4 className="text-sm lg:text-base font-medium text-gray-800 pr-2">How do I join a rehearsal?</h4>
-                    <div className="flex-shrink-0">
-                      {openFAQ === 0 ? <ChevronUp className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" /> : <ChevronDown className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" />}
-                    </div>
-                  </button>
-                  {openFAQ === 0 && (
-                    <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-gray-100">
-                      <p className="text-sm lg:text-base text-gray-600 leading-relaxed pt-3">Check the Rehearsals section for upcoming sessions and register through the calendar.</p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                  <button 
-                    onClick={() => toggleFAQ(1)}
-                    className="w-full p-4 lg:p-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-                  >
-                    <h4 className="text-sm lg:text-base font-medium text-gray-800 pr-2">Where can I find song lyrics?</h4>
-                    <div className="flex-shrink-0">
-                      {openFAQ === 1 ? <ChevronUp className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" /> : <ChevronDown className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" />}
-                    </div>
-                  </button>
-                  {openFAQ === 1 && (
-                    <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-gray-100">
-                      <p className="text-sm lg:text-base text-gray-600 leading-relaxed pt-3">Access song lyrics and audio resources in the AudioLabs section.</p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                  <button 
-                    onClick={() => toggleFAQ(2)}
-                    className="w-full p-4 lg:p-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-                  >
-                    <h4 className="text-sm lg:text-base font-medium text-gray-800 pr-2">How do I get support?</h4>
-                    <div className="flex-shrink-0">
-                      {openFAQ === 2 ? <ChevronUp className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" /> : <ChevronDown className="w-4 h-4 lg:w-5 lg:h-5 text-gray-500" />}
-                    </div>
-                  </button>
-                  {openFAQ === 2 && (
-                    <div className="px-4 lg:px-5 pb-4 lg:pb-5 border-t border-gray-100">
-                      <p className="text-sm lg:text-base text-gray-600 leading-relaxed pt-3">Use the Support section or contact your ministry coordinator for assistance.</p>
-                    </div>
-                  )}
-                </div>
+            </button>
+            {openAbout === 0 && (
+              <div className="px-4 pb-4 border-t border-gray-100">
+                <p className="text-sm text-gray-600 leading-relaxed pt-3">A comprehensive platform for managing rehearsal schedules, song collections, and ministry activities. Connect with fellow singers, access audio resources, and stay updated with the latest ministry news.</p>
               </div>
-            </div>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="px-4 pb-6">
+        <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">FAQ</h2>
+        <div className="space-y-2">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <button 
+              onClick={() => toggleFAQ(0)}
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+            >
+              <h4 className="text-sm font-medium text-gray-800 pr-2">How do I join a rehearsal?</h4>
+              <div className="flex-shrink-0">
+                {openFAQ === 0 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+              </div>
+            </button>
+            {openFAQ === 0 && (
+              <div className="px-4 pb-4 border-t border-gray-100">
+                <p className="text-sm text-gray-600 leading-relaxed pt-3">Check the Rehearsals section for upcoming sessions and register through the calendar.</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <button 
+              onClick={() => toggleFAQ(1)}
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+            >
+              <h4 className="text-sm font-medium text-gray-800 pr-2">Where can I find song lyrics?</h4>
+              <div className="flex-shrink-0">
+                {openFAQ === 1 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+              </div>
+            </button>
+            {openFAQ === 1 && (
+              <div className="px-4 pb-4 border-t border-gray-100">
+                <p className="text-sm text-gray-600 leading-relaxed pt-3">Access song lyrics and audio resources in the AudioLabs section.</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <button 
+              onClick={() => toggleFAQ(2)}
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+            >
+              <h4 className="text-sm font-medium text-gray-800 pr-2">How do I get support?</h4>
+              <div className="flex-shrink-0">
+                {openFAQ === 2 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+              </div>
+            </button>
+            {openFAQ === 2 && (
+              <div className="px-4 pb-4 border-t border-gray-100">
+                <p className="text-sm text-gray-600 leading-relaxed pt-3">Use the Support section or contact your ministry coordinator for assistance.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       </div>
 
       {/* Sliding Drawer */}

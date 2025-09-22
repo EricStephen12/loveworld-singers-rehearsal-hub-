@@ -1,35 +1,21 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { ChevronRight, Calendar, Users, Music, Clock, MapPin, Bell, Search, X, ArrowRight, Flag, Menu } from 'lucide-react'
+import { ChevronRight, Calendar, Users, Music, Clock, MapPin, Bell } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
-import { useGlobalSearch } from '@/hooks/useGlobalSearch'
 
 export default function RehearsalsPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const router = useRouter()
-  
-  // Use global search hook
-  const { searchQuery, setSearchQuery, searchResults, hasResults } = useGlobalSearch()
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
   }
-
-  // Focus the input when search opens
-  useEffect(() => {
-    if (isSearchOpen && searchInputRef.current) {
-      // slight delay to allow element to mount before focusing
-      const id = setTimeout(() => searchInputRef.current?.focus(), 50)
-      return () => clearTimeout(id)
-    }
-  }, [isSearchOpen])
 
   const handleTitleClick = () => {
     router.push('/home')
@@ -160,171 +146,14 @@ export default function RehearsalsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-slate-50">
-      {/* Main Content Container with Responsive Max Width */}
-      <div className="mx-auto max-w-2xl">
-        {/* Enhanced Header with Search Overlay */}
-        <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
-          <div className="relative">
-            {/* Normal Header Content */}
-            <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
-              isSearchOpen ? 'opacity-0' : 'opacity-100'
-            }`}>
-              {/* Left Section - Menu Button */}
-              <div className="flex items-center">
-                <button 
-                  onClick={toggleMenu}
-                  className="flex items-center p-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 hover:bg-gray-100 active:scale-95"
-                  aria-label="Open menu"
-                  style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
-                >
-                  <Menu className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-              
-              {/* Center - Title */}
-              <div className="absolute left-1/2 transform -translate-x-1/2">
-                <button 
-                  onClick={handleTitleClick}
-                  className="text-base sm:text-lg font-outfit-semibold text-gray-800 hover:text-gray-900 active:scale-95 transition-all duration-200"
-                >
-                  Rehearsals
-                </button>
-              </div>
-              
-              {/* Right Section - Logo */}
-              <div className="flex items-center space-x-1">
-                {/* Logo */}
-                <div className="flex items-center">
-                  <div className="relative">
-                    <img 
-                      src="/logo.png" 
-                      alt="LoveWorld Logo" 
-                      className="w-10 h-10 object-contain transition-transform duration-200 hover:scale-105"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                    {/* Subtle glow effect */}
-                    <div className="absolute inset-0 w-10 h-10 bg-purple-500/10 rounded-full blur-sm -z-10"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <ScreenHeader 
+        title="Rehearsals" 
+        onMenuClick={toggleMenu} 
+        rightImageSrc="/logo.png"
+        onTitleClick={handleTitleClick}
+      />
 
-            {/* Header Search Overlay */}
-            <div className={`absolute inset-0 bg-white/95 backdrop-blur-xl transition-all duration-300 ease-out ${
-              isSearchOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
-            }`}>
-              <div className="flex items-center justify-between px-4 py-3 h-full">
-                {/* Search Input */}
-                <div className="flex-1 relative">
-                  <input
-                    ref={searchInputRef}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    type="text"
-                    placeholder="Search songs, artists, events..."
-                    inputMode="search"
-                    aria-label="Search"
-                    className="w-full text-lg bg-transparent px-0 py-3 text-gray-800 placeholder-gray-400 border-0 outline-none appearance-none shadow-none ring-0 focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none font-poppins-medium"
-                    style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
-                  />
-                  
-                  {/* iOS-style search underline */}
-                  <div className="absolute left-0 right-0 bottom-0 h-px bg-gray-300/40" />
-                  
-                  {/* iOS-style active underline */}
-                  <div className="absolute left-0 bottom-0 h-0.5 bg-purple-500 w-full shadow-sm" 
-                       style={{ boxShadow: '0 0 8px rgba(147, 51, 234, 0.4)' }} />
-                </div>
-                
-                {/* Close Button */}
-                <button
-                  onClick={() => {
-                    setIsSearchOpen(false)
-                    setSearchQuery('')
-                  }}
-                  aria-label="Close search"
-                  className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90 ml-4"
-                  style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
-                >
-                  <X className="w-6 h-6 text-gray-700 transition-all duration-200" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search Results Overlay */}
-        {isSearchOpen && hasResults && (
-          <div className="absolute top-full left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl border-b border-gray-100/50 max-h-96 overflow-y-auto">
-            <div className="px-4 py-2">
-              <div className="text-xs text-gray-500 mb-2 font-medium">
-                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
-              </div>
-              <div className="space-y-1">
-                {searchResults.map((result) => (
-                  <Link
-                    key={result.id}
-                    href={result.url}
-                    onClick={() => {
-                      setIsSearchOpen(false)
-                      setSearchQuery('')
-                    }}
-                    className="block p-3 rounded-xl hover:bg-gray-100/70 active:bg-gray-200/90 transition-all duration-200 group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          {result.type === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
-                          {result.type === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
-                          {result.type === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
-                          <h4 className="font-medium text-gray-900 text-sm truncate group-hover:text-purple-700 transition-colors">
-                            {result.title}
-                          </h4>
-                          {result.status && (
-                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium flex-shrink-0 ${
-                              result.status === 'heard' 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-orange-100 text-orange-700'
-                            }`}>
-                              {result.status}
-                            </span>
-                          )}
-                        </div>
-                        {result.subtitle && (
-                          <p className="text-xs text-purple-600 font-medium mb-0.5">
-                            {result.subtitle}
-                          </p>
-                        )}
-                        {result.description && (
-                          <p className="text-xs text-gray-500 truncate">
-                            {result.description}
-                          </p>
-                        )}
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0 ml-2" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* No Results Message */}
-        {isSearchOpen && searchQuery.trim() && !hasResults && (
-          <div className="absolute top-full left-0 right-0 z-[60] bg-white/95 backdrop-blur-xl border-b border-gray-100/50">
-            <div className="px-4 py-6 text-center">
-              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500 font-medium">No results found</p>
-              <p className="text-xs text-gray-400 mt-1">Try searching for songs, artists, or events</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+      <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
         {/* Image Carousel */}
         <div className="mb-6">
           <div
@@ -353,27 +182,27 @@ export default function RehearsalsPage() {
         </div>
 
         {/* Rehearsal Options */}
-        <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
+        <div>
           {rehearsalOptions.map((option) => (
             <Link key={option.id} href={option.href}>
-              <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group ring-1 ring-black/5 mb-3 lg:mb-4">
+              <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group ring-1 ring-black/5 mb-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 lg:gap-4">
-                    <div className={`w-10 h-10 lg:w-12 lg:h-12 ${option.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
-                      <option.icon className={`w-4 h-4 lg:w-5 lg:h-5 ${option.iconColor}`} />
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 ${option.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
+                      <option.icon className={`w-4 h-4 ${option.iconColor}`} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-medium text-slate-900 text-sm lg:text-base group-hover:text-black leading-tight">
+                      <h3 className="font-medium text-slate-900 text-sm group-hover:text-black leading-tight">
                         {option.title}
                       </h3>
-                      <p className="text-xs lg:text-sm text-slate-500 mt-0.5 leading-tight">
+                      <p className="text-xs text-slate-500 mt-0.5 leading-tight">
                         {option.description}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-6 h-6 lg:w-7 lg:h-7 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                      <ChevronRight className="w-3 h-3 lg:w-4 lg:h-4 text-slate-500 group-hover:translate-x-0.5 transition-all duration-200" />
+                    <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                      <ChevronRight className="w-3 h-3 text-slate-500 group-hover:translate-x-0.5 transition-all duration-200" />
                     </div>
                   </div>
                 </div>

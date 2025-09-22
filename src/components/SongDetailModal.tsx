@@ -241,19 +241,10 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
   };
 
   // Get history data for the current song
-  const getHistoryData = (type: 'lyrics' | 'solfas' | 'audio' | 'comments' | 'metadata') => {
-    if (!selectedSong?.history) return [];
-    
-    let historyEntries = selectedSong.history
-      .filter(entry => entry.type === type)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    // For audio, only show history if the current audio is different from history entries
-    if (type === 'audio' && selectedSong.audioFile) {
-      historyEntries = historyEntries.filter(entry => entry.content !== selectedSong.audioFile);
-    }
-    
-    return historyEntries;
+  const getHistoryData = (type: 'lyrics' | 'solfas' | 'audio' | 'comments' | 'metadata'): HistoryEntry[] => {
+    // For now, return empty array since history is not loaded by default for performance
+    // In the future, this could load history data on demand
+    return [];
   };
 
   // Get latest content (what's shown in main tabs)
@@ -742,8 +733,11 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                     {/* Show empty state if no history available */}
                     {getHistoryData('lyrics').length === 0 && (
                       <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <BookOpen className="w-8 h-8 text-slate-400" />
+                        </div>
                         <div className="text-slate-500 text-sm mb-2">No Lyrics History</div>
-                        <div className="text-slate-400 text-xs">Previous lyrics versions will appear here when available</div>
+                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
                       </div>
                     )}
                   </div>
@@ -816,8 +810,11 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                     {/* Show empty state if no history available */}
                     {getHistoryData('audio').length === 0 && (
                       <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <Music className="w-8 h-8 text-slate-400" />
+                        </div>
                         <div className="text-slate-500 text-sm mb-2">No Audio History</div>
-                        <div className="text-slate-400 text-xs">Previous audio versions will appear here when available</div>
+                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
                       </div>
                     )}
                   </div>
@@ -900,8 +897,11 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                     {/* Show empty state if no history available */}
                     {getOlderSolfas().length === 0 && getHistoryData('solfas').length === 0 && (
                       <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <Music2 className="w-8 h-8 text-slate-400" />
+                        </div>
                         <div className="text-slate-500 text-sm mb-2">No Solfas History</div>
-                        <div className="text-slate-400 text-xs">Previous solfas versions will appear here when available</div>
+                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
                       </div>
                     )}
 
@@ -985,8 +985,11 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                     {/* Show empty state if no history available */}
                     {getOlderComments().length === 0 && getHistoryData('comments').length === 0 && (
                       <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <Users className="w-8 h-8 text-slate-400" />
+                        </div>
                         <div className="text-slate-500 text-sm mb-2">No Comments History</div>
-                        <div className="text-slate-400 text-xs">Previous comments will appear here when available</div>
+                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
                       </div>
                     )}
 
@@ -1040,8 +1043,11 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                     {/* Empty state for metadata history */}
                     {getHistoryData('metadata').length === 0 && (
                       <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <Settings className="w-8 h-8 text-slate-400" />
+                        </div>
                         <div className="text-slate-500 text-sm mb-2">No Metadata History</div>
-                        <div className="text-slate-400 text-xs">Previous metadata changes will appear here when available</div>
+                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
                       </div>
                     )}
                   </div>

@@ -37,11 +37,24 @@ function SuccessContent() {
     if (countdown <= 0) {
       const navigateTimer = setTimeout(() => {
         try {
-          router.push('/home')
+          // Check if user has completed profile
+          const hasCompletedProfile = localStorage.getItem('hasCompletedProfile')
+          const bypassLogin = localStorage.getItem('bypassLogin')
+          
+          if (bypassLogin || hasCompletedProfile === 'true') {
+            router.push('/home')
+          } else {
+            router.push('/profile-completion')
+          }
         } catch (error) {
           console.error('Navigation error:', error)
           // Fallback to window.location if router fails
-          window.location.href = '/home'
+          const hasCompletedProfile = localStorage.getItem('hasCompletedProfile')
+          if (hasCompletedProfile === 'true') {
+            window.location.href = '/home'
+          } else {
+            window.location.href = '/profile-completion'
+          }
         }
       }, 100)
 

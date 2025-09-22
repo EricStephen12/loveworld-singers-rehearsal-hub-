@@ -11,9 +11,8 @@ export default function SplashPage() {
     const checkAuthAndRedirect = () => {
       const authStatus = localStorage.getItem('isAuthenticated')
       const hasCompletedProfile = localStorage.getItem('hasCompletedProfile')
-      const hasSubscribed = localStorage.getItem('hasSubscribed')
       
-      if (authStatus === 'true' && hasCompletedProfile === 'true' && hasSubscribed === 'true') {
+      if (authStatus === 'true' && hasCompletedProfile === 'true') {
         // User is fully authenticated, go to home
         router.push('/home')
       } else {

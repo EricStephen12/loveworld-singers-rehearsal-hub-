@@ -32,18 +32,18 @@ export default function MediaSelectionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+    <div className="fixed inset-0 bg-white z-[60] flex flex-col w-screen h-screen">
+      <div className="bg-white w-full h-full flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 flex-shrink-0">
+          <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-6 h-6 text-slate-500" />
           </button>
         </div>
-        <div className="flex-1 overflow-hidden h-full">
+        <div className="flex-1 overflow-hidden">
           <MediaManager
             onSelectFile={(file) => {
               onFileSelect(file);

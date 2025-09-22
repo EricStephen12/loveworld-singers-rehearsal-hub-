@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import SplashScreen from './SplashScreen'
 import AuthScreen from './AuthScreen'
 import ProfileCompletionScreen from './ProfileCompletionScreen'
-import SubscriptionOnboardingScreen from './SubscriptionOnboardingScreen'
-import SubscriptionCheck from './SubscriptionCheck'
+// Subscription components removed
 
 interface MobileLayoutProps {
   children: React.ReactNode
@@ -15,7 +14,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   const [showSplash, setShowSplash] = useState(true)
   const [showAuth, setShowAuth] = useState(false)
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
-  const [showSubscription, setShowSubscription] = useState(false)
+  // Subscription state removed
   const [socialData, setSocialData] = useState<{
     socialProvider: string
     socialId: string
@@ -39,32 +38,24 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     const checkAuthStatus = () => {
       const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
       const hasCompletedProfile = localStorage.getItem('hasCompletedProfile') === 'true'
-      const hasSubscribed = localStorage.getItem('hasSubscribed') === 'true'
-      
-      if (isAuthenticated && hasCompletedProfile && hasSubscribed) {
+      if (isAuthenticated && hasCompletedProfile) {
         // User is fully set up, skip all screens
         setShowSplash(false)
         setShowAuth(false)
         setShowProfileCompletion(false)
-        setShowSubscription(false)
-      } else if (isAuthenticated && hasCompletedProfile) {
-        // User needs subscription
-        setShowSplash(false)
-        setShowAuth(false)
-        setShowProfileCompletion(false)
-        setShowSubscription(true)
+        // Subscription removed
       } else if (isAuthenticated) {
         // User needs to complete profile
         setShowSplash(false)
         setShowAuth(false)
         setShowProfileCompletion(true)
-        setShowSubscription(false)
+        // Subscription removed
       } else {
         // User needs to authenticate
         setShowSplash(false)
         setShowAuth(true)
         setShowProfileCompletion(false)
-        setShowSubscription(false)
+        // Subscription removed
       }
       
       setIsInitialized(true)
@@ -102,7 +93,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   const handleProfileComplete = () => {
     localStorage.setItem('hasCompletedProfile', 'true')
     setShowProfileCompletion(false)
-    setShowSubscription(true)
+    // Subscription removed - user goes directly to main app
   }
 
   const handleProfileBack = () => {
@@ -110,15 +101,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     setShowAuth(true)
   }
 
-  const handleSubscriptionComplete = () => {
-    localStorage.setItem('hasSubscribed', 'true')
-    setShowSubscription(false)
-  }
-
-  const handleSubscriptionBack = () => {
-    setShowSubscription(false)
-    setShowProfileCompletion(true)
-  }
+  // Subscription functionality removed
 
   // Show loading while checking authentication status
   if (!isInitialized) {
@@ -141,15 +124,11 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     return <ProfileCompletionScreen onComplete={handleProfileComplete} onBack={handleProfileBack} socialData={socialData} />
   }
 
-  if (showSubscription) {
-    return <SubscriptionOnboardingScreen onComplete={handleSubscriptionComplete} onBack={handleSubscriptionBack} />
-  }
+  // Subscription screen removed
 
   return (
     <div className={`min-h-screen ${isMobile ? 'mobile-optimized' : ''}`}>
-      <SubscriptionCheck>
-        {children}
-      </SubscriptionCheck>
+      {children}
     </div>
   )
 }

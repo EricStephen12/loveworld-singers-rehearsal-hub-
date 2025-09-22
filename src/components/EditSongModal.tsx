@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Trash2, FolderOpen } from 'lucide-react';
 import { PraiseNightSong, Comment, Category } from '../types/supabase';
 import MediaSelectionModal from './MediaSelectionModal';
+import BasicTextEditor from './BasicTextEditor';
 
 interface MediaFile {
   id: string;
@@ -366,7 +367,7 @@ export default function EditSongModal({
         }
       `}</style>
       
-      <div className="fixed inset-0 bg-white z-50 flex flex-col">
+      <div className="fixed inset-0 bg-white z-50 flex flex-col w-screen h-screen">
         <div className="bg-white w-full h-full overflow-hidden flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-200 flex-shrink-0">
@@ -713,115 +714,16 @@ export default function EditSongModal({
                       </h4>
                     </div>
                     <div className="p-4 sm:p-6">
-                      {/* Plain Text Editor - No formatting toolbar needed */}
+                      {/* Rich Text Editor with formatting toolbar */}
                       <div className="mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
-                        Plain text editor - Type your lyrics naturally
-                      </div>
-                      <div className="hide-toolbar flex flex-wrap items-center gap-1 sm:gap-2 mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('bold')}
-                          className="px-2 sm:px-3 py-1 text-xs sm:text-sm font-bold bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Bold"
-                        >
-                          B
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('italic')}
-                          className="px-3 py-1 text-sm italic bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Italic"
-                        >
-                          I
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('underline')}
-                          className="px-3 py-1 text-sm underline bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Underline"
-                        >
-                          U
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('strikeThrough')}
-                          className="px-3 py-1 text-sm line-through bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Strikethrough"
-                        >
-                          <s>S</s>
-                        </button>
-                        <div className="w-px h-6 bg-slate-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('insertUnorderedList')}
-                          className="px-3 py-1 text-sm bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Bullet List"
-                        >
-                          • List
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('insertOrderedList')}
-                          className="px-3 py-1 text-sm bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Numbered List"
-                        >
-                          1. List
-                        </button>
-                        <div className="w-px h-6 bg-slate-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('formatBlock', false, 'h1')}
-                          className="px-1.5 sm:px-2 py-1 text-xs bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Heading 1"
-                        >
-                          H1
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('formatBlock', false, 'h2')}
-                          className="px-1.5 sm:px-2 py-1 text-xs bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Heading 2"
-                        >
-                          H2
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('formatBlock', false, 'h3')}
-                          className="px-1.5 sm:px-2 py-1 text-xs bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Heading 3"
-                        >
-                          H3
-                        </button>
+                        Rich text editor - Use the toolbar above to format your lyrics
                       </div>
                       
                       <div className="relative">
-                        <textarea
+                        <BasicTextEditor
                           id="lyrics-editor"
-                          value={songLyrics} // Now contains plain text
-                          onChange={(e) => setSongLyrics(e.target.value)}
-                          onPaste={(e) => {
-                            e.preventDefault();
-                            const clipboardData = e.clipboardData || (window as any).clipboardData;
-                            const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
-                            const target = e.target as HTMLTextAreaElement;
-                            const start = target.selectionStart || 0;
-                            const end = target.selectionEnd || 0;
-                            const currentValue = songLyrics;
-                            const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
-                            setSongLyrics(newValue);
-                            // Set cursor position after pasted text
-                            setTimeout(() => {
-                              target.selectionStart = target.selectionEnd = start + pastedText.length;
-                            }, 0);
-                          }}
-                          dir="ltr"
-                          style={{ 
-                            textAlign: 'left', 
-                            direction: 'ltr',
-                            minHeight: '400px',
-                            resize: 'vertical'
-                          }}
-                          className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 text-sm leading-relaxed"
+                          value={songLyrics}
+                          onChange={setSongLyrics}
                           placeholder="Enter complete song lyrics here...
 
 Example:
@@ -836,6 +738,7 @@ Verse 2:
 
 Bridge:
 [Your bridge lyrics here]"
+                          className="w-full"
                         />
                         <div className="absolute bottom-3 right-3 text-xs text-slate-400 bg-white px-2 py-1 rounded">
                           {songLyrics.length} characters
@@ -853,115 +756,16 @@ Bridge:
                       </h4>
                     </div>
                     <div className="p-4 sm:p-6">
-                      {/* Plain Text Editor - No formatting toolbar needed */}
+                      {/* Rich Text Editor with formatting toolbar */}
                       <div className="mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
-                        Plain text editor - Type your solfas naturally
-                      </div>
-                      <div className="hide-toolbar flex flex-wrap items-center gap-1 sm:gap-2 mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('bold')}
-                          className="px-2 sm:px-3 py-1 text-xs sm:text-sm font-bold bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Bold"
-                        >
-                          B
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('italic')}
-                          className="px-3 py-1 text-sm italic bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Italic"
-                        >
-                          I
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('underline')}
-                          className="px-3 py-1 text-sm underline bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Underline"
-                        >
-                          U
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('strikeThrough')}
-                          className="px-3 py-1 text-sm line-through bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Strikethrough"
-                        >
-                          <s>S</s>
-                        </button>
-                        <div className="w-px h-6 bg-slate-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('insertUnorderedList')}
-                          className="px-3 py-1 text-sm bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Bullet List"
-                        >
-                          • List
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('insertOrderedList')}
-                          className="px-3 py-1 text-sm bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Numbered List"
-                        >
-                          1. List
-                        </button>
-                        <div className="w-px h-6 bg-slate-300"></div>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('formatBlock', false, 'h1')}
-                          className="px-1.5 sm:px-2 py-1 text-xs bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Heading 1"
-                        >
-                          H1
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('formatBlock', false, 'h2')}
-                          className="px-1.5 sm:px-2 py-1 text-xs bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Heading 2"
-                        >
-                          H2
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => document.execCommand('formatBlock', false, 'h3')}
-                          className="px-1.5 sm:px-2 py-1 text-xs bg-white border-2 border-slate-300 rounded hover:bg-slate-100 transition-colors"
-                          title="Heading 3"
-                        >
-                          H3
-                        </button>
+                        Rich text editor - Use the toolbar above to format your solfas
                       </div>
                       
                       <div className="relative">
-                        <textarea
+                        <BasicTextEditor
                           id="solfas-editor"
-                          value={songSolfas} // Now contains plain text
-                          onChange={(e) => setSongSolfas(e.target.value)}
-                          onPaste={(e) => {
-                            e.preventDefault();
-                            const clipboardData = e.clipboardData || (window as any).clipboardData;
-                            const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
-                            const target = e.target as HTMLTextAreaElement;
-                            const start = target.selectionStart || 0;
-                            const end = target.selectionEnd || 0;
-                            const currentValue = songSolfas;
-                            const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
-                            setSongSolfas(newValue);
-                            // Set cursor position after pasted text
-                            setTimeout(() => {
-                              target.selectionStart = target.selectionEnd = start + pastedText.length;
-                            }, 0);
-                          }}
-                          dir="ltr"
-                          style={{ 
-                            textAlign: 'left', 
-                            direction: 'ltr',
-                            minHeight: '300px',
-                            resize: 'vertical'
-                          }}
-                          className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 text-sm leading-relaxed font-mono"
+                          value={songSolfas}
+                          onChange={setSongSolfas}
                           placeholder="Enter solfas notation here...
 
 Example:
@@ -972,6 +776,7 @@ Do Ti La Sol Fa Mi Re Do
 Chorus:
 Do Re Mi Fa Sol La Ti Do
 Do Re Mi Fa Sol La Ti Do"
+                          className="w-full font-mono"
                         />
                         <div className="absolute bottom-3 right-3 text-xs text-slate-400 bg-white px-2 py-1 rounded">
                           {songSolfas.length} characters

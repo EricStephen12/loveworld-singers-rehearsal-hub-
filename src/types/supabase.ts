@@ -1,5 +1,76 @@
 // Type definitions for Supabase data structures
 
+// User Profile Types
+export interface UserProfile {
+  id: string;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  email: string;
+  phone_number?: string;
+  gender?: 'Male' | 'Female';
+  birthday?: string;
+  region?: string;
+  zone?: string;
+  church?: string;
+  designation?: 'Soprano' | 'Alto' | 'Tenor' | 'Bass' | 'Instrumentalist' | 'Backup Singer';
+  administration?: 'Coordinator' | 'Assistant Coordinator' | 'Secretary' | 'Treasurer' | 'Member';
+  social_provider?: 'google' | 'kingschat' | 'email';
+  social_id?: string;
+  profile_completed: boolean;
+  email_verified: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserGroup {
+  id: string;
+  user_id: string;
+  group_name: string;
+  created_at: string;
+}
+
+export interface Attendance {
+  id: string;
+  user_id: string;
+  event_name: string;
+  event_date: string;
+  status: 'Present' | 'Late' | 'Absent';
+  check_in_time?: string;
+  created_at: string;
+}
+
+export interface Achievement {
+  id: string;
+  user_id: string;
+  achievement_name: string;
+  achievement_description?: string;
+  earned_date: string;
+  created_at: string;
+}
+
+// Auth Types
+export interface SignUpData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}
+
+export interface ProfileCompletionData {
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+  gender?: 'Male' | 'Female';
+  birthday?: string;
+  phoneNumber?: string;
+  region?: string;
+  zone?: string;
+  church?: string;
+  designation?: 'Soprano' | 'Alto' | 'Tenor' | 'Bass' | 'Instrumentalist' | 'Backup Singer';
+  administration?: 'Coordinator' | 'Assistant Coordinator' | 'Secretary' | 'Treasurer' | 'Member';
+}
+
 export interface PraiseNight {
   id: number;
   name: string;

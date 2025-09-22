@@ -2,20 +2,51 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { PraiseNight, PraiseNightSong } from '@/types/supabase';
 import { getAllPages } from '@/lib/database';
+import { offlineManager } from '@/utils/offlineManager';
+import { dataPrefetcher } from '@/utils/dataPrefetcher';
 
 export function useRealtimeData() {
   const [pages, setPages] = useState<PraiseNight[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false for instant display
   const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // Memory optimization - limit pages in memory
+  const MAX_PAGES_IN_MEMORY = 5;
 
-  // Load initial data
+  // Load initial data with ultra-fast cache-first approach
   useEffect(() => {
     async function loadInitialData() {
       try {
-        setLoading(true);
-        const supabasePages = await getAllPages();
-        setPages(supabasePages);
+        console.log('🚀 Starting ultra-fast data load...');
+        const startTime = performance.now();
+        
+        // INSTANT: Load cached data immediately for zero loading time
+        const cachedData = await dataPrefetcher.getCachedData();
+        if (cachedData && cachedData.length > 0) {
+          console.log('⚡ Loading cached data instantly (0ms)');
+          setPages(cachedData);
+          setError(null);
+          setIsInitialLoad(false);
+        } else {
+          // Only show loading if no cache available
+          setLoading(true);
+        }
+        
+        // Fetch fresh data in background (non-blocking)
+        const dataPromise = getAllPages();
+        
+        // Wait for fresh data
+        const supabasePages = await dataPromise;
+        
+        // Update with fresh data - limit memory usage
+        const limitedPages = supabasePages.slice(0, MAX_PAGES_IN_MEMORY);
+        setPages(limitedPages);
         setError(null);
+        setIsInitialLoad(false);
+        
+        const totalTime = performance.now() - startTime;
+        console.log(`🎯 Total load time: ${totalTime.toFixed(2)}ms`);
       } catch (err) {
         console.error('Error loading initial data:', err);
         setError('Failed to load data');
@@ -164,12 +195,26 @@ export function useRealtimeData() {
     return page?.songs || [];
   };
 
+  // Preload function for instant navigation
+  const preloadData = async () => {
+    try {
+      console.log('🔄 Preloading data for instant access...');
+      const updatedPages = await getAllPages();
+      const limitedPages = updatedPages.slice(0, MAX_PAGES_IN_MEMORY);
+      setPages(limitedPages);
+    } catch (err) {
+      console.error('Error preloading data:', err);
+    }
+  };
+
   return {
     pages,
     loading,
     error,
+    isInitialLoad,
     getCurrentPage,
     getCurrentSongs,
+    preloadData,
     // Manual refresh function (still available if needed)
     refreshData: async () => {
       try {

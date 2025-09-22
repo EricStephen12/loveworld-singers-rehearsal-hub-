@@ -359,7 +359,7 @@ export default function MediaManager({
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-200">
+      <div className="flex-shrink-0 p-3 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1">
             <h2 className="text-xl font-semibold text-gray-900">
@@ -436,7 +436,7 @@ export default function MediaManager({
       </div>
 
       {/* Upload Area */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-200">
+      <div className="flex-shrink-0 p-3 border-b border-gray-200">
         <div
           ref={dropZoneRef}
           onDragOver={handleDragOver}

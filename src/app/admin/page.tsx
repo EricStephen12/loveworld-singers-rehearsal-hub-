@@ -29,7 +29,8 @@ import {
   Tag,
   X,
   Check,
-  Save
+  Save,
+  ExternalLink
 } from "lucide-react";
 import { PraiseNightSong, Comment, PraiseNight, Category } from '../../types/supabase';
 import { useRealtimeData } from '../../hooks/useRealtimeData';
@@ -40,6 +41,11 @@ import MediaManager from '../../components/MediaManager';
 import { ToastContainer, Toast } from '../../components/Toast';
 
 export default function AdminPage() {
+  // Admin authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginData, setLoginData] = useState({ username: '', password: '' });
+  const [loginError, setLoginError] = useState('');
+
   // Initialize Supabase client
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -49,6 +55,33 @@ export default function AdminPage() {
   const [activeSection, setActiveSection] = useState('Pages');
   const [selectedPage, setSelectedPage] = useState<PraiseNight | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    const adminAuth = localStorage.getItem('adminAuthenticated');
+    if (adminAuth === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  // Admin login function
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+
+    if (loginData.username === 'admin' && loginData.password === '@admin1234@') {
+      setIsAuthenticated(true);
+      localStorage.setItem('adminAuthenticated', 'true');
+    } else {
+      setLoginError('Invalid username or password');
+    }
+  };
+
+  // Admin logout function
+  const handleAdminLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('adminAuthenticated');
+  };
   
   // Use real-time Supabase data for instant updates
   const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, refreshData } = useRealtimeData();
@@ -851,6 +884,71 @@ export default function AdminPage() {
     );
   }
 
+  // Show admin login form if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center">
+        <div className="w-full max-w-md mx-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Settings className="w-8 h-8 text-purple-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">Admin Login</h1>
+              <p className="text-gray-600 text-sm">Enter your credentials to access the admin panel</p>
+            </div>
+
+            <form onSubmit={handleAdminLogin} className="space-y-6">
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  value={loginData.username}
+                  onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                  placeholder="Enter username"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  value={loginData.password}
+                  onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+
+              {loginError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                  <p className="text-red-600 text-sm">{loginError}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-purple-600 text-white font-semibold rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl hover:bg-purple-700 active:scale-95"
+              >
+                Login
+              </button>
+            </form>
+
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex flex-col lg:flex-row">
       {/* Mobile Menu Button */}
@@ -909,6 +1007,19 @@ export default function AdminPage() {
               )}
             </button>
           ))}
+          
+          {/* Logout Button */}
+          <div className="pt-4 border-t border-slate-200">
+            <button
+              onClick={handleAdminLogout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-red-600 hover:bg-red-50"
+            >
+              <X className="w-5 h-5 flex-shrink-0" />
+              {!sidebarCollapsed && (
+                <span className="text-sm font-medium">Logout</span>
+              )}
+            </button>
+          </div>
         </nav>
       </div>
 
@@ -953,6 +1064,15 @@ export default function AdminPage() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
+              <a 
+                href="/home" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm font-medium">View Site</span>
+              </a>
               <button className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-600 hover:bg-gray-100 rounded-lg transition-colors">
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline text-sm font-medium">Export</span>
@@ -1026,8 +1146,23 @@ export default function AdminPage() {
           )}
 
           {activeSection === 'Media' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 h-full">
-              <MediaManager />
+            <div className="fixed inset-0 z-50 bg-white overflow-hidden">
+              <div className="h-full flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+                  <h2 className="text-xl font-semibold text-gray-900">Media Library</h2>
+                  <button
+                    onClick={() => setActiveSection('Pages')}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto">
+                  <MediaManager />
+                </div>
+              </div>
             </div>
           )}
 

@@ -40,17 +40,17 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       console.log('🚫 Ignoring rapid click');
       return;
     }
-    
+
     setIsToggling(true);
     setTimeout(() => setIsToggling(false), 300); // 300ms debounce
-    
-    console.log('🎵 togglePlayPause called:', { 
-      isPlaying, 
+
+    console.log('🎵 togglePlayPause called:', {
+      isPlaying,
       hasAudioRef: !!audioRef.current,
       audioSrc: audioRef.current?.src,
-      songTitle: currentSong?.title 
+      songTitle: currentSong?.title
     });
-    
+
     if (audioRef.current) {
       if (isPlaying) {
         console.log('⏸️ Pausing audio');
@@ -61,12 +61,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
           console.warn('No audio source set. Cannot play audio.');
           return;
         }
-        
+
         console.log('▶️ Playing audio:', audioRef.current.src);
-        
+
         // Use a promise to handle play() properly
         const playPromise = audioRef.current.play();
-        
+
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
@@ -156,10 +156,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const handleEnded = () => {
     setIsPlaying(false);
     setCurrentTime(0);
-    
+
     // Dispatch custom event for repeat functionality
-    const event = new CustomEvent('audioEnded', { 
-      detail: { song: currentSong } 
+    const event = new CustomEvent('audioEnded', {
+      detail: { song: currentSong }
     });
     window.dispatchEvent(event);
   };
@@ -185,7 +185,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     });
     console.error('❌ Audio error code:', audioRef.current?.error?.code);
     console.error('❌ Audio error message:', audioRef.current?.error?.message);
-    
+
     // Test if the URL is accessible
     if (currentSong?.audioFile) {
       console.log('🔍 Testing audio URL accessibility:', currentSong.audioFile);
@@ -201,7 +201,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
           console.error('🔍 URL fetch failed:', fetchError);
         });
     }
-    
+
     setIsPlaying(false);
     setIsLoading(false);
     setHasError(true);
@@ -211,7 +211,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     console.log('Audio loading effect triggered for song:', currentSong?.title);
     console.log('Audio file URL:', currentSong?.audioFile);
-    
+
     if (currentSong?.audioFile && audioRef.current && currentSong.audioFile.trim() !== '') {
       try {
         // Reset audio state
@@ -219,17 +219,17 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         setDuration(0);
         setIsLoading(true);
         setHasError(false);
-        
+
         // Check if the audio file URL looks valid (Cloudinary URLs or other valid URLs)
         if (currentSong.audioFile.startsWith('http') || currentSong.audioFile.startsWith('https')) {
           // Don't encode URLs that are already properly encoded (like Cloudinary URLs)
           const urlToUse = currentSong.audioFile;
-          
+
           console.log('🎵 Loading audio file for song:', currentSong.title);
           console.log('🎵 Audio URL:', urlToUse);
           console.log('🎵 URL length:', urlToUse.length);
           console.log('🎵 URL domain:', new URL(urlToUse).hostname);
-          
+
           audioRef.current.src = urlToUse;
           audioRef.current.load();
         } else {
@@ -262,14 +262,14 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     console.log('🎵 Setting current song:', song?.title, 'autoPlay:', autoPlay);
     console.log('🎵 Song audioFile:', song?.audioFile);
     console.log('🎵 Song mediaId:', song?.mediaId);
-    
+
     // Stop current playback when changing songs
     if (audioRef.current) {
       audioRef.current.pause();
       setIsPlaying(false);
       setCurrentTime(0);
     }
-    
+
     setCurrentSong(song);
     setShouldAutoPlay(autoPlay);
   };

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Menu } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+// Removed auth context dependency for admin check
 
 type ScreenHeaderProps = {
   title: string
@@ -14,11 +15,14 @@ type ScreenHeaderProps = {
   leftButtons?: React.ReactNode
   onTitleClick?: () => void
   timer?: React.ReactNode
+  showMenuButton?: boolean
 }
 
-export function ScreenHeader({ title, subtitle, onMenuClick, rightImageSrc = '/logo.png', showDivider = true, rightButtons, leftButtons, onTitleClick, timer }: ScreenHeaderProps) {
+export function ScreenHeader({ title, subtitle, onMenuClick, rightImageSrc = '/logo.png', showDivider = true, rightButtons, leftButtons, onTitleClick, timer, showMenuButton = true }: ScreenHeaderProps) {
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
+  // Check admin status from localStorage
+  const isAdmin = typeof window !== 'undefined' && localStorage.getItem('adminAuthenticated') === 'true'
 
   useEffect(() => {
     const id = window.setTimeout(() => setMounted(true), 200)
@@ -26,7 +30,11 @@ export function ScreenHeader({ title, subtitle, onMenuClick, rightImageSrc = '/l
   }, [])
 
   const handleLogoClick = () => {
-    router.push('/home')
+    if (isAdmin) {
+      router.push('/admin')
+    } else {
+      router.push('/home')
+    }
   }
 
   return (
@@ -34,14 +42,16 @@ export function ScreenHeader({ title, subtitle, onMenuClick, rightImageSrc = '/l
       <div className="flex items-center justify-between p-3 relative">
         {/* Left side - Menu button and left buttons */}
         <div className="flex items-center space-x-2">
-          <button 
-            onClick={onMenuClick}
-            className={`flex items-center p-2 rounded-lg transition-all duration-1000 ease-out focus:outline-none focus:ring-0 focus:border-0 hover:bg-gray-100 ${mounted ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-4 scale-75'}`}
-            aria-label="Open menu"
-            style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
-          >
-            <Menu className="w-5 h-5 text-gray-600" />
-          </button>
+          {showMenuButton && (
+            <button 
+              onClick={onMenuClick}
+              className={`flex items-center p-2 rounded-lg transition-all duration-1000 ease-out focus:outline-none focus:ring-0 focus:border-0 hover:bg-gray-100 ${mounted ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-4 scale-75'}`}
+              aria-label="Open menu"
+              style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+            >
+              <Menu className="w-5 h-5 text-gray-600" />
+            </button>
+          )}
           {leftButtons && (
             <div className={`transition-all duration-1000 ease-out ${mounted ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-4 scale-75'}`}>
               {leftButtons}
