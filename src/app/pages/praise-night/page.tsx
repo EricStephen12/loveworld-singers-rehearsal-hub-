@@ -1023,71 +1023,66 @@ function PraiseNightPageContent() {
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category */}
-      {filteredPraiseNights.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
-          <div className="w-full flex items-center px-4 sm:px-6 py-4 gap-2 sm:gap-4">
-            {/* Category buttons with text */}
-            {mainCategories.map((category, index) => (
-              <div key={category} className="relative flex-1">
+        {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category */}
+        {filteredPraiseNights.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
+            <div className="w-full flex items-center px-4 sm:px-6 py-4 gap-2">
+              {/* Category buttons with text - Take up most of the space */}
+              <div className="flex-1 flex gap-2">
+                {mainCategories.map((category, index) => (
+                  <button
+                    key={category}
+                    onClick={() => handleCategorySelect(category)}
+                    className={`flex-1 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center ${activeCategory === category
+                      ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                      : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                      }`}
+                  >
+                    <span className="block leading-tight break-words">{category}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* FAB positioned to the right with small gap */}
+              <div className="relative flex-shrink-0 ml-2">
+                {/* Others text positioned above FAB */}
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-purple-600 font-semibold text-center whitespace-nowrap z-10">
+                  Others
+                </div>
                 <button
-                  onClick={() => handleCategorySelect(category)}
-                  className={`w-full px-2 sm:px-4 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap ${activeCategory === category
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                    }`}
+                  onClick={() => setIsCategoryDrawerOpen(true)}
+                  onMouseEnter={() => setHoveredCategory("Other Categories")}
+                  onMouseLeave={() => setHoveredCategory(null)}
+                  className="w-12 h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
                 >
-                  <span className="hidden sm:inline">{category}</span>
-                  <span className="sm:hidden">
-                    {category === 'Pre-rehearsal' ? 'Pre' :
-                      category === 'Ongoing' ? 'Live' :
-                        category === 'Archive' ? 'Past' : category}
-                  </span>
+                  <Image
+                    src="/click-icon.png"
+                    alt="Click for more categories"
+                    width={20}
+                    height={20}
+                    className="w-5 h-5"
+                  />
                 </button>
-              </div>
-            ))}
 
-            {/* FAB with Plus Icon and Tooltip */}
-            <div className="relative flex-1 flex flex-col items-center min-w-0">
-              {/* Other Categories indicator above FAB */}
-              <div className="text-xs text-purple-400 font-medium mb-1 text-center whitespace-nowrap px-1">
-                <span className="hidden sm:inline">Other Categories</span>
-                <span className="sm:hidden">More</span>
-              </div>
-              <button
-                onClick={() => setIsCategoryDrawerOpen(true)}
-                onMouseEnter={() => setHoveredCategory("Other Categories")}
-                onMouseLeave={() => setHoveredCategory(null)}
-                className="w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
-              >
-                <Image
-                  src="/click-icon.png"
-                  alt="Click for more categories"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
-              </button>
-
-              {/* iOS-style Tooltip for FAB */}
-              {hoveredCategory === "Other Categories" && (
-                <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
-                  left: '50%',
-                  transform: 'translateX(-50%)'
-                }}>
-                  <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
-                    Other Categories
-                    {/* iOS-style arrow */}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-                      <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
+                {/* iOS-style Tooltip for FAB */}
+                {hoveredCategory === "Other Categories" && (
+                  <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
+                    right: '16px',
+                    transform: 'translateX(0)'
+                  }}>
+                    <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
+                      Other Categories
+                      {/* iOS-style arrow */}
+                      <div className="absolute top-full right-4">
+                        <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Category Filter Drawer */}
       {isCategoryDrawerOpen && (

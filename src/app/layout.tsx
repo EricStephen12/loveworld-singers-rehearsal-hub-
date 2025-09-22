@@ -28,18 +28,18 @@ const outfit = Outfit({
 })
 
 export const metadata: Metadata = {
-  title: 'LWSRH - LoveWorld Singers Rehearsal Hub',
+  title: 'LWSHRP - LoveWorld Singers Rehearsal Hub',
   description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'LWSRH',
+    title: 'LWSHRP',
   },
   formatDetection: {
     telephone: false,
   },
-  applicationName: 'LWSRH',
+  applicationName: 'LWSHRP',
   generator: 'Next.js',
   keywords: ['praise', 'worship', 'rehearsal', 'music', 'loveworld', 'singers'],
   authors: [{ name: 'LoveWorld Singers' }],
@@ -48,13 +48,13 @@ export const metadata: Metadata = {
   robots: 'index, follow',
   openGraph: {
     type: 'website',
-    siteName: 'LWSRH',
-    title: 'LWSRH - LoveWorld Singers Rehearsal Hub',
+    siteName: 'LWSHRP',
+    title: 'LWSHRP - LoveWorld Singers Rehearsal Hub',
     description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'LWSRH - LoveWorld Singers Rehearsal Hub',
+    title: 'LWSHRP - LoveWorld Singers Rehearsal Hub',
     description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
   },
 }
@@ -83,7 +83,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="LWSRH" />
+        <meta name="apple-mobile-web-app-title" content="LWSHRP" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-navbutton-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
