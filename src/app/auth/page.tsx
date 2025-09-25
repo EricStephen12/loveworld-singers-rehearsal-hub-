@@ -84,23 +84,16 @@ export default function AuthPage() {
   }
 
   const handleSocialLogin = async (provider: string) => {
+    if (provider === 'google') {
+      // Google integration - placeholder for future implementation
+      setError('Google integration coming soon!')
+      return
+    }
+    
     if (provider === 'kingschat') {
       // KingsChat integration - placeholder for future implementation
       setError('KingsChat integration coming soon!')
       return
-    }
-    
-    setError('')
-    setIsLoading(true)
-    
-    try {
-      // Sign in with Google
-      await AuthService.signInWithGoogle()
-      // The redirect will be handled by the OAuth flow
-    } catch (error: any) {
-      console.error('Social login error:', error)
-      setError(error.message || 'An error occurred during social login')
-      setIsLoading(false)
     }
   }
 

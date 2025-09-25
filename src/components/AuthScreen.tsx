@@ -65,42 +65,17 @@ export default function AuthScreen({ onComplete }: AuthScreenProps) {
   }
 
   const handleSocialSignup = (provider: 'google' | 'kingschat') => {
-    // For now, simulate social login and move to profile completion
-    // In a real app, you'd integrate with Google OAuth or KingsChat API
-    const mockSocialData = {
-      google: {
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john.doe@gmail.com',
-        socialId: 'google_123456789'
-      },
-      kingschat: {
-        firstName: 'Jane',
-        lastName: 'Smith', 
-        email: 'jane.smith@kingschat.com',
-        socialId: 'kingschat_987654321'
-      }
+    if (provider === 'google') {
+      // Google integration - placeholder for future implementation
+      alert('Google integration coming soon!')
+      return
     }
-
-    const socialData = mockSocialData[provider]
     
-    setFormData(prev => ({
-      ...prev,
-      socialProvider: provider,
-      socialId: socialData.socialId,
-      firstName: socialData.firstName,
-      lastName: socialData.lastName,
-      email: socialData.email
-    }))
-
-    // Move to profile completion screen with social data
-    onComplete({
-      socialProvider: provider,
-      socialId: socialData.socialId,
-      firstName: socialData.firstName,
-      lastName: socialData.lastName,
-      email: socialData.email
-    })
+    if (provider === 'kingschat') {
+      // KingsChat integration - placeholder for future implementation
+      alert('KingsChat integration coming soon!')
+      return
+    }
   }
 
 

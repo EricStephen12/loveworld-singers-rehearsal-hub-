@@ -6,6 +6,7 @@ import { AudioProvider } from '@/contexts/AudioContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 import RealtimeNotifications from '@/components/RealtimeNotifications'
+import VersionChecker from '@/components/VersionChecker'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -96,6 +97,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${poppins.variable} ${outfit.variable} font-sans`}>
         <AuthProvider>
           <AudioProvider>
+            <VersionChecker />
             <main className="min-h-screen bg-gray-50">
               {children}
             </main>

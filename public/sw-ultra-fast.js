@@ -1,6 +1,6 @@
 // ULTRA FAST Service Worker - Aggressive Caching for Instant Loading
 
-const CACHE_VERSION = 'ultra-fast-v1';
+const CACHE_VERSION = 'ultra-fast-v' + Date.now();
 const CACHE_NAMES = {
   STATIC: 'static-ultra-fast',
   API: 'api-ultra-fast', 
@@ -310,6 +310,39 @@ self.addEventListener('message', (event) => {
         return cache.addAll(event.data.urls);
       })
     );
+  }
+  
+  // Handle cache clearing requests
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      Promise.all([
+        caches.delete(CACHE_NAMES.STATIC),
+        caches.delete(CACHE_NAMES.API),
+        caches.delete(CACHE_NAMES.IMAGES),
+        caches.delete(CACHE_NAMES.PAGES)
+      ]).then(() => {
+        console.log('🧹 Service Worker cache cleared');
+        event.ports[0]?.postMessage({ success: true });
+      })
+    );
+  }
+  
+  // Handle version-based cache invalidation
+  if (event.data && event.data.type === 'VERSION_UPDATE') {
+    const newVersion = event.data.version;
+    if (newVersion !== CACHE_VERSION) {
+      console.log('🔄 Version changed, clearing cache...');
+      event.waitUntil(
+        Promise.all([
+          caches.delete(CACHE_NAMES.STATIC),
+          caches.delete(CACHE_NAMES.API),
+          caches.delete(CACHE_NAMES.IMAGES),
+          caches.delete(CACHE_NAMES.PAGES)
+        ]).then(() => {
+          console.log('✅ Cache cleared for new version');
+        })
+      );
+    }
   }
 });
 
