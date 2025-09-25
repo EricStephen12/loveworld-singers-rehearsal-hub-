@@ -510,7 +510,7 @@ export default function ProfilePage() {
                             const success = await ultraFastDeleteImage(profileImage)
                             if (success) {
                               setProfileImage(null)
-                              await updateProfile({ profile_image_url: null })
+                              await updateProfile({ profile_image_url: undefined })
                               alert('Profile image deleted successfully!')
                             } else {
                               alert('Failed to delete image. Please try again.')
