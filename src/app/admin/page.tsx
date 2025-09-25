@@ -36,6 +36,8 @@ import { useRealtimeData } from '../../hooks/useRealtimeData';
 import { createPage, updatePage, deletePage, createSong, updateSong, deleteSong, updateSongsCategory, handleCategoryDeletion, getAllCategories, createCategory, updateCategory, deleteCategory } from '../../lib/database';
 import { supabase } from '@/lib/supabase';
 import { clearAllCaches } from '@/utils/cacheBuster';
+import { versionManager } from '@/utils/versionManager';
+import { smartCache } from '@/utils/smartCache';
 import EditSongModal from '../../components/EditSongModal';
 import MediaManager from '../../components/MediaManager';
 import { ToastContainer, Toast } from '../../components/Toast';
@@ -882,130 +884,38 @@ export default function AdminPage() {
   const loadUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      console.log('🔄 Loading all users with multiple approaches...');
+      // Clear cache and use DIRECT approach
+      console.log('🔄 Clearing cache and using DIRECT approach...');
+      await versionManager.checkForUpdates();
+      smartCache.clearCache('admin-users-cache');
       
-      let allUsers: any[] = [];
-      let profiles: any[] = [];
+      console.log('🔄 Loading users with DIRECT query (no complex logic)...');
       
-      // Approach 1: Try to get profiles with different query methods
-      console.log('📋 Approach 1: Standard profiles query...');
+      // DIRECT QUERY - Simple and direct
+      console.log('📋 Direct profiles query...');
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
+      console.log('📊 Raw query result:', { data: profilesData, error: profilesError });
+      
       if (profilesError) {
-        console.error('❌ Standard profiles query failed:', profilesError);
-      } else {
-        profiles = profilesData || [];
-        console.log('✅ Standard query found:', profiles.length, 'profiles');
-      }
-      
-      // Approach 2: Try without ordering (in case ordering causes issues)
-      if (profiles.length === 0) {
-        console.log('📋 Approach 2: Profiles query without ordering...');
-        const { data: profilesData2, error: profilesError2 } = await supabase
-          .from('profiles')
-          .select('*');
-        
-        if (profilesError2) {
-          console.error('❌ Profiles query without ordering failed:', profilesError2);
-        } else {
-          profiles = profilesData2 || [];
-          console.log('✅ Query without ordering found:', profiles.length, 'profiles');
-        }
-      }
-      
-      // Approach 3: Try with specific columns only
-      if (profiles.length === 0) {
-        console.log('📋 Approach 3: Profiles query with specific columns...');
-        const { data: profilesData3, error: profilesError3 } = await supabase
-          .from('profiles')
-          .select('id, email, first_name, last_name, created_at');
-        
-        if (profilesError3) {
-          console.error('❌ Profiles query with specific columns failed:', profilesError3);
-        } else {
-          profiles = profilesData3 || [];
-          console.log('✅ Query with specific columns found:', profiles.length, 'profiles');
-        }
-      }
-      
-      // Approach 4: Try to get auth users (admin access)
-      let authUsers: any[] = [];
-      try {
-        console.log('📋 Approach 4: Trying admin auth access...');
-        const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
-        if (authError) {
-          console.log('⚠️ Admin auth access failed:', authError.message);
-        } else {
-          authUsers = users || [];
-          console.log('✅ Admin auth found:', authUsers.length, 'auth users');
-        }
-      } catch (error) {
-        console.log('⚠️ Admin auth access not available:', error);
-      }
-      
-      // Approach 5: Try direct SQL query (if RLS is the issue)
-      if (profiles.length === 0 && authUsers.length === 0) {
-        console.log('📋 Approach 5: Trying direct SQL query...');
-        try {
-          const { data: sqlData, error: sqlError } = await supabase.rpc('get_all_profiles');
-          if (sqlError) {
-            console.log('⚠️ Direct SQL query failed:', sqlError.message);
-          } else {
-            profiles = sqlData || [];
-            console.log('✅ Direct SQL found:', profiles.length, 'profiles');
-          }
-        } catch (error) {
-          console.log('⚠️ Direct SQL query not available:', error);
-        }
-      }
-      
-      // Combine results
-      if (authUsers.length > 0) {
-        console.log('🔄 Merging auth users with profiles...');
-        
-        // Create a map of existing profiles
-        const profilesMap = new Map();
-        profiles?.forEach(profile => {
-          profilesMap.set(profile.id, profile);
+        console.error('❌ Profiles query failed:', profilesError);
+        addToast({
+          type: 'error',
+          message: `Database error: ${profilesError.message}`
         });
-        
-        // Add all auth users, using profile data if available
-        authUsers.forEach(authUser => {
-          const existingProfile = profilesMap.get(authUser.id);
-          if (existingProfile) {
-            allUsers.push(existingProfile);
-          } else {
-            // User exists in auth but no profile
-            allUsers.push({
-              id: authUser.id,
-              email: authUser.email,
-              first_name: authUser.user_metadata?.first_name || '',
-              last_name: authUser.user_metadata?.last_name || '',
-              middle_name: authUser.user_metadata?.middle_name || '',
-              phone_number: authUser.user_metadata?.phone_number || '',
-              gender: authUser.user_metadata?.gender || '',
-              birthday: authUser.user_metadata?.birthday || '',
-              region: authUser.user_metadata?.region || '',
-              zone: authUser.user_metadata?.zone || '',
-              church: authUser.user_metadata?.church || '',
-              designation: authUser.user_metadata?.designation || '',
-              administration: authUser.user_metadata?.administration || '',
-              profile_completed: false,
-              created_at: authUser.created_at,
-              updated_at: authUser.updated_at || authUser.created_at
-            });
-          }
-        });
-      } else {
-        allUsers = profiles;
+        return;
       }
       
-      console.log('📊 Final profiles data:', profiles);
-      console.log('📊 Final allUsers data:', allUsers);
-      console.log('📊 Total users found:', allUsers.length);
+      const profiles = profilesData || [];
+      console.log('✅ Found profiles:', profiles.length);
+      console.log('📋 Profile details:', profiles);
+      
+      // Use the profiles directly - no complex merging logic
+      const allUsers = profiles;
+      console.log('📊 Using profiles directly:', allUsers.length, 'users');
       
       // Fetch user groups for all users
       const { data: groups, error: groupsError } = await supabase
@@ -1055,9 +965,10 @@ export default function AdminPage() {
     }
   };
 
-  // Load users when Users section is active
+  // Load users when Users section is active (ALWAYS refresh)
   useEffect(() => {
-    if (activeSection === 'Users' && users.length === 0) {
+    if (activeSection === 'Users') {
+      console.log('🔄 Users section activated - loading users...');
       loadUsers();
     }
   }, [activeSection]);
@@ -1410,6 +1321,31 @@ export default function AdminPage() {
                   >
                     <RefreshCw className={`w-4 h-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
                     Refresh
+                  </button>
+                  <button
+                    onClick={async () => {
+                      console.log('🔍 DEBUG: Current users state:', users);
+                      console.log('🔍 DEBUG: User groups state:', userGroups);
+                      console.log('🔍 DEBUG: Loading state:', isLoadingUsers);
+                      
+                      // Test direct query
+                      console.log('🔍 DEBUG: Testing direct query...');
+                      const { data, error } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                      
+                      console.log('🔍 DEBUG: Direct query result:', { data, error });
+                      console.log('🔍 DEBUG: Data length:', data?.length || 0);
+                      
+                      if (data && data.length > 0) {
+                        console.log('🔍 DEBUG: First user:', data[0]);
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Debug
                   </button>
                 </div>
               </div>

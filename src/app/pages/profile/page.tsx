@@ -10,7 +10,8 @@ import { getMenuItems } from '@/config/menuItems'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUltraFastProfile } from '@/hooks/useUltraFastProfile'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
-import { uploadProfileImage, validateImageFile } from '@/utils/imageUpload'
+import { ultraFastUploadProfileImage, ultraFastDeleteImage } from '@/utils/ultraFastImageUpload'
+import { validateImageFile } from '@/utils/imageUpload'
 import { supabase } from '@/lib/supabase-client'
 
 export default function ProfilePage() {
@@ -42,6 +43,7 @@ export default function ProfilePage() {
   ])
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState({ stage: '', progress: 0, message: '' })
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [qrCode, setQrCode] = useState('')
   const [timeLeft, setTimeLeft] = useState(0) // Will be set when QR is generated
@@ -226,16 +228,21 @@ export default function ProfilePage() {
     console.log('👤 User ID:', user.id)
 
     setIsUploadingImage(true)
+    setUploadProgress({ stage: 'compressing', progress: 0, message: 'Preparing image...' })
+    
     try {
-      console.log('🚀 Starting image upload...')
+      console.log('🚀 Starting ULTRA-FAST image upload...')
       
-      // Upload to Supabase Storage
-      const result = await uploadProfileImage(file, user.id)
+      // Upload with progress tracking
+      const result = await ultraFastUploadProfileImage(file, user.id, (progress) => {
+        setUploadProgress(progress)
+        console.log('📊 Upload progress:', progress)
+      })
       
       console.log('📤 Upload result:', result)
       
       if (result.success && result.url) {
-        console.log('✅ Image uploaded successfully, updating profile...')
+        console.log('✅ ULTRA-FAST upload successful!', `Time: ${result.uploadTime}ms`)
         
         // Update profile with new image URL
         const updateSuccess = await updateProfile({
@@ -247,7 +254,8 @@ export default function ProfilePage() {
         if (updateSuccess) {
           // Set local state for immediate UI update
           setProfileImage(result.url)
-          alert('Profile image updated successfully!')
+          const timeText = result.uploadTime ? ` (${result.uploadTime}ms)` : ''
+          alert(`Profile image updated successfully${timeText}!`)
         } else {
           alert('Failed to update profile with new image. Please try again.')
         }
@@ -260,6 +268,7 @@ export default function ProfilePage() {
       alert(`Error uploading image: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsUploadingImage(false)
+      setUploadProgress({ stage: '', progress: 0, message: '' })
     }
   }
 
@@ -355,8 +364,14 @@ export default function ProfilePage() {
     }
   }, [timeLeft, qrGenerated])
 
-  // Show loading state only if no cached data is available (like praise night page)
-  if (isLoading && !currentProfile && !user) {
+
+  const handleLogout = async () => {
+    await signOut()
+    router.push('/auth')
+  }
+
+  // Show loading state while authentication is being checked
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -367,25 +382,8 @@ export default function ProfilePage() {
     )
   }
 
-  const handleLogout = async () => {
-    await signOut()
-    router.push('/auth')
-  }
-
-  // Show loading state only if no user at all
-  if (isLoading && !user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Redirect if not authenticated
-  if (!user) {
+  // Only redirect if authentication is complete and no user is found
+  if (!isLoading && !user) {
     router.push('/auth')
     return null
   }
@@ -496,15 +494,42 @@ export default function ProfilePage() {
       <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="text-center">
           <div className="relative inline-block mb-4">
-            <div className="w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mx-auto overflow-hidden">
+            <div className="relative w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mx-auto overflow-hidden">
               {profileImage ? (
-                <img 
-                  src={profileImage} 
-                  alt="Profile" 
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <img 
+                    src={profileImage} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                  {isEditing && (
+                    <button
+                      onClick={async () => {
+                        if (confirm('Are you sure you want to delete this profile image?')) {
+                          try {
+                            const success = await ultraFastDeleteImage(profileImage)
+                            if (success) {
+                              setProfileImage(null)
+                              await updateProfile({ profile_image_url: null })
+                              alert('Profile image deleted successfully!')
+                            } else {
+                              alert('Failed to delete image. Please try again.')
+                            }
+                          } catch (error) {
+                            console.error('Error deleting image:', error)
+                            alert('Error deleting image. Please try again.')
+                          }
+                        }
+                      }}
+                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      title="Delete image"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </>
               ) : (
-              <User className="w-12 h-12 text-white" />
+                <User className="w-12 h-12 text-white" />
               )}
             </div>
             <button 
@@ -609,7 +634,23 @@ export default function ProfilePage() {
                         <Camera className="w-4 h-4" />
                         {isUploadingImage ? 'Uploading...' : 'Upload Image'}
                       </label>
-                      <p className="text-xs text-gray-500 mt-1">Max 5MB, JPG/PNG</p>
+                      <p className="text-xs text-gray-500 mt-1">Max 10MB, JPG/PNG/WebP</p>
+                      
+                      {/* Upload Progress */}
+                      {isUploadingImage && uploadProgress.stage && (
+                        <div className="mt-2 w-full">
+                          <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                            <span>{uploadProgress.message}</span>
+                            <span>{uploadProgress.progress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-purple-600 h-2 rounded-full transition-all duration-300 ease-out"
+                              style={{ width: `${uploadProgress.progress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
