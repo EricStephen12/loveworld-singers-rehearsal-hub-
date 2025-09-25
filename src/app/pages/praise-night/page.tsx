@@ -10,7 +10,6 @@ import Image from "next/image";
 
 import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2, Flag } from "lucide-react";
 import SongDetailModal from "@/components/SongDetailModal";
-import Link from "next/link";
 import { PraiseNightSong, PraiseNight } from "@/types/supabase";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
 import { OfflineBanner } from "@/components/OfflineIndicator";
@@ -18,11 +17,13 @@ import ScreenHeader from "@/components/ScreenHeader";
 import SharedDrawer from "@/components/SharedDrawer";
 import { getMenuItems } from "@/config/menuItems";
 import { useAudio } from "@/contexts/AudioContext";
-import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch";
+import { usePageSearch, PageSearchResult } from "@/hooks/usePageSearch";
 
 function PraiseNightPageContent() {
   const searchParams = useSearchParams();
   const categoryFilter = searchParams.get('category');
+  const pageParam = searchParams.get('page');
+  const songParam = searchParams.get('song');
 
   // Use real-time Supabase data for instant updates
   const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, preloadData } = useRealtimeData();
@@ -46,14 +47,38 @@ function PraiseNightPageContent() {
     preloadData();
   }, [preloadData]);
 
-  // Auto-select first page only when no page is selected
+  // Handle page parameter from search results
   useEffect(() => {
-    if (filteredPraiseNights.length > 0 && !currentPraiseNight) {
-      // Only auto-select if no page is currently selected
+    if (pageParam && allPraiseNights.length > 0) {
+      const pageId = parseInt(pageParam);
+      const targetPage = allPraiseNights.find(page => page.id === pageId);
+      if (targetPage) {
+        setCurrentPraiseNightState(targetPage);
+        console.log('🎯 Navigated to page from search:', targetPage.name);
+      }
+    }
+  }, [pageParam, allPraiseNights]);
+
+  // Handle song parameter from search results
+  useEffect(() => {
+    if (songParam && currentPraiseNight?.songs) {
+      const targetSong = currentPraiseNight.songs.find(song => song.title === decodeURIComponent(songParam));
+      if (targetSong) {
+        const songIndex = currentPraiseNight.songs.indexOf(targetSong);
+        handleSongClick(targetSong, songIndex);
+        console.log('🎯 Opened song from search:', targetSong.title);
+      }
+    }
+  }, [songParam, currentPraiseNight]);
+
+  // Auto-select first page only when no page is selected and no page parameter
+  useEffect(() => {
+    if (filteredPraiseNights.length > 0 && !currentPraiseNight && !pageParam) {
+      // Only auto-select if no page is currently selected and no page parameter
       const firstPage = filteredPraiseNights[0];
       setCurrentPraiseNightState(firstPage);
     }
-  }, [filteredPraiseNights, currentPraiseNight]);
+  }, [filteredPraiseNights, currentPraiseNight, pageParam]);
 
   // Real-time data automatically loads songs, so we don't need the manual loading effect anymore
 
@@ -344,9 +369,9 @@ function PraiseNightPageContent() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Use global search hook
-  const { searchQuery, setSearchQuery, searchResults, hasResults } = useGlobalSearch();
-  const typedSearchResults = searchResults as SearchResult[];
+  // Use page-specific search hook
+  const { searchQuery, setSearchQuery, searchResults, hasResults } = usePageSearch(currentPraiseNight);
+  const typedSearchResults = searchResults as PageSearchResult[];
 
   const onHeaderSearchClick = () => {
     setIsSearchOpen(true);
@@ -622,7 +647,6 @@ function PraiseNightPageContent() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 {(result.type as string) === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
-                                {(result.type as string) === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
                                 {(result.type as string) === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
                                 <h4 className="font-medium text-gray-900 text-sm truncate group-hover:text-purple-700 transition-colors">
                                   {result.title}
@@ -652,22 +676,21 @@ function PraiseNightPageContent() {
                         </button>
                       );
                     } else {
-                      // For page/category results, use navigation
+                      // For category results, filter by category
                       return (
-                        <Link
+                        <button
                           key={result.id}
-                          href={result.url}
                           onClick={() => {
-                            setIsSearchOpen(false)
-                            setSearchQuery('')
+                            setActiveCategory(result.category || '');
+                            setIsSearchOpen(false);
+                            setSearchQuery('');
                           }}
-                          className="block p-3 rounded-xl hover:bg-gray-100/70 active:bg-gray-200/90 transition-all duration-200 group"
+                          className="w-full text-left block p-3 rounded-xl hover:bg-gray-100/70 active:bg-gray-200/90 transition-all duration-200 group"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 {(result.type as string) === 'song' && <Music className="w-4 h-4 text-purple-600 flex-shrink-0" />}
-                                {(result.type as string) === 'page' && <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />}
                                 {(result.type as string) === 'category' && <Flag className="w-4 h-4 text-green-600 flex-shrink-0" />}
                                 <h4 className="font-medium text-gray-900 text-sm truncate group-hover:text-purple-700 transition-colors">
                                   {result.title}
@@ -694,7 +717,7 @@ function PraiseNightPageContent() {
                             </div>
                             <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0 ml-2" />
                           </div>
-                        </Link>
+                        </button>
                       );
                     }
                   })}
@@ -1023,23 +1046,23 @@ function PraiseNightPageContent() {
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-        {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category */}
-        {filteredPraiseNights.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
+      {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category */}
+      {filteredPraiseNights.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
             <div className="w-full flex items-center px-4 sm:px-6 py-4 gap-2">
               {/* Category buttons with text - Take up most of the space */}
               <div className="flex-1 flex gap-2">
-                {mainCategories.map((category, index) => (
-                  <button
+            {mainCategories.map((category, index) => (
+                <button
                     key={category}
-                    onClick={() => handleCategorySelect(category)}
+                  onClick={() => handleCategorySelect(category)}
                     className={`flex-1 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center ${activeCategory === category
-                      ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                      : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                      }`}
-                  >
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                    }`}
+                >
                     <span className="block leading-tight break-words">{category}</span>
-                  </button>
+                </button>
                 ))}
               </div>
 
@@ -1048,41 +1071,41 @@ function PraiseNightPageContent() {
                 {/* Others text positioned above FAB */}
                 <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-purple-600 font-semibold text-center whitespace-nowrap z-10">
                   Others
-                </div>
-                <button
-                  onClick={() => setIsCategoryDrawerOpen(true)}
-                  onMouseEnter={() => setHoveredCategory("Other Categories")}
-                  onMouseLeave={() => setHoveredCategory(null)}
+              </div>
+              <button
+                onClick={() => setIsCategoryDrawerOpen(true)}
+                onMouseEnter={() => setHoveredCategory("Other Categories")}
+                onMouseLeave={() => setHoveredCategory(null)}
                   className="w-12 h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
-                >
-                  <Image
-                    src="/click-icon.png"
-                    alt="Click for more categories"
-                    width={20}
-                    height={20}
-                    className="w-5 h-5"
-                  />
-                </button>
+              >
+                <Image
+                  src="/click-icon.png"
+                  alt="Click for more categories"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5"
+                />
+              </button>
 
-                {/* iOS-style Tooltip for FAB */}
-                {hoveredCategory === "Other Categories" && (
-                  <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
+              {/* iOS-style Tooltip for FAB */}
+              {hoveredCategory === "Other Categories" && (
+                <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
                     right: '16px',
                     transform: 'translateX(0)'
-                  }}>
-                    <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
-                      Other Categories
-                      {/* iOS-style arrow */}
+                }}>
+                  <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
+                    Other Categories
+                    {/* iOS-style arrow */}
                       <div className="absolute top-full right-4">
-                        <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
-                      </div>
+                      <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
       {/* Category Filter Drawer */}
       {isCategoryDrawerOpen && (

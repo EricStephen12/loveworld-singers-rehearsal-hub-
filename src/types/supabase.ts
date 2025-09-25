@@ -88,6 +88,7 @@ export interface PraiseNight {
 }
 
 export interface PraiseNightSong {
+  id?: number; // Database ID for the song
   title: string;
   status: 'heard' | 'unheard';
   category: string;
@@ -118,10 +119,14 @@ export interface Comment {
 
 export interface HistoryEntry {
   id: string;
-  type: 'lyrics' | 'solfas' | 'audio' | 'comment' | 'metadata';
-  content: string;
+  type: 'lyrics' | 'solfas' | 'audio' | 'comments' | 'song-details' | 'personnel' | 'music-details';
+  title: string;
+  description: string;
+  old_value: string;
+  new_value: string;
+  created_by: string;
   date: string;
-  version: number;
+  version: string;
 }
 
 export interface Category {

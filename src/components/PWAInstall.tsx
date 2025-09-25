@@ -61,7 +61,7 @@ export default function PWAInstall() {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-semibold text-gray-900 mb-1">
-              Install LWSHRP
+              Install LWSRHP
             </h3>
             <p className="text-sm text-gray-600 leading-relaxed mb-4">
               Install this app on your device for offline access and a better experience.

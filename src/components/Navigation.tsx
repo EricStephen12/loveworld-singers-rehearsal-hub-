@@ -25,7 +25,7 @@ export default function Navigation() {
               <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Music className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <span className="text-lg sm:text-xl font-bold text-gray-900">LWSHRP</span>
+              <span className="text-lg sm:text-xl font-bold text-gray-900">LWSRHP</span>
             </Link>
           </div>
 

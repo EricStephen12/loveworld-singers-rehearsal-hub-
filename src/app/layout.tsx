@@ -27,19 +27,22 @@ const outfit = Outfit({
   weight: ['300', '400', '500', '600', '700', '800']
 })
 
+// Generate a unique version for cache busting
+const APP_VERSION = Date.now().toString();
+
 export const metadata: Metadata = {
-  title: 'LWSHRP - LoveWorld Singers Rehearsal Hub',
+  title: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL - LoveWorld Singers Rehearsal Hub',
   description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
-  manifest: '/manifest.json?v=2.1.0',
+  manifest: `/manifest.json?v=${APP_VERSION}`,
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'LWSHRP',
+    title: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL',
   },
   formatDetection: {
     telephone: false,
   },
-  applicationName: 'LWSHRP',
+  applicationName: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL',
   generator: 'Next.js',
   keywords: ['praise', 'worship', 'rehearsal', 'music', 'loveworld', 'singers'],
   authors: [{ name: 'LoveWorld Singers' }],
@@ -48,13 +51,13 @@ export const metadata: Metadata = {
   robots: 'index, follow',
   openGraph: {
     type: 'website',
-    siteName: 'LWSHRP',
-    title: 'LWSHRP - LoveWorld Singers Rehearsal Hub',
+    siteName: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL',
+    title: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL - LoveWorld Singers Rehearsal Hub',
     description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'LWSHRP - LoveWorld Singers Rehearsal Hub',
+    title: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL - LoveWorld Singers Rehearsal Hub',
     description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
   },
 }
@@ -83,7 +86,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="LWSHRP" />
+        <meta name="apple-mobile-web-app-title" content="LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-navbutton-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

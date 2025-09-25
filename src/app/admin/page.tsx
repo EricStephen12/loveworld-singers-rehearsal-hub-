@@ -30,12 +30,14 @@ import {
   X,
   Check,
   Save,
-  ExternalLink
+  ExternalLink,
+  RefreshCw
 } from "lucide-react";
 import { PraiseNightSong, Comment, PraiseNight, Category } from '../../types/supabase';
 import { useRealtimeData } from '../../hooks/useRealtimeData';
 import { createPage, updatePage, deletePage, createSong, updateSong, deleteSong, updateSongsCategory, handleCategoryDeletion, getAllCategories, createCategory, updateCategory, deleteCategory } from '../../lib/database';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { clearAllCaches } from '@/utils/cacheBuster';
 import EditSongModal from '../../components/EditSongModal';
 import MediaManager from '../../components/MediaManager';
 import { ToastContainer, Toast } from '../../components/Toast';
@@ -47,14 +49,17 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
 
   // Initialize Supabase client
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  // Use shared Supabase client to avoid multiple instances
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [activeSection, setActiveSection] = useState('Pages');
   const [selectedPage, setSelectedPage] = useState<PraiseNight | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // User management state
+  const [users, setUsers] = useState<any[]>([]);
+  const [userStats, setUserStats] = useState({ total: 0, recent: 0, active: 0 });
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   // Check if user is already authenticated
   useEffect(() => {
@@ -82,6 +87,52 @@ export default function AdminPage() {
     setIsAuthenticated(false);
     localStorage.removeItem('adminAuthenticated');
   };
+
+  // User management functions
+  const loadUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      console.log('🔄 Loading users from Supabase...');
+      
+      // Fetch users directly from Supabase
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (usersError) throw usersError;
+
+      // Calculate stats from users data
+      const now = new Date();
+      const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const total = usersData?.length || 0;
+      const recent = usersData?.filter(user => new Date(user.created_at) > lastWeek).length || 0;
+      // For active users, we'll use updated_at as a proxy for last activity
+      const active = usersData?.filter(user => 
+        user.updated_at && new Date(user.updated_at) > lastMonth
+      ).length || 0;
+
+      const userStats = { total, recent, active };
+
+      console.log('✅ Users loaded:', usersData?.length || 0, 'users');
+      console.log('✅ User stats:', userStats);
+      setUsers(usersData || []);
+      setUserStats(userStats);
+    } catch (error) {
+      console.error('❌ Error loading users:', error);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  // Load users when Users section is active
+  useEffect(() => {
+    if (activeSection === 'Users') {
+      loadUsers();
+    }
+  }, [activeSection]);
   
   // Use real-time Supabase data for instant updates
   const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, refreshData } = useRealtimeData();
@@ -429,8 +480,40 @@ export default function AdminPage() {
     setShowSongModal(true);
   };
 
-  const handleSaveSong = async (songData: PraiseNightSong) => {
+  const handleSaveSong = async (songData: PraiseNightSong & { id?: number }) => {
     try {
+      // If songData has an ID, it's an existing song being updated
+      if (songData.id) {
+        console.log('🔄 Updating existing song with ID:', songData.id);
+        const success = await updateSong(songData.id, songData);
+        
+        if (success) {
+          console.log('✅ Song updated successfully, refreshing data...');
+          await refreshData();
+          setTimeout(async () => {
+            await refreshData();
+            console.log('✅ Second refresh completed');
+          }, 500);
+          
+          // Handle category changes
+          if (selectedCategory && songData.category && selectedCategory !== songData.category) {
+            console.log('🔄 Song moved from', selectedCategory, 'to', songData.category);
+            setSelectedCategory(null);
+            setTimeout(() => {
+              const newCategoryExists = pageCategories.some(cat => cat.name === songData.category);
+              if (newCategoryExists) {
+                setSelectedCategory(songData.category);
+              }
+            }, 100);
+          }
+          
+          addToast('Song updated successfully!', 'success');
+        } else {
+          throw new Error('Failed to update song in database');
+        }
+        return;
+      }
+
       // Check if this is a new song (no existing song with same title and praiseNightId)
       const { data: existingSong, error: fetchError } = await supabase
         .from('songs')
@@ -842,6 +925,7 @@ export default function AdminPage() {
     { icon: FileText, label: 'Pages', active: activeSection === 'Pages' },
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
     { icon: Music, label: 'Media', active: activeSection === 'Media' },
+    { icon: MessageCircle, label: 'Users', active: activeSection === 'Users' },
     { icon: Clock, label: 'History', active: false },
     { icon: Bell, label: 'Notifications', active: false },
     { icon: Bookmark, label: 'Bookmarks', active: false },
@@ -992,6 +1076,7 @@ export default function AdminPage() {
                 if (item.label === 'Pages') setActiveSection('Pages');
                 else if (item.label === 'Categories') setActiveSection('Categories');
                 else if (item.label === 'Media') setActiveSection('Media');
+                else if (item.label === 'Users') setActiveSection('Users');
                 // Auto-close sidebar on mobile after clicking
                 setSidebarCollapsed(true);
               }}
@@ -1088,6 +1173,7 @@ export default function AdminPage() {
             {selectedPage ? (selectedCategory ? selectedCategory : selectedPage.name) : 
              activeSection === 'Categories' ? 'Categories' : 
              activeSection === 'Media' ? 'Media Library' :
+             activeSection === 'Users' ? 'User Management' :
              activeSection === 'Pages' ? 'Pages' : 
              'Admin Dashboard'}
           </h1>
@@ -1162,6 +1248,145 @@ export default function AdminPage() {
                 <div className="flex-1 overflow-y-auto">
                   <MediaManager />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'Users' && (
+            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
+              {/* User Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold">{userStats.total}</div>
+                      <div className="text-purple-100 text-sm">Total Users</div>
+                    </div>
+                    <MessageCircle className="w-8 h-8 text-purple-200" />
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold">{userStats.recent}</div>
+                      <div className="text-green-100 text-sm">This Week</div>
+                    </div>
+                    <Calendar className="w-8 h-8 text-green-200" />
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold">{userStats.active}</div>
+                      <div className="text-blue-100 text-sm">Active Users</div>
+                    </div>
+                    <Clock className="w-8 h-8 text-blue-200" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <button
+                  onClick={loadUsers}
+                  disabled={isLoadingUsers}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                  <span>Refresh Users</span>
+                </button>
+              </div>
+
+              {/* Users List */}
+              <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                {isLoadingUsers ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                      <div className="text-slate-500">Loading users from Supabase...</div>
+                    </div>
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-12">
+                    <MessageCircle className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                    <div className="text-slate-500 text-lg mb-2">No users found</div>
+                    <div className="text-slate-400 text-sm">No users have signed up yet</div>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-200">
+                    {users.map((user) => (
+                      <div key={user.id} className="p-6 hover:bg-slate-50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-lg font-medium text-purple-600">
+                                {user.first_name ? user.first_name.charAt(0).toUpperCase() : 'U'}
+                              </span>
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-lg font-semibold text-slate-900 truncate">
+                                  {user.first_name && user.last_name 
+                                    ? `${user.first_name} ${user.last_name}` 
+                                    : user.email || 'Unknown User'
+                                  }
+                                </h3>
+                                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  user.updated_at && new Date(user.updated_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {user.updated_at && new Date(user.updated_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                                    ? 'Active'
+                                    : 'Inactive'
+                                  }
+                                </div>
+                              </div>
+                              
+                              <div className="text-slate-600 mb-3">{user.email}</div>
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="font-medium text-slate-700">Joined:</span>
+                                  <div className="text-slate-500">
+                                    {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    }) : 'Unknown'}
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-slate-700">Last Updated:</span>
+                                  <div className="text-slate-500">
+                                    {user.updated_at ? new Date(user.updated_at).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    }) : 'Unknown'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1975,6 +2200,7 @@ export default function AdminPage() {
          praiseNightCategories={pages.map(page => ({ id: page.id, name: page.name, description: 'Praise Night Event', date: page.date, location: page.location, icon: 'Music', color: '#8B5CF6', isActive: true, createdAt: new Date(), updatedAt: new Date(), countdown: page.countdown }))}
         onUpdate={handleSaveSong}
       />
+
       
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />

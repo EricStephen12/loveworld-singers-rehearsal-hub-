@@ -10,6 +10,7 @@ import type {
   Category
 } from '../types/supabase';
 import { offlineManager } from '../utils/offlineManager';
+import { getCacheBuster } from '../utils/cacheBuster';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -328,7 +329,27 @@ export async function updatePage(id: number, pageData: Partial<Omit<PraiseNight,
       .update(updateData)
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      // Check if it's the updated_at field error
+      if (error.code === '42703' && error.message.includes('updated_at')) {
+        console.log('🔄 Retrying page update without updated_at field...');
+        
+        // Remove any fields that might not exist in the database
+        const cleanUpdateData = { ...updateData };
+        delete cleanUpdateData.updated_at;
+        delete cleanUpdateData.created_at;
+        delete cleanUpdateData.id;
+        
+        const { error: retryError } = await supabase
+          .from('pages')
+          .update(cleanUpdateData)
+          .eq('id', id);
+          
+        if (retryError) throw retryError;
+        return true;
+      }
+      throw error;
+    }
     return true;
   } catch (error) {
     console.error('Error updating page:', error);
@@ -385,6 +406,7 @@ export async function getSongsByPageId(pageId: number): Promise<PraiseNightSong[
       console.log('✅ Using audio file URL:', audioFile);
 
       praiseNightSongs.push({
+        id: song.id,
         title: song.title,
         status: song.status,
         category: song.category,
@@ -500,12 +522,23 @@ export async function updateSong(songId: number, songData: Partial<PraiseNightSo
     if (songData.lyrics) updateData.lyrics = songData.lyrics;
     if (songData.solfas) updateData.solfas = songData.solfas;
     if (songData.rehearsalCount !== undefined) updateData.rehearsalcount = songData.rehearsalCount;
+    if (songData.comments !== undefined) updateData.comments = songData.comments;
     // Handle audio file updates - always update both fields together
     updateData.audiofile = songData.audioFile || null;
     updateData.mediaid = songData.mediaId || null;
+    
+    // Remove any fields that might not exist in the database
+    delete updateData.history; // Don't try to update history field directly
+    delete updateData.id; // Don't try to update the ID
+    delete updateData.praiseNightId; // This is praisenightid in the database
+    delete updateData.updatedAt; // Don't try to update updatedAt field
+    delete updateData.updated_at; // Don't try to update updated_at field
+    delete updateData.createdAt; // Don't try to update createdAt field
+    delete updateData.created_at; // Don't try to update created_at field
 
     console.log('💾 Updating song in database:', {
       songId,
+      updateData,
       audiofile: updateData.audiofile,
       mediaid: updateData.mediaid,
       hasAudioFile: !!updateData.audiofile,
@@ -519,7 +552,68 @@ export async function updateSong(songId: number, songData: Partial<PraiseNightSo
 
     if (error) {
       console.error('❌ Database error updating song:', error);
-      throw error;
+      console.error('❌ Full error details:', JSON.stringify(error, null, 2));
+      console.error('❌ Update data that failed:', JSON.stringify(updateData, null, 2));
+      
+      // If it's the comments field error, try again without comments
+      if (error.code === 'PGRST204' && error.message.includes('comments')) {
+        console.log('🔄 Retrying update without comments column...');
+        delete updateData.comments;
+        
+        const { error: retryError } = await supabase
+          .from('songs')
+          .update(updateData)
+          .eq('id', songId);
+          
+        if (retryError) {
+          console.error('❌ Retry also failed:', retryError);
+          throw retryError;
+        }
+        
+        console.log('✅ Update succeeded after removing comments column');
+        return true;
+      }
+      
+      // If it's the updated_at field error, try again with a minimal update
+      if (error.code === '42703' && error.message.includes('updated_at')) {
+        console.log('🔄 Retrying with minimal update data...');
+        
+        // Create a minimal update object with only essential fields
+        const minimalUpdateData: any = {};
+        if (updateData.title) minimalUpdateData.title = updateData.title;
+        if (updateData.status) minimalUpdateData.status = updateData.status;
+        if (updateData.category) minimalUpdateData.category = updateData.category;
+        if (updateData.leadsinger !== undefined) minimalUpdateData.leadsinger = updateData.leadsinger;
+        if (updateData.writer !== undefined) minimalUpdateData.writer = updateData.writer;
+        if (updateData.conductor !== undefined) minimalUpdateData.conductor = updateData.conductor;
+        if (updateData.key !== undefined) minimalUpdateData.key = updateData.key;
+        if (updateData.tempo !== undefined) minimalUpdateData.tempo = updateData.tempo;
+        if (updateData.leadkeyboardist !== undefined) minimalUpdateData.leadkeyboardist = updateData.leadkeyboardist;
+        if (updateData.leadguitarist !== undefined) minimalUpdateData.leadguitarist = updateData.leadguitarist;
+        if (updateData.drummer !== undefined) minimalUpdateData.drummer = updateData.drummer;
+        if (updateData.lyrics) minimalUpdateData.lyrics = updateData.lyrics;
+        if (updateData.solfas) minimalUpdateData.solfas = updateData.solfas;
+        if (updateData.rehearsalcount !== undefined) minimalUpdateData.rehearsalcount = updateData.rehearsalcount;
+        if (updateData.comments) minimalUpdateData.comments = updateData.comments;
+        if (updateData.audiofile !== undefined) minimalUpdateData.audiofile = updateData.audiofile;
+        if (updateData.mediaid !== undefined) minimalUpdateData.mediaid = updateData.mediaid;
+        
+        console.log('🔄 Minimal update data:', minimalUpdateData);
+        
+        const { error: retryError } = await supabase
+          .from('songs')
+          .update(minimalUpdateData)
+          .eq('id', songId);
+          
+        if (retryError) {
+          console.error('❌ Retry also failed:', retryError);
+          throw retryError;
+        } else {
+          console.log('✅ Retry successful with minimal data');
+        }
+      } else {
+        throw error;
+      }
     }
 
     console.log('✅ Song updated in database');
@@ -629,56 +723,41 @@ export async function createComment(commentData: Omit<Comment, 'id'> & { songId:
 
 export async function getHistoryBySongId(songId: number): Promise<HistoryEntry[]> {
   try {
+    console.log('🎯 Fetching history for song ID:', songId);
+    
     const { data, error } = await supabase
       .from('song_history')
       .select('*')
-      .eq('songid', songId)
-      .order('createdat', { ascending: false });
+      .eq('song_id', songId)
+      .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('🎯 Supabase error fetching history:', error);
+      throw error;
+    }
 
-    return (data || []).map(entry => ({
+    console.log('🎯 Raw history data:', data);
+
+    const historyEntries = (data || []).map(entry => ({
       id: entry.id,
       type: entry.type,
-      content: entry.content,
-      date: entry.date,
-      version: entry.version
+      title: entry.title,
+      description: entry.description,
+      old_value: entry.old_value,
+      new_value: entry.new_value,
+      created_by: entry.created_by,
+      date: entry.created_at,
+      version: entry.title // Use title as version since we don't have a separate version field
     }));
+
+    console.log('🎯 Processed history entries:', historyEntries);
+    return historyEntries;
   } catch (error) {
     console.error('Error fetching history:', error);
     return [];
   }
 }
 
-export async function createHistoryEntry(historyData: Omit<HistoryEntry, 'id'> & { songId: number }): Promise<HistoryEntry | null> {
-  try {
-    const { data, error } = await supabase
-      .from('song_history')
-      .insert({
-        id: `${historyData.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        songid: historyData.songId,
-        type: historyData.type,
-        content: historyData.content,
-        date: historyData.date,
-        version: historyData.version
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return {
-      id: data.id,
-      type: data.type,
-      content: data.content,
-      date: data.date,
-      version: data.version
-    };
-  } catch (error) {
-    console.error('Error creating history entry:', error);
-    return null;
-  }
-}
 
 // ===== FILE UPLOAD OPERATIONS =====
 
@@ -918,30 +997,129 @@ export interface MediaFile {
   updatedAt: string;
 }
 
+// Cache for media files
+let mediaCache: { data: MediaFile[]; timestamp: number } | null = null;
+const MEDIA_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export async function getAllMedia(): Promise<MediaFile[]> {
   try {
+    // Check cache first
+    if (mediaCache && (Date.now() - mediaCache.timestamp) < MEDIA_CACHE_DURATION) {
+      console.log('⚡ Using cached media data');
+      return mediaCache.data;
+    }
+
+    console.log('🚀 Fetching media data from database...');
+    console.log('🔍 Cache status:', {
+      hasCache: !!mediaCache,
+      cacheAge: mediaCache ? Date.now() - mediaCache.timestamp : 'N/A',
+      cacheDuration: MEDIA_CACHE_DURATION,
+      isExpired: mediaCache ? (Date.now() - mediaCache.timestamp) >= MEDIA_CACHE_DURATION : 'N/A'
+    });
+    const startTime = performance.now();
+
+    // Optimized query - only select needed fields
     const { data, error } = await supabase
       .from('media')
-      .select('*')
-      .order('uploadedat', { ascending: false });
+      .select('id, name, url, type, size, folder, storagepath, uploadedat, createdat, updatedat')
+      .order('uploadedat', { ascending: false })
+      .limit(1000); // Add reasonable limit
 
     if (error) throw error;
 
-    return (data || []).map(media => ({
+    const loadTime = performance.now() - startTime;
+    console.log(`⚡ Media loaded in ${loadTime.toFixed(2)}ms`);
+
+    const mediaFiles = (data || []).map(media => ({
       id: media.id,
       name: media.name,
       url: media.url,
       type: media.type,
       size: media.size,
       folder: media.folder,
-      storagePath: media.storagepath, // Map Supabase Storage path
+      storagePath: media.storagepath,
       uploadedAt: media.uploadedat,
       createdAt: media.createdat,
       updatedAt: media.updatedat
     }));
+
+    // Cache the result
+    mediaCache = {
+      data: mediaFiles,
+      timestamp: Date.now()
+    };
+
+    return mediaFiles;
   } catch (error) {
     console.error('Error fetching media files:', error);
+    
+    // Return cached data if available, even if expired
+    if (mediaCache) {
+      console.log('⚠️ Using expired cache due to error');
+      return mediaCache.data;
+    }
+    
     return [];
+  }
+}
+
+// Function to clear media cache
+export function clearMediaCache(): void {
+  console.log('🗑️ Media cache cleared - Stack trace:', new Error().stack);
+  mediaCache = null;
+}
+
+// ===== USER MANAGEMENT OPERATIONS =====
+
+export async function getAllUsers(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return [];
+  }
+}
+
+export async function getUserStats(): Promise<{total: number, recent: number, active: number}> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('created_at, updated_at');
+
+    if (error) throw error;
+
+    const now = new Date();
+    const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const total = data?.length || 0;
+    const recent = data?.filter(user => new Date(user.created_at) > lastWeek).length || 0;
+    const active = data?.filter(user => 
+      user.updated_at && new Date(user.updated_at) > lastMonth
+    ).length || 0;
+
+    return { total, recent, active };
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    return { total: 0, recent: 0, active: 0 };
+  }
+}
+
+// Function to preload media data in background
+export async function preloadMediaData(): Promise<void> {
+  try {
+    console.log('🔄 Preloading media data in background...');
+    await getAllMedia(); // This will cache the data
+    console.log('✅ Media data preloaded and cached');
+  } catch (error) {
+    console.error('❌ Error preloading media data:', error);
   }
 }
 
@@ -962,6 +1140,9 @@ export async function createMediaFile(mediaData: Omit<MediaFile, 'id' | 'created
       .single();
 
     if (error) throw error;
+
+    // Clear cache since we added a new file
+    clearMediaCache();
 
     return {
       id: data.id,
@@ -989,9 +1170,74 @@ export async function deleteMediaFile(mediaId: number): Promise<boolean> {
       .eq('id', mediaId);
 
     if (error) throw error;
+    
+    // Clear cache since we deleted a file
+    clearMediaCache();
+    
     return true;
   } catch (error) {
     console.error('Error deleting media file:', error);
+    return false;
+  }
+}
+
+// Create history entry with the new format
+export async function createHistoryEntry(historyData: {
+  song_id: number;
+  title: string;
+  description: string;
+  type: string;
+  old_value: string;
+  new_value: string;
+  created_by: string;
+}): Promise<boolean> {
+  try {
+    console.log('🎯 Creating history entry:', historyData);
+    
+    const { data, error } = await supabase
+      .from('song_history')
+      .insert({
+        song_id: historyData.song_id,
+        title: historyData.title,
+        description: historyData.description,
+        type: historyData.type,
+        old_value: historyData.old_value,
+        new_value: historyData.new_value,
+        created_by: historyData.created_by
+      });
+
+    if (error) {
+      console.error('🎯 Supabase error:', error);
+      throw error;
+    }
+    
+    console.log('🎯 History entry created successfully');
+    return true;
+  } catch (error) {
+    console.error('Error creating history entry:', error);
+    return false;
+  }
+}
+
+// Delete history entry
+export async function deleteHistoryEntry(historyId: string): Promise<boolean> {
+  try {
+    console.log('🎯 Deleting history entry:', historyId);
+    
+    const { error } = await supabase
+      .from('song_history')
+      .delete()
+      .eq('id', historyId);
+
+    if (error) {
+      console.error('🎯 Supabase error:', error);
+      throw error;
+    }
+    
+    console.log('🎯 History entry deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting history entry:', error);
     return false;
   }
 }

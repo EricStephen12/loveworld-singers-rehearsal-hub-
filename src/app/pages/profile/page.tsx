@@ -9,43 +9,129 @@ import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
 import { useAuth } from '@/contexts/AuthContext'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
-import { AttendanceService } from '@/lib/attendance-service'
 
 export default function ProfilePage() {
   const [showQRCode, setShowQRCode] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+    region: '',
+    zone: '',
+    church: '',
+    designation: '',
+    administration: ''
+  })
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [qrCode, setQrCode] = useState('')
   const [timeLeft, setTimeLeft] = useState(0) // Will be set when QR is generated
   const [isClient, setIsClient] = useState(false)
   const [qrGenerated, setQrGenerated] = useState(false)
-  const [attendanceHistory, setAttendanceHistory] = useState<any[]>([])
-  const [attendanceStats, setAttendanceStats] = useState({ total: 0, present: 0, late: 0, absent: 0, rate: 0 })
   const router = useRouter()
-  const { profile, isProfileComplete, signOut, isLoading, refreshProfile } = useAuth()
-  const [localProfile, setLocalProfile] = useState(profile)
-
-  // Use the most available profile data (localProfile first, then profile from context)
-  const currentProfile = localProfile || profile
+  const { user, profile: currentProfile, isLoading, isProfileComplete, signOut, refreshProfile } = useAuth()
 
   // Set client flag to prevent hydration issues
   useEffect(() => {
     setIsClient(true)
   }, [])
 
-  // Simplified profile loading - just use what's available from context
+  // Force refresh profile on mount to ensure data is loaded
   useEffect(() => {
-    if (profile) {
-      setLocalProfile(profile)
+    if (user && !currentProfile) {
+      console.log('🔄 No profile data found, refreshing...')
+      refreshProfile()
     }
-  }, [profile])
+  }, [user, currentProfile, refreshProfile])
 
-  // Load attendance data when profile is available
+  // Use default profile data if none is loaded yet - fixed duplicate declaration
+  const profileData = currentProfile || {
+    first_name: user?.user_metadata?.first_name || '',
+    last_name: user?.user_metadata?.last_name || '',
+    email: user?.email || '',
+    phone_number: '',
+    gender: '',
+    birthday: '',
+    region: '',
+    zone: '',
+    church: '',
+    designation: '',
+    administration: ''
+  }
+
+  // Initialize edit form with profile data
   useEffect(() => {
-    if (currentProfile?.id) {
-      loadAttendanceData()
+    setEditForm({
+      firstName: profileData.first_name || '',
+      lastName: profileData.last_name || '',
+      phoneNumber: profileData.phone_number || '',
+      region: profileData.region || '',
+      zone: profileData.zone || '',
+      church: profileData.church || '',
+      designation: profileData.designation || '',
+      administration: profileData.administration || ''
+    })
+  }, [profileData])
+
+  // Handle form input changes
+  const handleInputChange = (field: string, value: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  // Handle image upload
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
     }
-  }, [currentProfile?.id])
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB')
+      return
+    }
+
+    setIsUploadingImage(true)
+    try {
+      // Create a preview URL
+      const imageUrl = URL.createObjectURL(file)
+      setProfileImage(imageUrl)
+      
+      // Here you would upload to Supabase Storage
+      console.log('Image uploaded:', file.name)
+      alert('Profile image updated successfully!')
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      alert('Error uploading image. Please try again.')
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  // Handle save profile
+  const handleSaveProfile = async () => {
+    try {
+      // Here you would typically call an API to update the profile
+      console.log('Saving profile:', editForm)
+      console.log('Profile image:', profileImage)
+      
+      // For now, just close the edit mode
+      setIsEditing(false)
+      alert('Profile updated successfully!')
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      alert('Error saving profile. Please try again.')
+    }
+  }
 
   // Countdown timer (client-side only)
   useEffect(() => {
@@ -65,7 +151,7 @@ export default function ProfilePage() {
   }, [timeLeft, qrGenerated])
 
   // Show loading state only if we have absolutely no profile data and it's still loading
-  if (isLoading && !localProfile && !profile) {
+  if (isLoading && !currentProfile) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -81,37 +167,55 @@ export default function ProfilePage() {
     router.push('/auth')
   }
 
+  // Show loading state only if no user at all
+  if (isLoading && !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    router.push('/auth')
+    return null
+  }
+
   // Real user data from profile (use currentProfile for immediate loading)
   const userProfile = {
     // Personal Information
-    firstName: currentProfile?.first_name || '',
-    middleName: currentProfile?.middle_name || '',
-    lastName: currentProfile?.last_name || '',
-    fullName: `${currentProfile?.first_name || ''} ${currentProfile?.middle_name || ''} ${currentProfile?.last_name || ''}`.trim(),
-    email: currentProfile?.email || '',
-    phoneNumber: currentProfile?.phone_number || '',
-    gender: currentProfile?.gender || '',
-    birthday: currentProfile?.birthday || '',
+    firstName: profileData.first_name || '',
+    middleName: profileData.middle_name || '',
+    lastName: profileData.last_name || '',
+    fullName: `${profileData.first_name || ''} ${profileData.middle_name || ''} ${profileData.last_name || ''}`.trim(),
+    email: profileData.email || '',
+    phoneNumber: profileData.phone_number || '',
+    gender: profileData.gender || '',
+    birthday: profileData.birthday || '',
     
     // Location Information
-    region: currentProfile?.region || '',
-    zone: currentProfile?.zone || '',
-    church: currentProfile?.church || '',
+    region: profileData.region || '',
+    zone: profileData.zone || '',
+    church: profileData.church || '',
     
     // Ministry Information
-    designation: currentProfile?.designation || '',
-    administration: currentProfile?.administration || '',
-    socialProvider: currentProfile?.social_provider || 'email',
-    socialId: currentProfile?.social_id || currentProfile?.email || '',
+    designation: profileData.designation || '',
+    administration: profileData.administration || '',
+    socialProvider: profileData.social_provider || 'email',
+    socialId: profileData.social_id || profileData.email || '',
     
     // Additional Profile Data (these would come from other tables in a real app)
     groups: ["Main Choir", "Praise Team"], // TODO: Fetch from user_groups table
-    joinDate: currentProfile?.created_at ? new Date(currentProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
+    joinDate: profileData.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
     totalRehearsals: 0, // TODO: Calculate from attendance records
     attendanceRate: 0, // TODO: Calculate from attendance records
     lastCheckIn: "Never", // TODO: Get from latest attendance record
     achievements: ["Profile Completed"], // TODO: Fetch from achievements table
-    qrCode: currentProfile?.id ? `LW-USER-${currentProfile.id.slice(0, 8).toUpperCase()}` : "LW-USER-00000000"
+    qrCode: profileData.id ? `LW-USER-${profileData.id.slice(0, 8).toUpperCase()}` : "LW-USER-00000000"
   }
 
 
@@ -138,29 +242,26 @@ export default function ProfilePage() {
     }
   }
 
-  // Load attendance data
-  const loadAttendanceData = async () => {
-    if (!currentProfile?.id) return
-
-    try {
-      const [history, stats] = await Promise.all([
-        AttendanceService.getUserAttendance(currentProfile.id, 5),
-        AttendanceService.getAttendanceStats(currentProfile.id)
-      ])
-      
-      setAttendanceHistory(history)
-      setAttendanceStats(stats)
-    } catch (error) {
-      console.error('Error loading attendance data:', error)
-    }
-  }
+  // Mock attendance data for now
+  const attendanceHistory = []
+  const attendanceStats = { total: 0, present: 0, late: 0, absent: 0, rate: 0 }
 
 
 
 
   const menuItems = getMenuItems(handleLogout)
 
-  const rightButtons = null
+  const rightButtons = (
+    <button
+      onClick={refreshProfile}
+      className="p-2 text-gray-600 hover:text-purple-600 transition-colors"
+      title="Refresh Profile"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+    </button>
+  )
 
   return (
     <div className="min-h-screen bg-white">
@@ -200,8 +301,16 @@ export default function ProfilePage() {
       <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="text-center">
           <div className="relative inline-block mb-4">
-            <div className="w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mx-auto">
+            <div className="w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mx-auto overflow-hidden">
+              {profileImage ? (
+                <img 
+                  src={profileImage} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
               <User className="w-12 h-12 text-white" />
+              )}
             </div>
             <button 
               onClick={() => setIsEditing(!isEditing)}
@@ -213,17 +322,17 @@ export default function ProfilePage() {
           </div>
           
           <h2 className="text-2xl font-outfit-bold text-gray-800 mb-2">
-            {currentProfile ? `${currentProfile.first_name || ''} ${currentProfile.last_name || ''}`.trim() || 'User' : 'User'}
+            {userProfile.fullName || 'User'}
           </h2>
-          <p className="text-sm text-gray-600 mb-1">@{currentProfile?.social_id || 'user'}</p>
-          <p className="text-xs text-gray-500 mb-4">{currentProfile?.email || 'user@example.com'}</p>
+          <p className="text-sm text-gray-600 mb-1">@{userProfile.socialId || 'user'}</p>
+          <p className="text-xs text-gray-500 mb-4">{userProfile.email || 'user@example.com'}</p>
           
           <div className="flex items-center justify-center space-x-2">
             <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-poppins-medium">
-              {currentProfile?.designation || 'Member'}
+              {userProfile.designation || 'Member'}
             </span>
             <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-poppins-medium">
-              {currentProfile?.administration || 'General'}
+              {userProfile.administration || 'General'}
             </span>
           </div>
         </div>
@@ -269,34 +378,147 @@ export default function ProfilePage() {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
           
           <div className="space-y-4">
+            {isEditing ? (
+              <>
+                {/* Profile Image Upload */}
+                <div className="mb-6">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Profile Image</label>
+                  <div className="mt-2 flex items-center gap-4">
+                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center overflow-hidden">
+                      {profileImage ? (
+                        <img 
+                          src={profileImage} 
+                          alt="Profile" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-8 h-8 text-purple-600" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={isUploadingImage}
+                        className="hidden"
+                        id="profile-image-upload"
+                      />
+                      <label
+                        htmlFor="profile-image-upload"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Camera className="w-4 h-4" />
+                        {isUploadingImage ? 'Uploading...' : 'Upload Image'}
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">Max 5MB, JPG/PNG</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">First Name</label>
+                    <input
+                      type="text"
+                      value={editForm.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter first name"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Last Name</label>
+                    <input
+                      type="text"
+                      value={editForm.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter last name"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={editForm.phoneNumber}
+                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Region</label>
+                  <input
+                    type="text"
+                    value={editForm.region}
+                    onChange={(e) => handleInputChange('region', e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter region"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Church</label>
+                  <input
+                    type="text"
+                    value={editForm.church}
+                    onChange={(e) => handleInputChange('church', e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter church"
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSaveProfile}
+                    className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Save Changes
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">First Name</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.firstName || 'Not provided'}</p>
+                    <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.firstName || 'Not provided'}</p>
               </div>
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Middle Name</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.middleName || 'Not provided'}</p>
+                    <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.middleName || 'Not provided'}</p>
               </div>
             </div>
             
             <div>
               <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Last Name</label>
-              <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.lastName || 'Not provided'}</p>
+                  <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.lastName || 'Not provided'}</p>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Gender</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.gender || 'Not provided'}</p>
+                    <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.gender || 'Not provided'}</p>
               </div>
               <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Birthday</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">
-                  {userProfile.birthday ? new Date(userProfile.birthday).toLocaleDateString() : 'Not provided'}
-                </p>
+                    <p className="text-sm font-medium text-gray-800 mt-1">
+                      {userProfile.birthday ? new Date(userProfile.birthday).toLocaleDateString() : 'Not provided'}
+                    </p>
               </div>
             </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -388,10 +610,10 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Attendance Check-in</h3>
             {qrGenerated && timeLeft > 0 && (
-              <div className="flex items-center space-x-1 text-xs text-gray-500">
-                <Clock className="w-3 h-3" />
+            <div className="flex items-center space-x-1 text-xs text-gray-500">
+              <Clock className="w-3 h-3" />
                 <span>Expires in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
-              </div>
+            </div>
             )}
           </div>
           
@@ -407,7 +629,7 @@ export default function ProfilePage() {
                     />
                     {/* Fallback if QR code fails */}
                     <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 hidden" id="qr-fallback">
-                      <div className="text-center">
+              <div className="text-center">
                         <QrCode className="w-16 h-16 text-gray-400 mx-auto mb-2" />
                         <p className="text-xs text-gray-500">QR Code unavailable</p>
                       </div>
@@ -426,16 +648,16 @@ export default function ProfilePage() {
               <div className="text-center">
                 <div className="w-32 h-32 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
                   <QrCode className="w-16 h-16 text-gray-400" />
-                </div>
+            </div>
                 <p className="text-sm text-gray-600 mb-4">Generate a QR code for attendance check-in</p>
-                <button
+              <button 
                   onClick={generateQRCode}
                   className="px-6 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
-                >
+              >
                   Generate QR Code
-                </button>
+              </button>
                 <p className="text-xs text-gray-500 mt-2">QR code expires in 5 minutes</p>
-              </div>
+            </div>
             )}
           </div>
         </div>

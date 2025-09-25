@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { ChevronLeft, BookOpen, Music, Users, Clock, Play, Pause, SkipBack, SkipForward, RotateCcw, Music2, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { PraiseNightSong, HistoryEntry } from "@/types/supabase";
 import { useAudio } from "@/contexts/AudioContext";
+import { supabase } from "@/lib/supabase";
 
 interface SongDetailModalProps {
   selectedSong: PraiseNightSong | null;
@@ -240,12 +241,126 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     };
   };
 
+  // State for loaded history data
+  const [loadedHistory, setLoadedHistory] = useState<HistoryEntry[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+
+  // Load history data on demand
+  const loadHistoryData = async () => {
+    console.log('🎯 loadHistoryData called with selectedSong:', selectedSong);
+    console.log('🎯 selectedSong.id:', selectedSong?.id);
+    console.log('🎯 historyLoaded:', historyLoaded);
+    console.log('🎯 isLoadingHistory:', isLoadingHistory);
+    
+    if (!selectedSong || !selectedSong.id || historyLoaded || isLoadingHistory) {
+      console.log('🎯 Early return from loadHistoryData');
+      return;
+    }
+    
+    setIsLoadingHistory(true);
+    try {
+      console.log('🎯 Loading history for song ID:', selectedSong.id);
+      console.log('🎯 Song title:', selectedSong.title);
+      
+      // First, let's check if there are any history entries at all
+      const { data: allHistory, error: allError } = await supabase
+        .from('song_history')
+        .select('*')
+        .limit(5);
+      
+      console.log('🎯 All history entries (first 5):', allHistory);
+      console.log('🎯 All history error:', allError);
+      
+      // If we have history entries, let's see what song_ids they have
+      if (allHistory && allHistory.length > 0) {
+        console.log('🎯 Song IDs in history entries:', allHistory.map(h => h.song_id));
+      }
+      
+      const { data, error } = await supabase
+        .from('song_history')
+        .select('*')
+        .eq('song_id', selectedSong.id)
+        .order('created_at', { ascending: false });
+        
+      console.log('🎯 Query for song_id', selectedSong.id, 'returned:', data);
+      console.log('🎯 Query error:', error);
+
+      if (error) {
+        console.error('🎯 Supabase error loading history:', error);
+        throw error;
+      }
+
+      console.log('🎯 Raw history data from Supabase:', data);
+      console.log('🎯 Data length:', data?.length || 0);
+
+      // Transform the data to match our HistoryEntry interface
+      const historyEntries = (data || []).map(entry => {
+        console.log('🎯 Processing entry:', entry);
+        return {
+          id: entry.id,
+          type: entry.type,
+          title: entry.title,
+          description: entry.description,
+          old_value: entry.old_value,
+          new_value: entry.new_value,
+          created_by: entry.created_by,
+          date: entry.created_at,
+          version: entry.title // Use title as version
+        };
+      });
+
+      console.log('🎯 Processed history entries:', historyEntries);
+      console.log('🎯 History entries count:', historyEntries.length);
+      
+      setLoadedHistory(historyEntries);
+      setHistoryLoaded(true);
+      console.log('📚 Loaded history data:', historyEntries.length, 'entries');
+    } catch (error) {
+      console.error('❌ Error loading history:', error);
+      console.error('❌ Full error details:', JSON.stringify(error, null, 2));
+    } finally {
+      console.log('🎯 Setting isLoadingHistory to false');
+      setIsLoadingHistory(false);
+    }
+  };
+
   // Get history data for the current song
   const getHistoryData = (type: 'lyrics' | 'solfas' | 'audio' | 'comments' | 'metadata'): HistoryEntry[] => {
-    // For now, return empty array since history is not loaded by default for performance
-    // In the future, this could load history data on demand
-    return [];
+    // Map the old type names to new type names
+    const typeMapping: Record<string, string[]> = {
+      'lyrics': ['lyrics'],
+      'solfas': ['solfas'],
+      'audio': ['audio'],
+      'comments': ['comments'],
+      'metadata': ['song-details', 'personnel', 'music-details']
+    };
+    
+    const mappedTypes = typeMapping[type] || [type];
+    return loadedHistory.filter(entry => mappedTypes.includes(entry.type));
   };
+
+  // Load history when user switches to history tab or clicks history sub-tabs
+  useEffect(() => {
+    console.log('🎯 History useEffect triggered:', {
+      activeTab,
+      hasSelectedSong: !!selectedSong,
+      songId: selectedSong?.id,
+      shouldLoad: activeTab === 'history' && selectedSong && selectedSong.id
+    });
+    
+    if (activeTab === 'history' && selectedSong && selectedSong.id) {
+      console.log('🎯 Calling loadHistoryData from useEffect');
+      loadHistoryData();
+    }
+  }, [activeTab, selectedSong]);
+
+  // Reset history when song changes
+  useEffect(() => {
+    setLoadedHistory([]);
+    setHistoryLoaded(false);
+    setIsLoadingHistory(false);
+  }, [selectedSong]);
 
   // Get latest content (what's shown in main tabs)
   const getLatestContent = (type: 'lyrics' | 'solfas' | 'audio' | 'comments') => {
@@ -613,7 +728,6 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                   .map((comment: any) => (
                     <div key={comment.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                       <div className="flex items-start justify-between mb-2">
-                        <div className="font-medium text-gray-900 text-sm">{comment.author}</div>
                         <div className="text-gray-500 text-xs">
                           {new Date(comment.date).toLocaleDateString()}
                         </div>
@@ -687,7 +801,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                       : 'bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-white/90 hover:shadow-sm border border-slate-200/50'
                   }`}
                 >
-                  Metadata
+                  Song Details
                 </button>
               </div>
 
@@ -707,7 +821,8 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                               <BookOpen className="w-5 h-5 text-white" />
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                              <div className="text-sm font-medium text-slate-800">{entry.title}</div>
+                              <div className="text-xs text-slate-500">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -722,7 +837,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                           <div className="px-4 pb-4">
                             <div className="text-sm text-slate-700">
                               <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
-                                <div dangerouslySetInnerHTML={{ __html: entry.content }} />
+                                <div dangerouslySetInnerHTML={{ __html: entry.new_value }} />
                               </div>
                             </div>
                           </div>
@@ -730,14 +845,25 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                       </div>
                     ))}
 
+                    {/* Show loading state */}
+                    {isLoadingHistory && (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                        <div className="text-slate-500 text-sm mb-2">Loading History...</div>
+                        <div className="text-slate-400 text-xs">Fetching lyrics changes from database</div>
+                      </div>
+                    )}
+
                     {/* Show empty state if no history available */}
-                    {getHistoryData('lyrics').length === 0 && (
+                    {!isLoadingHistory && getHistoryData('lyrics').length === 0 && (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
                           <BookOpen className="w-8 h-8 text-slate-400" />
                         </div>
                         <div className="text-slate-500 text-sm mb-2">No Lyrics History</div>
-                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
+                        <div className="text-slate-400 text-xs">No lyrics changes have been made to this song yet</div>
                       </div>
                     )}
                   </div>
@@ -794,7 +920,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                                   ref={el => {
                                     if (el) historyAudioRefs.current[entry.id] = el;
                                   }}
-                                  src={entry.content}
+                                  src={entry.new_value}
                                   onTimeUpdate={() => handleHistoryAudioTimeUpdate(entry.id)}
                                   onLoadedMetadata={() => handleHistoryAudioLoadedMetadata(entry.id)}
                                   onEnded={() => handleHistoryAudioEnded(entry.id)}
@@ -807,14 +933,25 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                       </div>
                     ))}
 
+                    {/* Show loading state */}
+                    {isLoadingHistory && (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                        <div className="text-slate-500 text-sm mb-2">Loading History...</div>
+                        <div className="text-slate-400 text-xs">Fetching audio changes from database</div>
+                      </div>
+                    )}
+
                     {/* Show empty state if no history available */}
-                    {getHistoryData('audio').length === 0 && (
+                    {!isLoadingHistory && getHistoryData('audio').length === 0 && (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
                           <Music className="w-8 h-8 text-slate-400" />
                         </div>
                         <div className="text-slate-500 text-sm mb-2">No Audio History</div>
-                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
+                        <div className="text-slate-400 text-xs">No audio changes have been made to this song yet</div>
                       </div>
                     )}
                   </div>
@@ -835,7 +972,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                                 <Music className="w-5 h-5 text-white" />
                               </div>
                               <div className="text-right">
-                                <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date()).date} {formatDateTime(new Date()).time}</div>
+                                <div className="text-sm font-medium text-slate-800">Previous Version</div>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -886,7 +1023,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                           <div className="px-4 pb-4">
                             <div className="text-sm text-slate-700">
                               <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
-                                <div dangerouslySetInnerHTML={{ __html: entry.content }} />
+                                <div dangerouslySetInnerHTML={{ __html: entry.new_value }} />
                               </div>
                             </div>
                           </div>
@@ -894,14 +1031,25 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                       </div>
                     ))}
 
+                    {/* Show loading state */}
+                    {isLoadingHistory && (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                        <div className="text-slate-500 text-sm mb-2">Loading History...</div>
+                        <div className="text-slate-400 text-xs">Fetching solfas changes from database</div>
+                      </div>
+                    )}
+
                     {/* Show empty state if no history available */}
-                    {getOlderSolfas().length === 0 && getHistoryData('solfas').length === 0 && (
+                    {!isLoadingHistory && getOlderSolfas().length === 0 && getHistoryData('solfas').length === 0 && (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
                           <Music2 className="w-8 h-8 text-slate-400" />
                         </div>
                         <div className="text-slate-500 text-sm mb-2">No Solfas History</div>
-                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
+                        <div className="text-slate-400 text-xs">No solfas changes have been made to this song yet</div>
                       </div>
                     )}
 
@@ -937,8 +1085,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                           <div className="px-4 pb-4">
                             <div className="text-sm text-slate-700">
                               <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
-                                <p className="font-medium text-slate-800">{comment.author}</p>
-                                <p className="text-sm text-slate-700 mt-2">{comment.text}</p>
+                                <p className="text-sm text-slate-700">{comment.text}</p>
                               </div>
                             </div>
                           </div>
@@ -974,7 +1121,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                             <div className="text-sm text-slate-700">
                               <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
                                 <p className="font-medium text-slate-800">Pastor</p>
-                                <p className="text-sm text-slate-700 mt-2">{entry.content}</p>
+                                <p className="text-sm text-slate-700 mt-2">{entry.new_value}</p>
                               </div>
                             </div>
                           </div>
@@ -982,14 +1129,25 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                       </div>
                     ))}
 
+                    {/* Show loading state */}
+                    {isLoadingHistory && (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                        <div className="text-slate-500 text-sm mb-2">Loading History...</div>
+                        <div className="text-slate-400 text-xs">Fetching comments changes from database</div>
+                      </div>
+                    )}
+
                     {/* Show empty state if no history available */}
-                    {getOlderComments().length === 0 && getHistoryData('comments').length === 0 && (
+                    {!isLoadingHistory && getOlderComments().length === 0 && getHistoryData('comments').length === 0 && (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
                           <Users className="w-8 h-8 text-slate-400" />
                         </div>
                         <div className="text-slate-500 text-sm mb-2">No Comments History</div>
-                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
+                        <div className="text-slate-400 text-xs">No comments changes have been made to this song yet</div>
                       </div>
                     )}
 
@@ -998,7 +1156,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
                 {activeHistoryTab === 'metadata' && (
                   <div className="space-y-3">
-                    {/* Metadata history entries */}
+                    {/* Song Details history entries */}
                     {getHistoryData('metadata').map((entry) => (
                       <div key={entry.id} className="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
                         <button
@@ -1026,7 +1184,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                             <div className="text-sm text-slate-700">
                               <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
                                 <div className="space-y-2">
-                                  {entry.content.split(' | ').map((change, index) => (
+                                  {entry.new_value.split(' | ').map((change, index) => (
                                     <div key={index} className="flex items-center gap-2">
                                       <div className="w-2 h-2 rounded-full bg-purple-500"></div>
                                       <span className="text-sm text-slate-700">{change}</span>
@@ -1040,14 +1198,25 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                       </div>
                     ))}
 
+                    {/* Show loading state */}
+                    {isLoadingHistory && (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                        <div className="text-slate-500 text-sm mb-2">Loading History...</div>
+                        <div className="text-slate-400 text-xs">Fetching metadata changes from database</div>
+                      </div>
+                    )}
+
                     {/* Empty state for metadata history */}
-                    {getHistoryData('metadata').length === 0 && (
+                    {!isLoadingHistory && getHistoryData('metadata').length === 0 && (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
                           <Settings className="w-8 h-8 text-slate-400" />
                         </div>
                         <div className="text-slate-500 text-sm mb-2">No Metadata History</div>
-                        <div className="text-slate-400 text-xs">History feature is currently disabled for better performance</div>
+                        <div className="text-slate-400 text-xs">No metadata changes have been made to this song yet</div>
                       </div>
                     )}
                   </div>

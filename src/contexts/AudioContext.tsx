@@ -175,16 +175,19 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const handleError = (e: any) => {
-    console.error('❌ Audio error details:', {
-      error: e,
-      currentSong: currentSong?.title,
-      audioFile: currentSong?.audioFile,
-      audioSrc: audioRef.current?.src,
-      networkState: audioRef.current?.networkState,
-      readyState: audioRef.current?.readyState
-    });
-    console.error('❌ Audio error code:', audioRef.current?.error?.code);
-    console.error('❌ Audio error message:', audioRef.current?.error?.message);
+    // Only log errors if there's actually a source set
+    if (audioRef.current?.src && audioRef.current.src !== window.location.href) {
+      console.error('❌ Audio error details:', {
+        error: e,
+        currentSong: currentSong?.title,
+        audioFile: currentSong?.audioFile,
+        audioSrc: audioRef.current?.src,
+        networkState: audioRef.current?.networkState,
+        readyState: audioRef.current?.readyState
+      });
+      console.error('❌ Audio error code:', audioRef.current?.error?.code);
+      console.error('❌ Audio error message:', audioRef.current?.error?.message);
+    }
 
     // Test if the URL is accessible
     if (currentSong?.audioFile) {
@@ -315,7 +318,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         onPlay={handlePlay}
         onPause={handlePause}
         onError={handleError}
-        preload="metadata"
+        preload="none"
         crossOrigin="anonymous"
       />
     </AudioContext.Provider>

@@ -22,7 +22,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { uploadAudioToSupabase, deleteAudioFromSupabase } from '@/lib/supabase-storage';
-import { getAllMedia, createMediaFile, deleteMediaFile, MediaFile as DatabaseMediaFile } from '@/lib/database';
+import { getAllMedia, createMediaFile, deleteMediaFile, MediaFile as DatabaseMediaFile, clearMediaCache } from '@/lib/database';
 import { Toast } from './Toast';
 
 interface MediaFile {
@@ -67,7 +67,7 @@ export default function MediaManager({
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Load files from database
+  // Load files from database with optimized caching
   useEffect(() => {
     loadFilesFromDatabase();
   }, []);
@@ -75,7 +75,13 @@ export default function MediaManager({
   const loadFilesFromDatabase = async () => {
     try {
       setLoading(true);
+      console.log('🚀 Loading media files...');
+      const startTime = performance.now();
+      
       const mediaFiles = await getAllMedia();
+      
+      const loadTime = performance.now() - startTime;
+      console.log(`⚡ Media loaded in ${loadTime.toFixed(2)}ms`);
       
       // Convert database format to component format
       const convertedFiles: MediaFile[] = mediaFiles.map(dbFile => ({
@@ -84,15 +90,15 @@ export default function MediaManager({
         url: dbFile.url,
         type: dbFile.type,
         size: dbFile.size,
-        uploadedAt: dbFile.uploadedAt,
-        folder: dbFile.folder,
-        storagePath: dbFile.storagePath
+        folder: dbFile.folder || 'uncategorized',
+        uploadedAt: new Date(dbFile.uploadedAt),
+        createdAt: new Date(dbFile.createdAt),
+        updatedAt: new Date(dbFile.updatedAt)
       }));
       
       setFiles(convertedFiles);
     } catch (error) {
-      console.error('Error loading files from database:', error);
-      setFiles([]);
+      console.error('Error loading media files:', error);
     } finally {
       setLoading(false);
     }
@@ -184,7 +190,8 @@ export default function MediaManager({
               storagePath: dbMediaFile.storagePath
             };
             
-            setFiles(prev => [newFile, ...prev]);
+            // Refresh local data to show new file
+            await loadFilesFromDatabase();
             addToast({
               type: 'success',
               message: `File "${file.name}" uploaded successfully!`
@@ -246,14 +253,15 @@ export default function MediaManager({
           }
           
           if (supabaseDeleteSuccess) {
-            setFiles(prev => prev.filter(f => f.id !== file.id));
+            // Refresh local data to remove deleted file
+            await loadFilesFromDatabase();
             addToast({
               type: 'success',
               message: `File "${file.name}" deleted successfully!`
             });
           } else {
             // If Supabase Storage deletion fails, we should still remove from UI since DB is updated
-            setFiles(prev => prev.filter(f => f.id !== file.id));
+            await loadFilesFromDatabase();
             addToast({
               type: 'warning',
               message: `File "${file.name}" removed from database but may still exist in cloud storage.`

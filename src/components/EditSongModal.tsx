@@ -1,10 +1,12 @@
 "use client";
 
+// Smart Auto-History System - Fixed icon imports
 import React, { useState, useEffect } from 'react';
-import { X, Save, Trash2, FolderOpen } from 'lucide-react';
+import { X, Save, Trash2, FolderOpen, Clock, Plus, History } from 'lucide-react';
 import { PraiseNightSong, Comment, Category } from '../types/supabase';
 import MediaSelectionModal from './MediaSelectionModal';
 import BasicTextEditor from './BasicTextEditor';
+import { createHistoryEntry, deleteHistoryEntry } from '@/lib/database';
 
 interface MediaFile {
   id: string;
@@ -54,8 +56,199 @@ export default function EditSongModal({
   const [songLyrics, setSongLyrics] = useState('');
   const [songComments, setSongComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+  
+  // History management state
   const [rehearsalCount, setRehearsalCount] = useState(1);
   const [showMediaManager, setShowMediaManager] = useState(false);
+  
+  // Smart change detection - track original values
+  const [originalValues, setOriginalValues] = useState({
+    lyrics: '',
+    solfas: '',
+    audioFile: '',
+    title: '',
+    category: '',
+    leadSinger: '',
+    writer: '',
+    conductor: '',
+    key: '',
+    tempo: ''
+  });
+
+  // Manual history creation state
+  const [showHistoryForm, setShowHistoryForm] = useState(false);
+  const [historyType, setHistoryType] = useState<'song-details' | 'personnel' | 'music-details' | 'lyrics' | 'solfas' | 'audio' | 'comments'>('song-details');
+  const [historyTitle, setHistoryTitle] = useState('');
+  const [historyDescription, setHistoryDescription] = useState('');
+  const [historyEntries, setHistoryEntries] = useState<any[]>([]);
+  const [showHistoryList, setShowHistoryList] = useState(false);
+
+  // Manual history creation functions
+  const handleCreateHistory = (type: 'song-details' | 'personnel' | 'music-details' | 'lyrics' | 'solfas' | 'audio' | 'comments') => {
+    setHistoryType(type);
+    
+    // Set default title and description based on section
+    const sectionNames = {
+      'song-details': 'Song Details',
+      'personnel': 'Personnel',
+      'music-details': 'Music Details',
+      'lyrics': 'Lyrics',
+      'solfas': 'Solfas',
+      'audio': 'Audio',
+      'comments': 'Comments'
+    };
+    
+    setHistoryTitle(`${sectionNames[type]} Version ${new Date().toLocaleDateString()}`);
+    setHistoryDescription(`Updated ${sectionNames[type].toLowerCase()} on ${new Date().toLocaleString()}`);
+    
+    setShowHistoryForm(true);
+  };
+
+  const handleSaveHistory = async () => {
+    if (!song?.id) return;
+    
+    try {
+      // Get current content based on section type
+      let currentContent = '';
+      let oldValue = '';
+      
+      switch (historyType) {
+        case 'song-details':
+          currentContent = JSON.stringify({
+            title: songTitle,
+            category: songCategory,
+            key: songKey,
+            tempo: songTempo
+          });
+          oldValue = JSON.stringify({
+            title: originalValues.title,
+            category: originalValues.category,
+            key: originalValues.key,
+            tempo: originalValues.tempo
+          });
+          break;
+        case 'personnel':
+          currentContent = JSON.stringify({
+            leadSinger: songLeadSinger,
+            writer: songWriter,
+            conductor: songConductor,
+            leadKeyboardist: songLeadKeyboardist,
+            leadGuitarist: songLeadGuitarist,
+            drummer: songDrummer
+          });
+          oldValue = JSON.stringify({
+            leadSinger: originalValues.leadSinger,
+            writer: originalValues.writer,
+            conductor: originalValues.conductor,
+            leadKeyboardist: originalValues.leadKeyboardist,
+            leadGuitarist: originalValues.leadGuitarist,
+            drummer: originalValues.drummer
+          });
+          break;
+        case 'music-details':
+          currentContent = JSON.stringify({
+            key: songKey,
+            tempo: songTempo
+          });
+          oldValue = JSON.stringify({
+            key: originalValues.key,
+            tempo: originalValues.tempo
+          });
+          break;
+        case 'lyrics':
+          currentContent = songLyrics;
+          oldValue = originalValues.lyrics;
+          break;
+        case 'solfas':
+          currentContent = songSolfas;
+          oldValue = originalValues.solfas;
+          break;
+        case 'audio':
+          currentContent = audioFile ? audioFile.url : songAudioFile;
+          oldValue = originalValues.audioFile;
+          break;
+        case 'comments':
+          currentContent = JSON.stringify(songComments);
+          oldValue = JSON.stringify(song?.comments || []);
+          break;
+      }
+      
+      const success = await createHistoryEntry({
+        song_id: song.id,
+        title: historyTitle,
+        description: historyDescription,
+        type: historyType,
+        old_value: oldValue,
+        new_value: currentContent,
+        created_by: 'admin'
+      });
+      
+      if (success) {
+        // Reset form but keep it open for multiple entries
+        const sectionNames = {
+          'song-details': 'Song Details',
+          'personnel': 'Personnel',
+          'music-details': 'Music Details',
+          'lyrics': 'Lyrics',
+          'solfas': 'Solfas',
+          'audio': 'Audio',
+          'comments': 'Comments'
+        };
+        
+        setHistoryTitle(`${sectionNames[historyType]} Version ${new Date().toLocaleDateString()}`);
+        setHistoryDescription(`Updated ${sectionNames[historyType].toLowerCase()} on ${new Date().toLocaleString()}`);
+        
+        // Load updated history entries
+        loadHistoryEntries();
+        
+        // Show success message
+        alert('History entry created successfully! You can create another one or close the form.');
+      } else {
+        alert('Error creating history entry. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating history entry:', error);
+      alert('Error creating history entry. Please try again.');
+    }
+  };
+
+  // Load history entries for the current song
+  const loadHistoryEntries = async () => {
+    if (!song?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('song_history')
+        .select('*')
+        .eq('song_id', song.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      setHistoryEntries(data || []);
+    } catch (error) {
+      console.error('Error loading history entries:', error);
+    }
+  };
+
+  // Delete history entry
+  const handleDeleteHistory = async (historyId: string) => {
+    if (!confirm('Are you sure you want to delete this history entry?')) return;
+    
+    try {
+      const success = await deleteHistoryEntry(historyId);
+      if (success) {
+        // Remove from local state
+        setHistoryEntries(prev => prev.filter(entry => entry.id !== historyId));
+        alert('History entry deleted successfully!');
+      } else {
+        alert('Error deleting history entry. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting history entry:', error);
+      alert('Error deleting history entry. Please try again.');
+    }
+  };
 
   // Handle media file selection from MediaManager
   const handleMediaFileSelect = (mediaFile: any) => {
@@ -135,15 +328,29 @@ export default function EditSongModal({
       setSongAudioFile(song.audioFile || '');
       setAudioFile(null); // Reset file object when editing existing song
       
-      // Convert HTML to plain text for editing
-      setSongLyrics(htmlToPlainText(song.lyrics || ''));
-      setSongSolfas(htmlToPlainText(song.solfas || ''));
+      // Use HTML directly for BasicTextEditor
+      setSongLyrics(song.lyrics || '');
+      setSongSolfas(song.solfas || '');
       
       setSongComments(song.comments);
       setNewComment('');
       
       // Load rehearsal count from song data, default to 1 if not set
       setRehearsalCount(song.rehearsalCount || 1);
+      
+      // Store original values for change detection
+      setOriginalValues({
+        lyrics: song.lyrics || '',
+        solfas: song.solfas || '',
+        audioFile: song.audioFile || '',
+        title: song.title || '',
+        category: song.category || '',
+        leadSinger: song.leadSinger || '',
+        writer: song.writer || '',
+        conductor: song.conductor || '',
+        key: song.key || '',
+        tempo: song.tempo || ''
+      });
     } else {
       // Adding new song - reset all form fields to empty/default values
       setSongTitle('');
@@ -167,8 +374,74 @@ export default function EditSongModal({
       setSongComments([]);
       setNewComment('');
       setRehearsalCount(1);
+      
+      // Reset original values for new song
+      setOriginalValues({
+        lyrics: '',
+        solfas: '',
+        audioFile: '',
+        title: '',
+        category: '',
+        leadSinger: '',
+        writer: '',
+        conductor: '',
+        key: '',
+        tempo: ''
+      });
     }
   }, [song, praiseNightCategories]);
+
+  // Smart change detection function
+  const detectSignificantChanges = () => {
+    if (!song) {
+      console.log('🎯 No song - returning empty changes');
+      return []; // No changes for new songs
+    }
+    
+    const changes = [];
+    const currentAudioFile = audioFile ? audioFile.url : songAudioFile;
+    
+    console.log('🎯 Change detection debug:', {
+      currentLyrics: songLyrics.trim().substring(0, 50) + '...',
+      originalLyrics: originalValues.lyrics.trim().substring(0, 50) + '...',
+      lyricsChanged: songLyrics.trim() !== originalValues.lyrics.trim(),
+      lyricsLength: songLyrics.trim().length,
+      currentSolfas: songSolfas.trim().substring(0, 50) + '...',
+      originalSolfas: originalValues.solfas.trim().substring(0, 50) + '...',
+      solfasChanged: songSolfas.trim() !== originalValues.solfas.trim(),
+      solfasLength: songSolfas.trim().length
+    });
+    
+    // Check for significant changes (ignore minor whitespace/formatting changes)
+    if (songLyrics.trim() !== originalValues.lyrics.trim() && 
+        songLyrics.trim().length > 10) {
+      changes.push('lyrics');
+      console.log('🎯 Lyrics change detected');
+    }
+    
+    if (songSolfas.trim() !== originalValues.solfas.trim() && 
+        songSolfas.trim().length > 5) {
+      changes.push('solfas');
+      console.log('🎯 Solfas change detected');
+    }
+    
+    if (currentAudioFile !== originalValues.audioFile && 
+        currentAudioFile && 
+        originalValues.audioFile) {
+      changes.push('audio');
+      console.log('🎯 Audio change detected');
+    }
+    
+    // Check metadata changes (only if significant)
+    if (songTitle.trim() !== originalValues.title.trim() && 
+        songTitle.trim().length > 2) {
+      changes.push('metadata');
+      console.log('🎯 Metadata change detected');
+    }
+    
+    console.log('🎯 Final detected changes:', changes);
+    return changes;
+  };
 
   const handleUpdate = () => {
     if (songTitle.trim()) {
@@ -194,7 +467,7 @@ export default function EditSongModal({
         status: songStatus,
         category: songCategory,
         praiseNightId: selectedPraiseNight?.id,
-        lyrics: plainTextToHtml(songLyrics), // Convert plain text to HTML for storage
+        lyrics: songLyrics, // BasicTextEditor provides HTML
         leadSinger: songLeadSinger,
         writer: songWriter,
         conductor: songConductor,
@@ -203,7 +476,7 @@ export default function EditSongModal({
         leadKeyboardist: songLeadKeyboardist,
         leadGuitarist: songLeadGuitarist,
         drummer: songDrummer,
-        solfas: plainTextToHtml(songSolfas), // Convert plain text to HTML for storage
+        solfas: songSolfas, // BasicTextEditor provides HTML
         rehearsalCount: rehearsalCount, // Save rehearsal count to database
         comments: songComments,
         audioFile: finalAudioFile,
@@ -225,129 +498,6 @@ export default function EditSongModal({
       // If editing existing song, preserve other properties including history
       let updatedSong = song ? { ...song, ...songData } : songData;
 
-      // If editing existing song, create history entries for changes
-      if (song) {
-        const newHistoryEntries = [];
-
-        // Rehearsal count is now just a display field - no automatic history entries
-
-        // Check for metadata changes
-        if (song.leadSinger !== songLeadSinger ||
-            song.writer !== songWriter ||
-            song.conductor !== songConductor ||
-            song.key !== songKey ||
-            song.tempo !== songTempo ||
-            song.leadKeyboardist !== songLeadKeyboardist ||
-            song.leadGuitarist !== songLeadGuitarist ||
-            song.drummer !== songDrummer) {
-          
-          // Create metadata change description
-          const changes = [];
-          if (song.leadSinger !== songLeadSinger) changes.push(`Lead Singer: ${song.leadSinger} → ${songLeadSinger}`);
-          if (song.writer !== songWriter) changes.push(`Writer: ${song.writer} → ${songWriter}`);
-          if (song.conductor !== songConductor) changes.push(`Conductor: ${song.conductor} → ${songConductor}`);
-          if (song.key !== songKey) changes.push(`Key: ${song.key} → ${songKey}`);
-          if (song.tempo !== songTempo) changes.push(`Tempo: ${song.tempo} → ${songTempo}`);
-          if (song.leadKeyboardist !== songLeadKeyboardist) changes.push(`Lead Keyboardist: ${song.leadKeyboardist} → ${songLeadKeyboardist}`);
-          if (song.leadGuitarist !== songLeadGuitarist) changes.push(`Lead Guitarist: ${song.leadGuitarist} → ${songLeadGuitarist}`);
-          if (song.drummer !== songDrummer) changes.push(`Drummer: ${song.drummer} → ${songDrummer}`);
-
-          // Create metadata history entry
-          newHistoryEntries.push({
-            id: `metadata-${Date.now()}`,
-            type: 'metadata' as const,
-            content: changes.join(' | '),
-            date: new Date().toISOString(),
-            version: (song.history?.filter(entry => entry.type === 'metadata').length || 0) + 1
-          });
-        }
-
-        // Check for lyrics changes (compare HTML versions)
-        const newLyricsHtml = plainTextToHtml(songLyrics);
-        if (song.lyrics !== newLyricsHtml) {
-          console.log('🎵 Lyrics changed, adding history entry');
-          newHistoryEntries.push({
-            id: `lyrics-${Date.now()}`,
-            type: 'lyrics' as const,
-            content: newLyricsHtml,
-            date: new Date().toISOString(),
-            version: (song.history?.filter(entry => entry.type === 'lyrics').length || 0) + 1
-          });
-        }
-
-        // Check for solfas changes (compare HTML versions)
-        const newSolfasHtml = plainTextToHtml(songSolfas);
-        if (song.solfas !== newSolfasHtml) {
-          console.log('🎵 Solfas changed, adding history entry');
-          newHistoryEntries.push({
-            id: `solfas-${Date.now()}`,
-            type: 'solfas' as const,
-            content: newSolfasHtml,
-            date: new Date().toISOString(),
-            version: (song.history?.filter(entry => entry.type === 'solfas').length || 0) + 1
-          });
-        }
-
-        // Check for audio changes
-        const newAudioFile = audioFile ? audioFile.url : songAudioFile;
-        const oldAudioFile = song.audioFile || '';
-        
-        console.log('🎵 Checking audio changes:', {
-          oldAudioFile,
-          newAudioFile,
-          hasChanged: oldAudioFile !== newAudioFile
-        });
-        
-        if (oldAudioFile !== newAudioFile) {
-          const audioFileName = audioFile ? audioFile.name : (newAudioFile ? newAudioFile.split('/').pop() : 'Unknown');
-          newHistoryEntries.push({
-            id: `audio-${Date.now()}`,
-            type: 'audio' as const,
-            content: `Audio changed to: ${audioFileName}`,
-            date: new Date().toISOString(),
-            version: (song.history?.filter(entry => entry.type === 'audio').length || 0) + 1
-          });
-          console.log('🎵 Added audio history entry');
-        }
-
-        // Check for comments changes (if comments were added/modified)
-        if (songComments.length > (song.comments?.length || 0)) {
-          const newComments = songComments.slice(song.comments?.length || 0);
-          newComments.forEach(comment => {
-            newHistoryEntries.push({
-              id: `comment-${Date.now()}-${Math.random()}`,
-              type: 'comment' as const,
-              content: comment.text,
-              date: comment.date,
-              version: (song.history?.filter(entry => entry.type === 'comment').length || 0) + 1
-            });
-          });
-        }
-
-        // FOR TESTING: Always add a test history entry to verify the system works
-        if (newHistoryEntries.length === 0) {
-          console.log('🧪 Adding test history entry to verify system works');
-          newHistoryEntries.push({
-            id: `test-${Date.now()}`,
-            type: 'metadata' as const,
-            content: `Song edited at ${new Date().toLocaleString()}`,
-            date: new Date().toISOString(),
-            version: (song.history?.filter(entry => entry.type === 'metadata').length || 0) + 1
-          });
-        }
-
-        // Add all new history entries
-        if (newHistoryEntries.length > 0) {
-          console.log('🎵 Adding', newHistoryEntries.length, 'history entries:', newHistoryEntries.map(h => h.type));
-          updatedSong = {
-            ...updatedSong,
-            history: [...(song.history || []), ...newHistoryEntries]
-          };
-        } else {
-          console.log('🎵 No history entries to add');
-        }
-      }
-
       console.log('🎵 Final updatedSong with history:', {
         title: updatedSong.title,
         hasHistory: !!updatedSong.history,
@@ -355,7 +505,64 @@ export default function EditSongModal({
         historyTypes: updatedSong.history?.map(h => h.type) || []
       });
 
-      onUpdate(updatedSong);
+      // Pass the song ID if editing an existing song
+      if (song && song.id) {
+        onUpdate({ ...updatedSong, id: song.id });
+      } else {
+        onUpdate(updatedSong);
+      }
+      
+      // Manual history creation - no automatic history
+      if (false && significantChanges.length > 0 && song?.id) {
+        console.log('🎯 Creating automatic history entries for:', significantChanges);
+        
+        // Create history entries for each significant change (in background)
+        significantChanges.forEach(async (changeType) => {
+          try {
+            let content = '';
+            let version = '1.0';
+
+            switch (changeType) {
+              case 'lyrics':
+                content = songLyrics;
+                break;
+              case 'solfas':
+                content = songSolfas;
+                break;
+              case 'audio':
+                content = audioFile ? audioFile.url : songAudioFile;
+                break;
+              case 'metadata':
+                content = JSON.stringify({
+                  title: songTitle,
+                  category: songCategory,
+                  leadSinger: songLeadSinger,
+                  writer: songWriter,
+                  conductor: songConductor,
+                  key: songKey,
+                  tempo: songTempo
+                });
+                break;
+            }
+
+            if (content.trim()) {
+              await createHistoryEntry({
+                songId: song.id,
+                type: changeType,
+                content: content,
+            date: new Date().toISOString(),
+                version: version
+              });
+              console.log(`✅ Auto-created history entry for ${changeType}`);
+            }
+          } catch (error) {
+            console.error(`❌ Error creating auto history entry for ${changeType}:`, error);
+          }
+        });
+        } else {
+        console.log('🎵 No significant changes detected - no history entries created');
+      }
+      
       onClose();
     }
   };
@@ -372,6 +579,7 @@ export default function EditSongModal({
       setNewComment('');
     }
   };
+
 
   const handleDeleteComment = (commentId: string) => {
     setSongComments(songComments.filter(comment => comment.id !== commentId));
@@ -417,7 +625,16 @@ export default function EditSongModal({
                   
                   {/* Song Title - Full Width */}
                   <div className="bg-slate-50 rounded-lg p-4 sm:p-6">
-                    <h4 className="text-base sm:text-lg font-semibold text-slate-900 mb-3 sm:mb-4">Song Information</h4>
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <h4 className="text-base sm:text-lg font-semibold text-slate-900">Song Details</h4>
+                      <button
+                        onClick={() => handleCreateHistory('song-details')}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors"
+                      >
+                        <History className="w-3 h-3" />
+                        Add History
+                      </button>
+                    </div>
                     <div className="space-y-3 sm:space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -487,7 +704,16 @@ export default function EditSongModal({
 
                   {/* Music Details */}
                   <div className="bg-slate-50 rounded-lg p-4 sm:p-6">
-                    <h4 className="text-base sm:text-lg font-semibold text-slate-900 mb-3 sm:mb-4">Music Details</h4>
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <h4 className="text-base sm:text-lg font-semibold text-slate-900">Music Details</h4>
+                      <button
+                        onClick={() => handleCreateHistory('music-details')}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors"
+                      >
+                        <History className="w-3 h-3" />
+                        Add History
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -534,9 +760,18 @@ export default function EditSongModal({
 
                     {/* Audio File - Full Width */}
                     <div className="mt-6">
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-700">
                         Audio File
                       </label>
+                        <button
+                          onClick={() => handleCreateHistory('audio')}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-md transition-colors"
+                        >
+                          <History className="w-3 h-3" />
+                          Add History
+                        </button>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setShowMediaManager(true)}
@@ -630,7 +865,16 @@ export default function EditSongModal({
 
                   {/* Personnel */}
                   <div className="bg-slate-50 rounded-lg p-4 sm:p-6">
-                    <h4 className="text-base sm:text-lg font-semibold text-slate-900 mb-3 sm:mb-4">Personnel</h4>
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <h4 className="text-base sm:text-lg font-semibold text-slate-900">Personnel</h4>
+                      <button
+                        onClick={() => handleCreateHistory('personnel')}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors"
+                      >
+                        <History className="w-3 h-3" />
+                        Add History
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -725,10 +969,19 @@ export default function EditSongModal({
                   {/* Lyrics Section */}
                   <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+                      <div className="flex items-center justify-between">
                       <h4 className="text-base sm:text-lg font-semibold text-slate-900 flex items-center gap-2">
                         <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                         Song Lyrics
                       </h4>
+                        <button
+                          onClick={() => handleCreateHistory('lyrics')}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors"
+                        >
+                          <History className="w-3 h-3" />
+                          Add History
+                        </button>
+                      </div>
                     </div>
                     <div className="p-4 sm:p-6">
                       {/* Rich Text Editor with formatting toolbar */}
@@ -757,9 +1010,6 @@ Bridge:
 [Your bridge lyrics here]"
                           className="w-full"
                         />
-                        <div className="absolute bottom-3 right-3 text-xs text-slate-400 bg-white px-2 py-1 rounded">
-                          {songLyrics.length} characters
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -767,10 +1017,19 @@ Bridge:
                   {/* Solfas Section */}
                   <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+                      <div className="flex items-center justify-between">
                       <h4 className="text-base sm:text-lg font-semibold text-slate-900 flex items-center gap-2">
                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                         Solfas Notation
                       </h4>
+                        <button
+                          onClick={() => handleCreateHistory('solfas')}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 rounded-md transition-colors"
+                        >
+                          <History className="w-3 h-3" />
+                          Add History
+                        </button>
+                      </div>
                     </div>
                     <div className="p-4 sm:p-6">
                       {/* Rich Text Editor with formatting toolbar */}
@@ -795,9 +1054,6 @@ Do Re Mi Fa Sol La Ti Do
 Do Re Mi Fa Sol La Ti Do"
                           className="w-full font-mono"
                         />
-                        <div className="absolute bottom-3 right-3 text-xs text-slate-400 bg-white px-2 py-1 rounded">
-                          {songSolfas.length} characters
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -805,6 +1061,7 @@ Do Re Mi Fa Sol La Ti Do"
                   {/* Comments Section */}
                   <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+                      <div className="flex items-center justify-between">
                       <h4 className="text-base sm:text-lg font-semibold text-slate-900 flex items-center gap-2">
                         <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
                         Pastor Comments
@@ -812,6 +1069,14 @@ Do Re Mi Fa Sol La Ti Do"
                           {songComments.length} comment{songComments.length !== 1 ? 's' : ''}
                         </span>
                       </h4>
+                        <button
+                          onClick={() => handleCreateHistory('comments')}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-md transition-colors"
+                        >
+                          <History className="w-3 h-3" />
+                          Add History
+                        </button>
+                      </div>
                     </div>
                     
                     <div className="p-4 sm:p-6">
@@ -905,13 +1170,32 @@ Do Re Mi Fa Sol La Ti Do"
               <Save className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="text-sm sm:text-base">{song ? 'Update Song' : 'Add Song'}</span>
             </button>
-            <button
-              onClick={onClose}
-              className="w-full sm:w-auto px-4 sm:px-6 py-3 border-2 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium"
-            >
-              Cancel
-            </button>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  loadHistoryEntries();
+                  setShowHistoryList(true);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors font-medium relative"
+              >
+                <History className="w-4 h-4" />
+                <span className="text-sm sm:text-base">View History</span>
+                {historyEntries.length > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {historyEntries.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full sm:w-auto px-4 sm:px-6 py-3 border-2 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
+          
         </div>
       </div>
 
@@ -922,6 +1206,156 @@ Do Re Mi Fa Sol La Ti Do"
         allowedTypes={['audio']}
         title="Select Audio File"
       />
+
+      {/* Simple History Creation Modal */}
+      {showHistoryForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Save {historyType.charAt(0).toUpperCase() + historyType.slice(1)} Version
+              </h3>
+              <p className="text-sm text-slate-600 mt-1">
+                Create a history entry for the current {historyType} content
+              </p>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Version Title
+                </label>
+                <input
+                  type="text"
+                  value={historyTitle}
+                  onChange={(e) => setHistoryTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Lyrics Version 1.2"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  value={historyDescription}
+                  onChange={(e) => setHistoryDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={2}
+                  placeholder="What changed in this version?"
+                />
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Current {historyType} content will be saved as a new version.</strong>
+                  <br />
+                  You can create multiple versions and switch between them later.
+                </p>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-between">
+              <button
+                onClick={() => setShowHistoryForm(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveHistory}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                >
+                  Save Version
+                </button>
+                <button
+                  onClick={() => {
+                    handleSaveHistory();
+                    setShowHistoryForm(false);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors"
+                >
+                  Save & Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History List Modal */}
+      {showHistoryList && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Song History - {song?.title}
+                </h3>
+                <button
+                  onClick={() => setShowHistoryList(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {historyEntries.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <History className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                  <p>No history entries found for this song.</p>
+                  <p className="text-sm">Create your first history entry using the "Add History" buttons.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {historyEntries.map((entry) => (
+                    <div key={entry.id} className="border border-slate-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                              {entry.type}
+                            </span>
+                            <span className="text-sm text-slate-500">
+                              {new Date(entry.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          <h4 className="font-medium text-slate-900 mb-1">{entry.title}</h4>
+                          <p className="text-sm text-slate-600 mb-2">{entry.description}</p>
+                          <div className="text-xs text-slate-500">
+                            Created by: {entry.created_by}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteHistory(entry.id)}
+                          className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          title="Delete history entry"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="px-6 py-4 border-t border-slate-200">
+              <button
+                onClick={() => setShowHistoryList(false)}
+                className="w-full px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 }
