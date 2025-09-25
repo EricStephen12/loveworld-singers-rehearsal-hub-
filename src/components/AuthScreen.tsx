@@ -190,9 +190,11 @@ export default function AuthScreen({ onComplete }: AuthScreenProps) {
                     onClick={() => handleSocialSignup('kingschat')}
                     className="w-full py-4 bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center space-x-3 touch-target rounded-xl"
                   >
-                    <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">K</span>
-                    </div>
+                    <img 
+                      src="/kingschat.jpeg" 
+                      alt="KingsChat" 
+                      className="w-5 h-5 rounded-full object-cover"
+                    />
                     <span>Sign up with KingsChat</span>
                   </button>
                 </div>

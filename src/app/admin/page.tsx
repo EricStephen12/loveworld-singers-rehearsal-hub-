@@ -28,7 +28,8 @@ import {
   Check,
   Save,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Users
 } from "lucide-react";
 import { PraiseNightSong, Comment, PraiseNight, Category } from '../../types/supabase';
 import { useRealtimeData } from '../../hooks/useRealtimeData';
@@ -139,6 +140,12 @@ export default function AdminPage() {
   
   // Toast notifications
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // User management state
+  const [users, setUsers] = useState<any[]>([]);
+  const [userGroups, setUserGroups] = useState<{[key: string]: string[]}>({});
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
 
   // Toast helper functions
   const addToast = (toast: Omit<Toast, 'id'>) => {
@@ -871,11 +878,196 @@ export default function AdminPage() {
     });
   };
 
+  // User management functions
+  const loadUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      console.log('🔄 Loading all users with multiple approaches...');
+      
+      let allUsers: any[] = [];
+      let profiles: any[] = [];
+      
+      // Approach 1: Try to get profiles with different query methods
+      console.log('📋 Approach 1: Standard profiles query...');
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (profilesError) {
+        console.error('❌ Standard profiles query failed:', profilesError);
+      } else {
+        profiles = profilesData || [];
+        console.log('✅ Standard query found:', profiles.length, 'profiles');
+      }
+      
+      // Approach 2: Try without ordering (in case ordering causes issues)
+      if (profiles.length === 0) {
+        console.log('📋 Approach 2: Profiles query without ordering...');
+        const { data: profilesData2, error: profilesError2 } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (profilesError2) {
+          console.error('❌ Profiles query without ordering failed:', profilesError2);
+        } else {
+          profiles = profilesData2 || [];
+          console.log('✅ Query without ordering found:', profiles.length, 'profiles');
+        }
+      }
+      
+      // Approach 3: Try with specific columns only
+      if (profiles.length === 0) {
+        console.log('📋 Approach 3: Profiles query with specific columns...');
+        const { data: profilesData3, error: profilesError3 } = await supabase
+          .from('profiles')
+          .select('id, email, first_name, last_name, created_at');
+        
+        if (profilesError3) {
+          console.error('❌ Profiles query with specific columns failed:', profilesError3);
+        } else {
+          profiles = profilesData3 || [];
+          console.log('✅ Query with specific columns found:', profiles.length, 'profiles');
+        }
+      }
+      
+      // Approach 4: Try to get auth users (admin access)
+      let authUsers: any[] = [];
+      try {
+        console.log('📋 Approach 4: Trying admin auth access...');
+        const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
+        if (authError) {
+          console.log('⚠️ Admin auth access failed:', authError.message);
+        } else {
+          authUsers = users || [];
+          console.log('✅ Admin auth found:', authUsers.length, 'auth users');
+        }
+      } catch (error) {
+        console.log('⚠️ Admin auth access not available:', error);
+      }
+      
+      // Approach 5: Try direct SQL query (if RLS is the issue)
+      if (profiles.length === 0 && authUsers.length === 0) {
+        console.log('📋 Approach 5: Trying direct SQL query...');
+        try {
+          const { data: sqlData, error: sqlError } = await supabase.rpc('get_all_profiles');
+          if (sqlError) {
+            console.log('⚠️ Direct SQL query failed:', sqlError.message);
+          } else {
+            profiles = sqlData || [];
+            console.log('✅ Direct SQL found:', profiles.length, 'profiles');
+          }
+        } catch (error) {
+          console.log('⚠️ Direct SQL query not available:', error);
+        }
+      }
+      
+      // Combine results
+      if (authUsers.length > 0) {
+        console.log('🔄 Merging auth users with profiles...');
+        
+        // Create a map of existing profiles
+        const profilesMap = new Map();
+        profiles?.forEach(profile => {
+          profilesMap.set(profile.id, profile);
+        });
+        
+        // Add all auth users, using profile data if available
+        authUsers.forEach(authUser => {
+          const existingProfile = profilesMap.get(authUser.id);
+          if (existingProfile) {
+            allUsers.push(existingProfile);
+          } else {
+            // User exists in auth but no profile
+            allUsers.push({
+              id: authUser.id,
+              email: authUser.email,
+              first_name: authUser.user_metadata?.first_name || '',
+              last_name: authUser.user_metadata?.last_name || '',
+              middle_name: authUser.user_metadata?.middle_name || '',
+              phone_number: authUser.user_metadata?.phone_number || '',
+              gender: authUser.user_metadata?.gender || '',
+              birthday: authUser.user_metadata?.birthday || '',
+              region: authUser.user_metadata?.region || '',
+              zone: authUser.user_metadata?.zone || '',
+              church: authUser.user_metadata?.church || '',
+              designation: authUser.user_metadata?.designation || '',
+              administration: authUser.user_metadata?.administration || '',
+              profile_completed: false,
+              created_at: authUser.created_at,
+              updated_at: authUser.updated_at || authUser.created_at
+            });
+          }
+        });
+      } else {
+        allUsers = profiles;
+      }
+      
+      console.log('📊 Final profiles data:', profiles);
+      console.log('📊 Final allUsers data:', allUsers);
+      console.log('📊 Total users found:', allUsers.length);
+      
+      // Fetch user groups for all users
+      const { data: groups, error: groupsError } = await supabase
+        .from('user_groups')
+        .select('user_id, group_name');
+      
+      if (groupsError) {
+        console.error('❌ Error loading user groups:', groupsError);
+        // Don't return here, just log the error and continue
+      } else {
+        console.log('🏷️ User groups data:', groups);
+        
+        // Organize groups by user ID
+        const groupsByUser: {[key: string]: string[]} = {};
+        groups?.forEach(group => {
+          if (!groupsByUser[group.user_id]) {
+            groupsByUser[group.user_id] = [];
+          }
+          groupsByUser[group.user_id].push(group.group_name);
+        });
+        
+        setUserGroups(groupsByUser);
+      }
+      
+      setUsers(allUsers);
+      
+      if (allUsers.length === 0) {
+        addToast({
+          type: 'warning',
+          message: 'No users found. Check console for debugging info.'
+        });
+      } else {
+        addToast({
+          type: 'success',
+          message: `Loaded ${allUsers.length} users successfully`
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error loading users:', error);
+      addToast({
+        type: 'error',
+        message: `Failed to load users: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  // Load users when Users section is active
+  useEffect(() => {
+    if (activeSection === 'Users' && users.length === 0) {
+      loadUsers();
+    }
+  }, [activeSection]);
+
   const sidebarItems = [
     { icon: Home, label: 'Home', active: false },
     { icon: FileText, label: 'Pages', active: activeSection === 'Pages' },
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
     { icon: Music, label: 'Media', active: activeSection === 'Media' },
+    { icon: Users, label: 'Users', active: activeSection === 'Users' },
   ];
 
   // Show loading state
@@ -1019,6 +1211,7 @@ export default function AdminPage() {
                 if (item.label === 'Pages') setActiveSection('Pages');
                 else if (item.label === 'Categories') setActiveSection('Categories');
                 else if (item.label === 'Media') setActiveSection('Media');
+                else if (item.label === 'Users') setActiveSection('Users');
                 // Auto-close sidebar on mobile after clicking
                 setSidebarCollapsed(true);
               }}
@@ -1115,6 +1308,7 @@ export default function AdminPage() {
             {selectedPage ? (selectedCategory ? selectedCategory : selectedPage.name) : 
              activeSection === 'Categories' ? 'Categories' : 
              activeSection === 'Media' ? 'Media Library' :
+             activeSection === 'Users' ? 'User Management' :
              activeSection === 'Pages' ? 'Pages' : 
              'Admin Dashboard'}
           </h1>
@@ -1190,6 +1384,191 @@ export default function AdminPage() {
                   <MediaManager />
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeSection === 'Users' && (
+            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">User Management</h2>
+                  <p className="text-slate-600 mt-1">
+                    View and manage all user profiles 
+                    {users.length > 0 && (
+                      <span className="ml-2 text-purple-600 font-medium">
+                        ({users.length} users found)
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={loadUsers}
+                    disabled={isLoadingUsers}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="mb-6">
+                <input
+                  type="text"
+                  placeholder="Search users by name, email, or phone..."
+                  value={userSearchTerm}
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Debug Info */}
+              {users.length === 0 && !isLoadingUsers && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-yellow-800 font-medium mb-2">Debug Information</h3>
+                  <p className="text-yellow-700 text-sm mb-2">
+                    No users found. This could mean:
+                  </p>
+                  <ul className="text-yellow-700 text-sm list-disc list-inside space-y-1">
+                    <li>No users have signed up yet</li>
+                    <li>Users exist in auth.users but haven't completed profiles</li>
+                    <li>Database connection issue</li>
+                    <li>RLS policies blocking access</li>
+                    <li>Admin permissions not configured for auth.users access</li>
+                  </ul>
+                  <div className="mt-3 space-x-3">
+                    <button
+                      onClick={loadUsers}
+                      className="text-yellow-800 underline hover:text-yellow-900"
+                    >
+                      Retry loading users
+                    </button>
+                    <span className="text-yellow-600">|</span>
+                    <span className="text-yellow-600 text-sm">
+                      Check browser console for detailed logs
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Users List */}
+              {isLoadingUsers ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                  <p className="text-slate-600">Loading users...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {users
+                    .filter(user => {
+                      const matchesSearch = !userSearchTerm || 
+                        user.first_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                        user.last_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                        user.email?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                        user.phone_number?.toLowerCase().includes(userSearchTerm.toLowerCase());
+                      
+                      return matchesSearch;
+                    })
+                    .map((user) => (
+                      <div key={user.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                <Users className="w-5 h-5 text-purple-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-gray-900">
+                                  {user.first_name} {user.middle_name} {user.last_name}
+                                </h3>
+                                <p className="text-sm text-gray-600">{user.email}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Phone</p>
+                                <p className="text-sm font-medium">{user.phone_number || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Gender</p>
+                                <p className="text-sm font-medium">{user.gender || 'Not specified'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Birthday</p>
+                                <p className="text-sm font-medium">{user.birthday || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Region</p>
+                                <p className="text-sm font-medium">{user.region || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Zone</p>
+                                <p className="text-sm font-medium">{user.zone || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Church</p>
+                                <p className="text-sm font-medium">{user.church || 'Not provided'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Designation</p>
+                                <p className="text-sm font-medium">{user.designation || 'Not specified'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Administration</p>
+                                <p className="text-sm font-medium">{user.administration || 'Not specified'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Groups</p>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {userGroups[user.id]?.length > 0 ? (
+                                    userGroups[user.id].map((group, index) => (
+                                      <span key={index} className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full">
+                                        {group}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-sm text-gray-500">No groups</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+                              <div className="flex items-center gap-2">
+                                <span className={`inline-block w-2 h-2 rounded-full ${user.profile_completed ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+                                <span className="text-sm text-gray-600">
+                                  {user.profile_completed ? 'Profile Completed' : 'Profile Incomplete'}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Joined: {new Date(user.created_at).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  
+                  {users.filter(user => {
+                    const matchesSearch = !userSearchTerm || 
+                      user.first_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                      user.last_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                      user.email?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                      user.phone_number?.toLowerCase().includes(userSearchTerm.toLowerCase());
+                    
+                    return matchesSearch;
+                  }).length === 0 && (
+                    <div className="text-center py-8">
+                      <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">No users found</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

@@ -17,6 +17,7 @@ export interface UserProfile {
   administration?: 'Coordinator' | 'Assistant Coordinator' | 'Secretary' | 'Treasurer' | 'Member';
   social_provider?: 'google' | 'kingschat' | 'email';
   social_id?: string;
+  profile_image_url?: string;
   profile_completed: boolean;
   email_verified: boolean;
   created_at: string;

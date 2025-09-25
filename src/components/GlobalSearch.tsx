@@ -11,7 +11,7 @@ interface GlobalSearchProps {
 }
 
 export default function GlobalSearch({ 
-  placeholder = "Search songs, pages, categories...", 
+  placeholder = "Search songs, lyrics, solfas, pages, categories...", 
   className = "" 
 }: GlobalSearchProps) {
   const { searchQuery, setSearchQuery, searchResults, hasResults } = useGlobalSearch();

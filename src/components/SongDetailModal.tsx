@@ -5,6 +5,7 @@ import { ChevronLeft, BookOpen, Music, Users, Clock, Play, Pause, SkipBack, Skip
 import { PraiseNightSong, HistoryEntry } from "@/types/supabase";
 import { useAudio } from "@/contexts/AudioContext";
 import { supabase } from "@/lib/supabase";
+import { useUltraFastSongHistory } from "@/hooks/useUltraFastSongHistory";
 
 interface SongDetailModalProps {
   selectedSong: PraiseNightSong | null;
@@ -241,126 +242,22 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     };
   };
 
-  // State for loaded history data
-  const [loadedHistory, setLoadedHistory] = useState<HistoryEntry[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
+  // Use ultra-fast song history hook
+  const { 
+    history: loadedHistory, 
+    loading: isLoadingHistory, 
+    error: historyError,
+    isInitialLoad: isHistoryInitialLoad,
+    refreshHistory,
+    getHistoryByType 
+  } = useUltraFastSongHistory(selectedSong?.id?.toString() || null);
 
-  // Load history data on demand
-  const loadHistoryData = async () => {
-    console.log('🎯 loadHistoryData called with selectedSong:', selectedSong);
-    console.log('🎯 selectedSong.id:', selectedSong?.id);
-    console.log('🎯 historyLoaded:', historyLoaded);
-    console.log('🎯 isLoadingHistory:', isLoadingHistory);
-    
-    if (!selectedSong || !selectedSong.id || historyLoaded || isLoadingHistory) {
-      console.log('🎯 Early return from loadHistoryData');
-      return;
-    }
-    
-    setIsLoadingHistory(true);
-    try {
-      console.log('🎯 Loading history for song ID:', selectedSong.id);
-      console.log('🎯 Song title:', selectedSong.title);
-      
-      // First, let's check if there are any history entries at all
-      const { data: allHistory, error: allError } = await supabase
-        .from('song_history')
-        .select('*')
-        .limit(5);
-      
-      console.log('🎯 All history entries (first 5):', allHistory);
-      console.log('🎯 All history error:', allError);
-      
-      // If we have history entries, let's see what song_ids they have
-      if (allHistory && allHistory.length > 0) {
-        console.log('🎯 Song IDs in history entries:', allHistory.map(h => h.song_id));
-      }
-      
-      const { data, error } = await supabase
-        .from('song_history')
-        .select('*')
-        .eq('song_id', selectedSong.id)
-        .order('created_at', { ascending: false });
-        
-      console.log('🎯 Query for song_id', selectedSong.id, 'returned:', data);
-      console.log('🎯 Query error:', error);
-
-      if (error) {
-        console.error('🎯 Supabase error loading history:', error);
-        throw error;
-      }
-
-      console.log('🎯 Raw history data from Supabase:', data);
-      console.log('🎯 Data length:', data?.length || 0);
-
-      // Transform the data to match our HistoryEntry interface
-      const historyEntries = (data || []).map(entry => {
-        console.log('🎯 Processing entry:', entry);
-        return {
-          id: entry.id,
-          type: entry.type,
-          title: entry.title,
-          description: entry.description,
-          old_value: entry.old_value,
-          new_value: entry.new_value,
-          created_by: entry.created_by,
-          date: entry.created_at,
-          version: entry.title // Use title as version
-        };
-      });
-
-      console.log('🎯 Processed history entries:', historyEntries);
-      console.log('🎯 History entries count:', historyEntries.length);
-      
-      setLoadedHistory(historyEntries);
-      setHistoryLoaded(true);
-      console.log('📚 Loaded history data:', historyEntries.length, 'entries');
-    } catch (error) {
-      console.error('❌ Error loading history:', error);
-      console.error('❌ Full error details:', JSON.stringify(error, null, 2));
-    } finally {
-      console.log('🎯 Setting isLoadingHistory to false');
-      setIsLoadingHistory(false);
-    }
-  };
-
-  // Get history data for the current song
+  // Get history data for the current song using the ultra-fast hook
   const getHistoryData = (type: 'lyrics' | 'solfas' | 'audio' | 'comments' | 'metadata'): HistoryEntry[] => {
-    // Map the old type names to new type names
-    const typeMapping: Record<string, string[]> = {
-      'lyrics': ['lyrics'],
-      'solfas': ['solfas'],
-      'audio': ['audio'],
-      'comments': ['comments'],
-      'metadata': ['song-details', 'personnel', 'music-details']
-    };
-    
-    const mappedTypes = typeMapping[type] || [type];
-    return loadedHistory.filter(entry => mappedTypes.includes(entry.type));
+    return getHistoryByType(type);
   };
 
-  // Load history when user switches to history tab or clicks history sub-tabs
-  useEffect(() => {
-    console.log('🎯 History useEffect triggered:', {
-      activeTab,
-      hasSelectedSong: !!selectedSong,
-      songId: selectedSong?.id,
-      shouldLoad: activeTab === 'history' && selectedSong && selectedSong.id
-    });
-    
-    if (activeTab === 'history' && selectedSong && selectedSong.id) {
-      console.log('🎯 Calling loadHistoryData from useEffect');
-      loadHistoryData();
-    }
-  }, [activeTab, selectedSong]);
-
-  // Reset history when song changes
-  useEffect(() => {
-    setLoadedHistory([]);
-    setHistoryLoaded(false);
-    setIsLoadingHistory(false);
-  }, [selectedSong]);
+  // History loading is now handled automatically by the useUltraFastSongHistory hook
 
   // Get latest content (what's shown in main tabs)
   const getLatestContent = (type: 'lyrics' | 'solfas' | 'audio' | 'comments') => {
@@ -374,7 +271,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
       case 'audio':
         return selectedSong.audioFile;
       case 'comments':
-        // Get ONLY the latest pastor comment (newest one)
+        // Get ONLY the latest pastor's comment (newest one)
         return selectedSong.comments
           .filter(comment => comment.author === 'Pastor')
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
@@ -720,7 +617,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           {activeTab === 'comments' && (
             <div className="space-y-3">
               {selectedSong?.comments && selectedSong.comments.length > 0 ? (
-                // Show only the latest pastor comment in main Comments tab
+                // Show only the latest pastor's comment in main Comments tab
                 selectedSong.comments
                   .filter((comment: any) => comment.author === 'Pastor')
                   .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -735,15 +632,15 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                       <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
                       <div className="mt-3 pt-3 border-t border-gray-100">
                         <p className="text-xs text-gray-500">
-                          💡 <strong>Tip:</strong> View all pastor comments in History &gt; Pastor Comments
+                          💡 <strong>Tip:</strong> View all pastor's comments in History &gt; Pastor's Comments
                         </p>
                       </div>
                     </div>
                   ))
               ) : (
                 <div className="text-center py-8">
-                  <div className="text-gray-500 text-sm mb-2">No Pastor Comments Yet</div>
-                  <div className="text-gray-400 text-xs">Latest pastor comments will appear here</div>
+                  <div className="text-gray-500 text-sm mb-2">No Pastor's Comments Yet</div>
+                  <div className="text-gray-400 text-xs">Latest pastor's comments will appear here</div>
                 </div>
               )}
             </div>
@@ -791,7 +688,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                       : 'bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-white/90 hover:shadow-sm border border-slate-200/50'
                   }`}
                 >
-                  Pastor Comments
+                  Pastor's Comments
                 </button>
                 <button
                   onClick={() => setActiveHistoryTab('metadata')}

@@ -279,7 +279,7 @@ export default function HomePage() {
                   value={globalSearchQuery}
                   onChange={(e) => setGlobalSearchQuery(e.target.value)}
                   type="text"
-                  placeholder="Search everything..."
+                  placeholder="Search songs, lyrics, solfas, pages..."
                   inputMode="search"
                   aria-label="Search"
                   className="w-full text-lg bg-transparent px-0 py-3 text-gray-800 placeholder-gray-400 border-0 outline-none appearance-none shadow-none ring-0 focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none font-poppins-medium"

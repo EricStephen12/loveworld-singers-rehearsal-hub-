@@ -8,7 +8,10 @@ import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
 import { useAuth } from '@/contexts/AuthContext'
+import { useUltraFastProfile } from '@/hooks/useUltraFastProfile'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
+import { uploadProfileImage, validateImageFile } from '@/utils/imageUpload'
+import { supabase } from '@/lib/supabase-client'
 
 export default function ProfilePage() {
   const [showQRCode, setShowQRCode] = useState(true)
@@ -16,13 +19,27 @@ export default function ProfilePage() {
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
+    middleName: '',
     phoneNumber: '',
+    gender: '',
+    birthday: '',
     region: '',
     zone: '',
     church: '',
     designation: '',
     administration: ''
   })
+  const [userGroups, setUserGroups] = useState<string[]>([])
+  const [availableGroups] = useState([
+    'Main Choir',
+    'Praise Team', 
+    'Youth Choir',
+    'Children Choir',
+    'Instrumentalists',
+    'Backup Singers',
+    'Sound Team',
+    'Media Team'
+  ])
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -31,20 +48,25 @@ export default function ProfilePage() {
   const [isClient, setIsClient] = useState(false)
   const [qrGenerated, setQrGenerated] = useState(false)
   const router = useRouter()
-  const { user, profile: currentProfile, isLoading, isProfileComplete, signOut, refreshProfile } = useAuth()
+  const { user, signOut } = useAuth()
+  const { profile: currentProfile, loading: isLoading, updateProfile, refreshProfile } = useUltraFastProfile()
 
   // Set client flag to prevent hydration issues
   useEffect(() => {
     setIsClient(true)
   }, [])
 
-  // Force refresh profile on mount to ensure data is loaded
+  // Load user groups when user is available
   useEffect(() => {
-    if (user && !currentProfile) {
-      console.log('🔄 No profile data found, refreshing...')
-      refreshProfile()
+    if (user?.id) {
+      loadUserGroups()
     }
-  }, [user, currentProfile, refreshProfile])
+  }, [user?.id])
+
+  // Keep existing profile completion logic from useAuth
+  const { isProfileComplete } = useAuth()
+  
+  // Force Turbopack rebuild for ultra-fast profile loading
 
   // Use default profile data if none is loaded yet - fixed duplicate declaration
   const profileData = currentProfile || {
@@ -63,6 +85,7 @@ export default function ProfilePage() {
     administration: '',
     social_provider: 'email',
     social_id: user?.email || '',
+    profile_image_url: '',
     profile_completed: false,
     email_verified: user?.email_confirmed_at ? true : false,
     created_at: user?.created_at || new Date().toISOString(),
@@ -74,13 +97,21 @@ export default function ProfilePage() {
     setEditForm({
       firstName: profileData.first_name || '',
       lastName: profileData.last_name || '',
+      middleName: profileData.middle_name || '',
       phoneNumber: profileData.phone_number || '',
+      gender: profileData.gender || '',
+      birthday: profileData.birthday || '',
       region: profileData.region || '',
       zone: profileData.zone || '',
       church: profileData.church || '',
       designation: profileData.designation || '',
       administration: profileData.administration || ''
     })
+    
+    // Initialize profile image from profile data
+    if (profileData.profile_image_url) {
+      setProfileImage(profileData.profile_image_url)
+    }
   }, [profileData])
 
   // Handle form input changes
@@ -91,35 +122,142 @@ export default function ProfilePage() {
     }))
   }
 
+  // Load user groups
+  const loadUserGroups = async () => {
+    if (!user?.id) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_groups')
+        .select('group_name')
+        .eq('user_id', user.id)
+      
+      if (error) {
+        console.error('Error loading user groups:', error)
+        return
+      }
+      
+      const groups = data?.map(item => item.group_name) || []
+      setUserGroups(groups)
+      console.log('📋 Loaded user groups:', groups)
+    } catch (error) {
+      console.error('Error loading user groups:', error)
+    }
+  }
+
+  // Handle group toggle
+  const handleGroupToggle = (groupName: string) => {
+    setUserGroups(prev => {
+      if (prev.includes(groupName)) {
+        return prev.filter(g => g !== groupName)
+      } else {
+        return [...prev, groupName]
+      }
+    })
+  }
+
+  // Save user groups
+  const saveUserGroups = async () => {
+    if (!user?.id) return false
+    
+    try {
+      console.log('💾 Saving user groups:', userGroups)
+      
+      // First, delete all existing groups for this user
+      const { error: deleteError } = await supabase
+        .from('user_groups')
+        .delete()
+        .eq('user_id', user.id)
+      
+      if (deleteError) {
+        console.error('Error deleting existing groups:', deleteError)
+        return false
+      }
+      
+      // Then, insert new groups
+      if (userGroups.length > 0) {
+        const groupInserts = userGroups.map(groupName => ({
+          user_id: user.id,
+          group_name: groupName
+        }))
+        
+        const { error: insertError } = await supabase
+          .from('user_groups')
+          .insert(groupInserts)
+        
+        if (insertError) {
+          console.error('Error inserting new groups:', insertError)
+          return false
+        }
+      }
+      
+      console.log('✅ User groups saved successfully')
+      return true
+    } catch (error) {
+      console.error('Error saving user groups:', error)
+      return false
+    }
+  }
+
   // Handle image upload
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file')
+    if (!file) {
+      console.log('❌ No file selected')
       return
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image size must be less than 5MB')
+    console.log('📁 Selected file:', file.name, file.size, file.type)
+
+    // Validate file
+    const validation = validateImageFile(file)
+    if (!validation.valid) {
+      console.log('❌ File validation failed:', validation.error)
+      alert(validation.error)
       return
     }
+
+    if (!user?.id) {
+      console.log('❌ User not authenticated')
+      alert('User not authenticated')
+      return
+    }
+
+    console.log('👤 User ID:', user.id)
 
     setIsUploadingImage(true)
     try {
-      // Create a preview URL
-      const imageUrl = URL.createObjectURL(file)
-      setProfileImage(imageUrl)
+      console.log('🚀 Starting image upload...')
       
-      // Here you would upload to Supabase Storage
-      console.log('Image uploaded:', file.name)
-      alert('Profile image updated successfully!')
+      // Upload to Supabase Storage
+      const result = await uploadProfileImage(file, user.id)
+      
+      console.log('📤 Upload result:', result)
+      
+      if (result.success && result.url) {
+        console.log('✅ Image uploaded successfully, updating profile...')
+        
+        // Update profile with new image URL
+        const updateSuccess = await updateProfile({
+          profile_image_url: result.url
+        })
+        
+        console.log('📝 Profile update result:', updateSuccess)
+        
+        if (updateSuccess) {
+          // Set local state for immediate UI update
+          setProfileImage(result.url)
+          alert('Profile image updated successfully!')
+        } else {
+          alert('Failed to update profile with new image. Please try again.')
+        }
+      } else {
+        console.log('❌ Upload failed:', result.error)
+        alert(result.error || 'Failed to upload image. Please try again.')
+      }
     } catch (error) {
-      console.error('Error uploading image:', error)
-      alert('Error uploading image. Please try again.')
+      console.error('❌ Error uploading image:', error)
+      alert(`Error uploading image: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsUploadingImage(false)
     }
@@ -128,16 +266,75 @@ export default function ProfilePage() {
   // Handle save profile
   const handleSaveProfile = async () => {
     try {
-      // Here you would typically call an API to update the profile
-      console.log('Saving profile:', editForm)
-      console.log('Profile image:', profileImage)
+      console.log('🚀 Starting profile save...')
+      console.log('📝 Edit form data:', editForm)
+      console.log('🖼️ Profile image:', profileImage)
+      console.log('👤 Current user:', user?.id)
       
-      // For now, just close the edit mode
-      setIsEditing(false)
-      alert('Profile updated successfully!')
+      // Basic validation
+      if (!editForm.firstName.trim()) {
+        alert('First name is required')
+        return
+      }
+      
+      if (!editForm.lastName.trim()) {
+        alert('Last name is required')
+        return
+      }
+      
+      if (!editForm.phoneNumber.trim()) {
+        alert('Phone number is required')
+        return
+      }
+      
+      if (!editForm.region.trim()) {
+        alert('Region is required')
+        return
+      }
+      
+      if (!editForm.church.trim()) {
+        alert('Church is required')
+        return
+      }
+      
+      const updateData = {
+        first_name: editForm.firstName.trim(),
+        last_name: editForm.lastName.trim(),
+        middle_name: editForm.middleName.trim() || undefined,
+        phone_number: editForm.phoneNumber.trim(),
+        gender: editForm.gender as 'Male' | 'Female' | undefined,
+        birthday: editForm.birthday || undefined,
+        region: editForm.region.trim(),
+        zone: editForm.zone.trim() || undefined,
+        church: editForm.church.trim(),
+        designation: editForm.designation as 'Soprano' | 'Alto' | 'Tenor' | 'Bass' | 'Instrumentalist' | 'Backup Singer' | undefined,
+        administration: editForm.administration as 'Coordinator' | 'Assistant Coordinator' | 'Secretary' | 'Treasurer' | 'Member' | undefined
+      }
+      
+      console.log('📤 Sending update data:', updateData)
+      
+      // Update profile using the ultra-fast hook
+      const profileSuccess = await updateProfile(updateData)
+      
+      console.log('✅ Profile update result:', profileSuccess)
+      
+      // Save user groups
+      const groupsSuccess = await saveUserGroups()
+      
+      console.log('✅ Groups update result:', groupsSuccess)
+      
+      if (profileSuccess && groupsSuccess) {
+        setIsEditing(false)
+        alert('Profile and groups updated successfully!')
+      } else if (profileSuccess) {
+        setIsEditing(false)
+        alert('Profile updated successfully, but there was an issue with groups.')
+      } else {
+        alert('Failed to update profile. Please try again.')
+      }
     } catch (error) {
-      console.error('Error saving profile:', error)
-      alert('Error saving profile. Please try again.')
+      console.error('❌ Error saving profile:', error)
+      alert(`Error saving profile: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -158,13 +355,13 @@ export default function ProfilePage() {
     }
   }, [timeLeft, qrGenerated])
 
-  // Show loading state only if we have absolutely no profile data and it's still loading
-  if (isLoading && !currentProfile) {
+  // Show loading state only if no cached data is available (like praise night page)
+  if (isLoading && !currentProfile && !user) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-sm">Loading profile...</p>
+          <p className="text-gray-600 text-sm">Loading profile data...</p>
         </div>
       </div>
     )
@@ -217,7 +414,7 @@ export default function ProfilePage() {
     socialId: profileData.social_id || profileData.email || '',
     
     // Additional Profile Data (these would come from other tables in a real app)
-    groups: ["Main Choir", "Praise Team"], // TODO: Fetch from user_groups table
+    groups: userGroups.length > 0 ? userGroups : ["No groups assigned"], // Use actual user groups
     joinDate: profileData.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
     totalRehearsals: 0, // TODO: Calculate from attendance records
     attendanceRate: 0, // TODO: Calculate from attendance records
@@ -259,17 +456,7 @@ export default function ProfilePage() {
 
   const menuItems = getMenuItems(handleLogout)
 
-  const rightButtons = (
-    <button
-      onClick={refreshProfile}
-      className="p-2 text-gray-600 hover:text-purple-600 transition-colors"
-      title="Refresh Profile"
-    >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-    </button>
-  )
+  const rightButtons = null
 
   return (
     <div className="min-h-screen bg-white">
@@ -332,7 +519,6 @@ export default function ProfilePage() {
           <h2 className="text-2xl font-outfit-bold text-gray-800 mb-2">
             {userProfile.fullName || 'User'}
           </h2>
-          <p className="text-sm text-gray-600 mb-1">@{userProfile.socialId || 'user'}</p>
           <p className="text-xs text-gray-500 mb-4">{userProfile.email || 'user@example.com'}</p>
           
           <div className="flex items-center justify-center space-x-2">
@@ -363,7 +549,11 @@ export default function ProfilePage() {
                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   </svg>
                 ) : userProfile.socialProvider === 'kingschat' ? (
-                  <span className="text-white font-bold text-sm">K</span>
+                  <img 
+                    src="/kingschat.jpeg" 
+                    alt="KingsChat" 
+                    className="w-4 h-4 rounded-full object-cover"
+                  />
                 ) : (
                   <span className="text-white font-bold text-sm">@</span>
                 )}
@@ -436,13 +626,48 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Last Name</label>
+                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Middle Name</label>
                     <input
                       type="text"
-                      value={editForm.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      value={editForm.middleName}
+                      onChange={(e) => handleInputChange('middleName', e.target.value)}
                       className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Enter last name"
+                      placeholder="Enter middle name"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Last Name</label>
+                  <input
+                    type="text"
+                    value={editForm.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter last name"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Gender</label>
+                    <select
+                      value={editForm.gender}
+                      onChange={(e) => handleInputChange('gender', e.target.value)}
+                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="">Select gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Birthday</label>
+                    <input
+                      type="date"
+                      value={editForm.birthday}
+                      onChange={(e) => handleInputChange('birthday', e.target.value)}
+                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -458,15 +683,27 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Region</label>
-                  <input
-                    type="text"
-                    value={editForm.region}
-                    onChange={(e) => handleInputChange('region', e.target.value)}
-                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter region"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Region</label>
+                    <input
+                      type="text"
+                      value={editForm.region}
+                      onChange={(e) => handleInputChange('region', e.target.value)}
+                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter region"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Zone</label>
+                    <input
+                      type="text"
+                      value={editForm.zone}
+                      onChange={(e) => handleInputChange('zone', e.target.value)}
+                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter zone"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -478,6 +715,58 @@ export default function ProfilePage() {
                     className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Enter church"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Designation</label>
+                    <select
+                      value={editForm.designation}
+                      onChange={(e) => handleInputChange('designation', e.target.value)}
+                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="">Select designation</option>
+                      <option value="Soprano">Soprano</option>
+                      <option value="Alto">Alto</option>
+                      <option value="Tenor">Tenor</option>
+                      <option value="Bass">Bass</option>
+                      <option value="Instrumentalist">Instrumentalist</option>
+                      <option value="Backup Singer">Backup Singer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Administration</label>
+                    <select
+                      value={editForm.administration}
+                      onChange={(e) => handleInputChange('administration', e.target.value)}
+                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="">Select administration</option>
+                      <option value="Coordinator">Coordinator</option>
+                      <option value="Assistant Coordinator">Assistant Coordinator</option>
+                      <option value="Secretary">Secretary</option>
+                      <option value="Treasurer">Treasurer</option>
+                      <option value="Member">Member</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Groups</label>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {availableGroups.map((group) => (
+                      <label key={group} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={userGroups.includes(group)}
+                          onChange={() => handleGroupToggle(group)}
+                          className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                        />
+                        <span className="text-sm text-gray-700">{group}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Select all groups you belong to</p>
                 </div>
                 
                 <div className="flex gap-3">
@@ -599,10 +888,6 @@ export default function ProfilePage() {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Contact Information</h3>
           
           <div className="space-y-4">
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Email</label>
-              <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.email || 'Not provided'}</p>
-            </div>
             
             <div>
               <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Phone Number</label>

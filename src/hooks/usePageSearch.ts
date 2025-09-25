@@ -28,8 +28,10 @@ export function usePageSearch(currentPage: PraiseNight | null) {
       const matchesConductor = song.conductor?.toLowerCase().includes(query);
       const matchesCategory = song.category.toLowerCase().includes(query);
       const matchesKey = song.key?.toLowerCase().includes(query);
+      const matchesLyrics = song.lyrics?.toLowerCase().includes(query);
+      const matchesSolfas = song.solfas?.toLowerCase().includes(query);
 
-      if (matchesTitle || matchesWriter || matchesLeadSinger || matchesConductor || matchesCategory || matchesKey) {
+      if (matchesTitle || matchesWriter || matchesLeadSinger || matchesConductor || matchesCategory || matchesKey || matchesLyrics || matchesSolfas) {
         let matchReason = '';
         if (matchesTitle) matchReason = 'Song Title';
         else if (matchesWriter) matchReason = `Writer: ${song.writer}`;
@@ -37,6 +39,8 @@ export function usePageSearch(currentPage: PraiseNight | null) {
         else if (matchesConductor) matchReason = `Conductor: ${song.conductor}`;
         else if (matchesCategory) matchReason = `Category: ${song.category}`;
         else if (matchesKey) matchReason = `Key: ${song.key}`;
+        else if (matchesLyrics) matchReason = 'Lyrics Content';
+        else if (matchesSolfas) matchReason = 'Solfas Content';
 
         results.push({
           id: `song-${song.title}-${currentPage.id}`,

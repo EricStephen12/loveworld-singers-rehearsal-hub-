@@ -285,9 +285,11 @@ export default function AuthPage() {
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-3 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="w-5 h-5 bg-white rounded-full flex items-center justify-center">
-                <span className="text-purple-600 font-bold text-sm">K</span>
-              </span>
+              <img 
+                src="/kingschat.jpeg" 
+                alt="KingsChat" 
+                className="w-5 h-5 rounded-full object-cover"
+              />
               {isLogin ? 'Continue with KingsChat' : 'Sign up with KingsChat'}
             </button>
           </div>
