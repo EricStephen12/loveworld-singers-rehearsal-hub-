@@ -91,7 +91,7 @@ export default function MediaManager({
         type: dbFile.type,
         size: dbFile.size,
         folder: dbFile.folder || 'uncategorized',
-        uploadedAt: new Date(dbFile.uploadedAt),
+        uploadedAt: dbFile.uploadedAt,
         createdAt: new Date(dbFile.createdAt),
         updatedAt: new Date(dbFile.updatedAt)
       }));

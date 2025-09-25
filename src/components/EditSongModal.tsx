@@ -7,6 +7,7 @@ import { PraiseNightSong, Comment, Category } from '../types/supabase';
 import MediaSelectionModal from './MediaSelectionModal';
 import BasicTextEditor from './BasicTextEditor';
 import { createHistoryEntry, deleteHistoryEntry } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
 
 interface MediaFile {
   id: string;
@@ -71,6 +72,9 @@ export default function EditSongModal({
     leadSinger: '',
     writer: '',
     conductor: '',
+    leadKeyboardist: '',
+    leadGuitarist: '',
+    drummer: '',
     key: '',
     tempo: ''
   });
@@ -348,6 +352,9 @@ export default function EditSongModal({
         leadSinger: song.leadSinger || '',
         writer: song.writer || '',
         conductor: song.conductor || '',
+        leadKeyboardist: song.leadKeyboardist || '',
+        leadGuitarist: song.leadGuitarist || '',
+        drummer: song.drummer || '',
         key: song.key || '',
         tempo: song.tempo || ''
       });
@@ -385,6 +392,9 @@ export default function EditSongModal({
         leadSinger: '',
         writer: '',
         conductor: '',
+        leadKeyboardist: '',
+        leadGuitarist: '',
+        drummer: '',
         key: '',
         tempo: ''
       });
@@ -513,7 +523,8 @@ export default function EditSongModal({
       }
       
       // Manual history creation - no automatic history
-      if (false && significantChanges.length > 0 && song?.id) {
+      if (false && detectSignificantChanges().length > 0 && song?.id) {
+        const significantChanges = detectSignificantChanges();
         console.log('🎯 Creating automatic history entries for:', significantChanges);
         
         // Create history entries for each significant change (in background)
@@ -547,11 +558,13 @@ export default function EditSongModal({
 
             if (content.trim()) {
               await createHistoryEntry({
-                songId: song.id,
+                song_id: song?.id || 0,
+                title: `${changeType} Version ${version}`,
+                description: `Updated ${changeType} on ${new Date().toLocaleString()}`,
                 type: changeType,
-                content: content,
-            date: new Date().toISOString(),
-                version: version
+                old_value: '',
+                new_value: content,
+                created_by: 'admin'
               });
               console.log(`✅ Auto-created history entry for ${changeType}`);
             }
@@ -1186,14 +1199,14 @@ Do Re Mi Fa Sol La Ti Do"
                     {historyEntries.length}
                   </span>
                 )}
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full sm:w-auto px-4 sm:px-6 py-3 border-2 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium"
-              >
-                Cancel
-              </button>
-            </div>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 border-2 border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium"
+            >
+              Cancel
+            </button>
+          </div>
           </div>
           
         </div>

@@ -632,7 +632,7 @@ export async function updateSong(songId: number, songData: Partial<PraiseNightSo
       for (const historyEntry of newHistoryEntries) {
         const savedEntry = await createHistoryEntry({
           ...historyEntry,
-          songId: songId
+          song_id: songId
         });
         
         if (savedEntry) {

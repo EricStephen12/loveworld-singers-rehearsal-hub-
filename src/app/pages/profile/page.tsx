@@ -48,7 +48,9 @@ export default function ProfilePage() {
 
   // Use default profile data if none is loaded yet - fixed duplicate declaration
   const profileData = currentProfile || {
+    id: user?.id || '',
     first_name: user?.user_metadata?.first_name || '',
+    middle_name: user?.user_metadata?.middle_name || '',
     last_name: user?.user_metadata?.last_name || '',
     email: user?.email || '',
     phone_number: '',
@@ -58,7 +60,13 @@ export default function ProfilePage() {
     zone: '',
     church: '',
     designation: '',
-    administration: ''
+    administration: '',
+    social_provider: 'email',
+    social_id: user?.email || '',
+    profile_completed: false,
+    email_verified: user?.email_confirmed_at ? true : false,
+    created_at: user?.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
 
   // Initialize edit form with profile data
@@ -243,7 +251,7 @@ export default function ProfilePage() {
   }
 
   // Mock attendance data for now
-  const attendanceHistory = []
+  const attendanceHistory: any[] = []
   const attendanceStats = { total: 0, present: 0, late: 0, absent: 0, rate: 0 }
 
 
