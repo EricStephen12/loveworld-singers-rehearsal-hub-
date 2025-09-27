@@ -33,6 +33,11 @@ class SmartCacheManager {
   }
 
   private initializeCache(): void {
+    // Only run in browser environment
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return;
+    }
+    
     // Check if app version changed and clear old cache
     const storedVersion = localStorage.getItem('app-cache-version');
     if (!storedVersion || storedVersion !== this.APP_VERSION) {
@@ -60,11 +65,13 @@ class SmartCacheManager {
 
     this.cache.set(config.key, entry);
     
-    // Also store in localStorage for persistence
-    try {
-      localStorage.setItem(`cache-${config.key}`, JSON.stringify(entry));
-    } catch (error) {
-      console.warn('Failed to store cache in localStorage:', error);
+    // Also store in localStorage for persistence (only in browser)
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(`cache-${config.key}`, JSON.stringify(entry));
+      } catch (error) {
+        console.warn('Failed to store cache in localStorage:', error);
+      }
     }
   }
 
@@ -76,22 +83,24 @@ class SmartCacheManager {
       return memoryEntry.data;
     }
 
-    // Check localStorage cache
-    try {
-      const stored = localStorage.getItem(`cache-${key}`);
-      if (stored) {
-        const entry: SmartCacheEntry = JSON.parse(stored);
-        if (this.isValidEntry(entry)) {
-          // Restore to memory cache
-          this.cache.set(key, entry);
-          return entry.data;
-        } else {
-          // Remove expired entry
-          localStorage.removeItem(`cache-${key}`);
+    // Check localStorage cache (only in browser)
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`cache-${key}`);
+        if (stored) {
+          const entry: SmartCacheEntry = JSON.parse(stored);
+          if (this.isValidEntry(entry)) {
+            // Restore to memory cache
+            this.cache.set(key, entry);
+            return entry.data;
+          } else {
+            // Remove expired entry
+            localStorage.removeItem(`cache-${key}`);
+          }
         }
+      } catch (error) {
+        console.warn('Failed to read cache from localStorage:', error);
       }
-    } catch (error) {
-      console.warn('Failed to read cache from localStorage:', error);
     }
 
     return null;
@@ -135,7 +144,9 @@ class SmartCacheManager {
     const toRemove = entries.slice(0, Math.floor(this.MAX_CACHE_SIZE * 0.2));
     toRemove.forEach(([key]) => {
       this.cache.delete(key);
-      localStorage.removeItem(`cache-${key}`);
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`cache-${key}`);
+      }
     });
   }
 
@@ -143,15 +154,17 @@ class SmartCacheManager {
   public clearAllCache(): void {
     this.cache.clear();
     
-    // Clear localStorage cache
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('cache-')) {
-        keysToRemove.push(key);
+    // Clear localStorage cache (only in browser)
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('cache-')) {
+          keysToRemove.push(key);
+        }
       }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
     }
-    keysToRemove.forEach(key => localStorage.removeItem(key));
     
     console.log('🧹 Smart cache cleared');
   }
@@ -159,7 +172,9 @@ class SmartCacheManager {
   // Clear specific cache
   public clearCache(key: string): void {
     this.cache.delete(key);
-    localStorage.removeItem(`cache-${key}`);
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.removeItem(`cache-${key}`);
+    }
   }
 
   // Get cache statistics

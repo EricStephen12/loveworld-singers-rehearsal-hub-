@@ -34,6 +34,11 @@ class VersionManager {
 
   // Check if app version has changed and needs cache refresh
   public async checkForUpdates(): Promise<boolean> {
+    // Only run in browser environment
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return false;
+    }
+    
     try {
       const storedVersion = localStorage.getItem(this.VERSION_KEY);
       const lastUpdateCheck = localStorage.getItem(this.LAST_UPDATE_KEY);
@@ -87,6 +92,10 @@ class VersionManager {
   }
 
   private clearLocalStorageCache(): void {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return;
+    }
+    
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -106,7 +115,7 @@ class VersionManager {
   }
 
   private async clearServiceWorkerCache(): Promise<void> {
-    if ('serviceWorker' in navigator) {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       try {
         const registrations = await navigator.serviceWorker.getRegistrations();
         for (const registration of registrations) {
@@ -120,7 +129,7 @@ class VersionManager {
   }
 
   private async clearBrowserCache(): Promise<void> {
-    if ('caches' in window) {
+    if (typeof window !== 'undefined' && 'caches' in window) {
       try {
         const cacheNames = await caches.keys();
         await Promise.all(
@@ -135,9 +144,15 @@ class VersionManager {
 
   // Force refresh for immediate updates (manual trigger)
   public async forceRefresh(): Promise<void> {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     console.log('🔄 Force refresh triggered...');
     await this.clearAllCaches();
-    localStorage.setItem(this.VERSION_KEY, this.currentVersion);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(this.VERSION_KEY, this.currentVersion);
+    }
     window.location.reload();
   }
 
@@ -148,6 +163,10 @@ class VersionManager {
 
   // Check if this is a new session (first load after update)
   public isNewSession(): boolean {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return false;
+    }
+    
     const storedVersion = localStorage.getItem(this.VERSION_KEY);
     return !storedVersion || storedVersion !== this.currentVersion;
   }

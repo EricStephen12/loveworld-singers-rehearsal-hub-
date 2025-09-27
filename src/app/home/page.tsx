@@ -136,7 +136,7 @@ export default function HomePage() {
     {
       icon: Bell,
       title: 'Push Notifications',
-      href: '#',
+      href: '/pages/notifications',
       badge: true,
     },
     {

@@ -52,7 +52,7 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
 
       {/* Items */}
       <div className="py-1">
-        {items.map((item, index) => {
+        {(items || []).map((item, index) => {
           const MenuItem: any = item.onClick ? 'button' : Link
           const commonProps = item.onClick 
             ? { onClick: () => { item.onClick?.(); onClose(); } }
@@ -92,13 +92,13 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
       </div>
 
       {/* Custom Sections */}
-      {customSections.map((section, sectionIndex) => (
+      {(customSections || []).map((section, sectionIndex) => (
         <div key={sectionIndex} className="border-t border-gray-100/80">
           <div className="px-6 py-3">
             <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider">{section.title}</h3>
           </div>
           <div className="py-1">
-            {section.items.map((item, index) => {
+            {(section.items || []).map((item, index) => {
               const MenuItem: any = item.onClick ? 'button' : Link
               const commonProps = item.onClick 
                 ? { onClick: () => { item.onClick?.(); onClose(); } }

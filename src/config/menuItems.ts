@@ -24,8 +24,8 @@ export const getMenuItems = (onLogout?: () => void): MenuItem[] => [
   },
   {
     icon: Bell,
-    title: 'Push Notifications',
-    href: '#',
+    title: 'Notifications',
+    href: '/pages/notifications',
     badge: true,
   },
   {

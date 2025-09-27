@@ -64,7 +64,13 @@ export default function AuthScreen({ onComplete }: AuthScreenProps) {
     }))
   }
 
-  const handleSocialSignup = (provider: 'google' | 'kingschat') => {
+  const handleSocialSignup = (provider: 'google' | 'kingschat', e?: React.MouseEvent) => {
+    // Prevent form submission
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
     if (provider === 'google') {
       // Google integration - placeholder for future implementation
       alert('Google integration coming soon!')
@@ -150,7 +156,7 @@ export default function AuthScreen({ onComplete }: AuthScreenProps) {
                   {/* Google Signup */}
                   <button
                     type="button"
-                    onClick={() => handleSocialSignup('google')}
+                    onClick={(e) => handleSocialSignup('google', e)}
                     className="w-full py-4 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 font-medium hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center space-x-3 touch-target"
                   >
                     <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center">
@@ -162,7 +168,7 @@ export default function AuthScreen({ onComplete }: AuthScreenProps) {
                   {/* KingsChat Signup */}
                   <button
                     type="button"
-                    onClick={() => handleSocialSignup('kingschat')}
+                    onClick={(e) => handleSocialSignup('kingschat', e)}
                     className="w-full py-4 bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center space-x-3 touch-target rounded-xl"
                   >
                     <img 

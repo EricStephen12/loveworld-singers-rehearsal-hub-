@@ -83,7 +83,13 @@ export default function AuthPage() {
     }
   }
 
-  const handleSocialLogin = async (provider: string) => {
+  const handleSocialLogin = async (provider: string, e?: React.MouseEvent) => {
+    // Prevent form submission
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
     if (provider === 'google') {
       // Google integration - placeholder for future implementation
       setError('Google integration coming soon!')
@@ -260,7 +266,8 @@ export default function AuthPage() {
           {/* Social Login Buttons */}
           <div className={`space-y-3 ${isLogin ? 'mt-6' : 'mt-0'}`}>
             <button
-              onClick={() => handleSocialLogin('google')}
+              type="button"
+              onClick={(e) => handleSocialLogin('google', e)}
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-3 py-3 bg-white border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -274,7 +281,8 @@ export default function AuthPage() {
             </button>
             
             <button
-              onClick={() => handleSocialLogin('kingschat')}
+              type="button"
+              onClick={(e) => handleSocialLogin('kingschat', e)}
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-3 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
