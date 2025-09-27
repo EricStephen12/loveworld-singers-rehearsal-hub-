@@ -467,28 +467,6 @@ export default function ProfilePage() {
       />
 
 
-      {/* Profile Completion Banner */}
-      {!isProfileComplete && (
-        <div className="mx-4 mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-amber-600" />
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-amber-800">Complete Your Profile</h3>
-                <p className="text-xs text-amber-600">Add more details to personalize your experience</p>
-              </div>
-            </div>
-            <button
-              onClick={() => router.push('/profile-completion')}
-              className="px-3 py-1 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 transition-colors"
-            >
-              Complete
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Profile Header */}
       <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
