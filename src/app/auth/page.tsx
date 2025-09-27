@@ -48,9 +48,6 @@ export default function AuthPage() {
 
         const result = await AuthService.signUp(signUpData)
         
-        // Set authentication status in localStorage
-        localStorage.setItem('isAuthenticated', 'true')
-        
         // DISABLED: Email confirmation is disabled for development
         // Always go directly to profile completion
         router.push('/profile-completion')
@@ -58,16 +55,11 @@ export default function AuthPage() {
         // Sign in with Supabase
         await AuthService.signIn(formData.email, formData.password)
         
-        // Set authentication status in localStorage
-        localStorage.setItem('isAuthenticated', 'true')
-        
         // Check if profile is complete
         const isComplete = await AuthService.isProfileComplete()
         console.log('Profile complete status:', isComplete)
         
         if (isComplete) {
-          // Set profile completion status
-          localStorage.setItem('hasCompletedProfile', 'true')
           console.log('Redirecting to /home')
           router.push('/home')
         } else {

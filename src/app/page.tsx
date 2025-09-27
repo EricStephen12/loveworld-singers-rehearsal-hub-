@@ -2,21 +2,45 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase-client'
 
 export default function SplashPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check authentication status and redirect accordingly
-    const checkAuthAndRedirect = () => {
-      const authStatus = localStorage.getItem('isAuthenticated')
-      const hasCompletedProfile = localStorage.getItem('hasCompletedProfile')
-      
-      if (authStatus === 'true' && hasCompletedProfile === 'true') {
-        // User is fully authenticated, go to home
-        router.push('/home')
-      } else {
-        // User needs to authenticate, go to auth
+    // Check authentication status using Supabase session
+    const checkAuthAndRedirect = async () => {
+      try {
+        // Get current session from Supabase
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Session check error:', error)
+          router.push('/auth')
+          return
+        }
+
+        if (session?.user) {
+          // User is authenticated, check if profile is complete
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('profile_completed')
+            .eq('id', session.user.id)
+            .single()
+
+          if (profile?.profile_completed) {
+            // User is fully authenticated and profile is complete
+            router.push('/home')
+          } else {
+            // User is authenticated but profile is incomplete
+            router.push('/profile-completion')
+          }
+        } else {
+          // No session, redirect to auth
+          router.push('/auth')
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
         router.push('/auth')
       }
     }
