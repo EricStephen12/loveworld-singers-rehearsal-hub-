@@ -1,8 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
-import { X } from 'lucide-react'
+import { X, LogOut, AlertCircle } from 'lucide-react'
 
 type DrawerItem = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
@@ -27,6 +27,8 @@ type SharedDrawerProps = {
 }
 
 export default function SharedDrawer({ open, onClose, title = 'Menu', items, customSections = [], fixedOnDesktop = false }: SharedDrawerProps) {
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [logoutCallback, setLogoutCallback] = useState<(() => void) | null>(null)
   // Render drawer content
   const renderDrawerContent = () => (
     <>
@@ -54,8 +56,22 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
       <div className="py-1">
         {(items || []).map((item, index) => {
           const MenuItem: any = item.onClick ? 'button' : Link
-          const commonProps = item.onClick 
-            ? { onClick: () => { item.onClick?.(); onClose(); } }
+
+          // Special handling for logout
+          const isLogout = item.title.toLowerCase() === 'logout'
+          const commonProps = item.onClick
+            ? {
+                onClick: () => {
+                  if (isLogout) {
+                    // Show confirmation modal for logout
+                    setLogoutCallback(() => item.onClick)
+                    setShowLogoutModal(true)
+                  } else {
+                    item.onClick?.()
+                    onClose()
+                  }
+                }
+              }
             : { href: item.href || '#', onClick: onClose }
 
           return (
@@ -63,19 +79,19 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
               key={index}
               {...commonProps}
               className={`flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/80 transition-all duration-200 active:bg-gray-100/80 w-full text-left group ${
-                item.title.toLowerCase() === 'logout' 
-                  ? 'text-red-600 hover:bg-red-50/80 active:bg-red-100/80' 
+                isLogout
+                  ? 'text-red-600 hover:bg-red-50/80 active:bg-red-100/80'
                   : 'text-gray-800'
               }`}
             >
               <div className="flex items-center space-x-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                  item.title.toLowerCase() === 'logout' 
-                    ? 'bg-red-100/80 group-hover:bg-red-200/80' 
+                  isLogout
+                    ? 'bg-red-100/80 group-hover:bg-red-200/80'
                     : 'bg-purple-100/80 group-hover:bg-purple-200/80'
                 }`}>
                   <item.icon className={`w-4 h-4 transition-colors duration-200 ${
-                    item.title.toLowerCase() === 'logout' ? 'text-red-600' : 'text-purple-600'
+                    isLogout ? 'text-red-600' : 'text-purple-600'
                   }`} />
                 </div>
                 <span className="text-sm font-poppins-medium">{item.title}</span>
@@ -142,18 +158,72 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
 
   // Mobile mode - popup drawer (works on all screen sizes)
   return (
-    <div className={`fixed inset-0 z-50 transform transition-all duration-300 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-      {/* Backdrop with blur */}
-      <div 
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <>
+      <div className={`fixed inset-0 z-50 transform transition-all duration-300 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+        {/* Backdrop with blur */}
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+        />
 
-      {/* Drawer Content */}
-      <div className="relative w-80 max-w-sm h-full bg-white/95 backdrop-blur-xl shadow-2xl border-r border-gray-200/50 overflow-y-auto">
-        {renderDrawerContent()}
+        {/* Drawer Content */}
+        <div className="relative w-80 max-w-sm h-full bg-white/95 backdrop-blur-xl shadow-2xl border-r border-gray-200/50 overflow-y-auto">
+          {renderDrawerContent()}
+        </div>
       </div>
-    </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowLogoutModal(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 transform transition-all">
+            {/* Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
+              Logout Confirmation
+            </h3>
+
+            {/* Message */}
+            <p className="text-gray-600 text-center mb-6">
+              Are you sure you want to logout?
+            </p>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutModal(false)
+                  onClose()
+                  logoutCallback?.()
+                }}
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

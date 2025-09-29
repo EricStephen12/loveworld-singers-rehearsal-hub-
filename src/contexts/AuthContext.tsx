@@ -38,13 +38,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    // Set a timeout to ensure loading doesn't hang forever
+    const loadingTimeout = setTimeout(() => {
+      console.log('Auth loading timeout - setting isLoading to false')
+      setIsLoading(false)
+    }, 2000)
+
     // Get initial session (non-blocking)
     const getInitialSession = async () => {
       try {
         const session = await AuthService.getCurrentSession()
         setSession(session)
         setUser(session?.user || null)
-        
+
         // Load profile in background (non-blocking)
         if (session?.user) {
           // Don't wait for profile - load it in background
@@ -57,10 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error('Background profile load error:', error)
             })
         }
-        
+
+        clearTimeout(loadingTimeout)
         setIsLoading(false)
       } catch (error) {
         console.error('Initial session error:', error)
+        clearTimeout(loadingTimeout)
         setIsLoading(false)
       }
     }
