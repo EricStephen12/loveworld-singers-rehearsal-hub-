@@ -705,41 +705,47 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Gender</label>
-                    <select
-                      value={editForm.gender}
-                      onChange={(e) => handleInputChange('gender', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
-                      <option value="">Select gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Birthday</label>
-                    <input
-                      type="date"
-                      value={editForm.birthday}
-                      onChange={(e) => handleInputChange('birthday', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
+                      <div>
+                        <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Gender</label>
+                        <select
+                          value={editForm.gender}
+                          onChange={(e) => handleInputChange('gender', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        >
+                          <option value="">Select gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Birthday</label>
+                        <input
+                          type="date"
+                          value={editForm.birthday}
+                          onChange={(e) => handleInputChange('birthday', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Phone Number</label>
+                      <input
+                        type="tel"
+                        value={editForm.phoneNumber}
+                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Enter phone number"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Phone Number</label>
-                  <input
-                    type="tel"
-                    value={editForm.phoneNumber}
-                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter phone number"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+                {/* Location Information Section */}
+                <div className="pt-4 border-t border-gray-100">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Location Information</h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Region</label>
                     <input
