@@ -746,111 +746,121 @@ export default function ProfilePage() {
                   <h4 className="text-sm font-semibold text-gray-700 mb-3">Location Information</h4>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Region</label>
-                    <input
-                      type="text"
-                      value={editForm.region}
-                      onChange={(e) => handleInputChange('region', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Enter region"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Zone</label>
-                    <input
-                      type="text"
-                      value={editForm.zone}
-                      onChange={(e) => handleInputChange('zone', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Enter zone"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Church</label>
-                  <input
-                    type="text"
-                    value={editForm.church}
-                    onChange={(e) => handleInputChange('church', e.target.value)}
-                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter church"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Designation</label>
-                    <select
-                      value={editForm.designation}
-                      onChange={(e) => handleInputChange('designation', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
-                      <option value="">Select designation</option>
-                      <option value="Soprano">Soprano</option>
-                      <option value="Alto">Alto</option>
-                      <option value="Tenor">Tenor</option>
-                      <option value="Bass">Bass</option>
-                      <option value="Instrumentalist">Instrumentalist</option>
-                      <option value="Backup Singer">Backup Singer</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Administration</label>
-                    <select
-                      value={editForm.administration}
-                      onChange={(e) => handleInputChange('administration', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
-                      <option value="">Select administration</option>
-                      <option value="Coordinator">Coordinator</option>
-                      <option value="Assistant Coordinator">Assistant Coordinator</option>
-                      <option value="Secretary">Secretary</option>
-                      <option value="Treasurer">Treasurer</option>
-                      <option value="Member">Member</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Group</label>
-                  <div className="mt-2 grid grid-cols-1 gap-2">
-                    {availableGroups.map((group) => (
-                      <label key={group} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-300 transition-all">
+                      <div>
+                        <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Region</label>
                         <input
-                          type="radio"
-                          name="group"
-                          value={group}
-                          checked={selectedGroup === group}
-                          onChange={() => handleGroupSelect(group)}
-                          className="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 focus:ring-purple-500 focus:ring-2"
+                          type="text"
+                          value={editForm.region}
+                          onChange={(e) => handleInputChange('region', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          placeholder="Enter region"
                         />
-                        <span className="text-sm text-gray-800 font-medium">{group}</span>
-                      </label>
-                    ))}
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Zone</label>
+                        <input
+                          type="text"
+                          value={editForm.zone}
+                          onChange={(e) => handleInputChange('zone', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          placeholder="Enter zone"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Church</label>
+                      <input
+                        type="text"
+                        value={editForm.church}
+                        onChange={(e) => handleInputChange('church', e.target.value)}
+                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Enter church"
+                      />
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">Select the group you belong to</p>
                 </div>
-                
+
+                {/* Ministry Information Section */}
+                <div className="pt-4 border-t border-gray-100">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Ministry Information</h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Designation</label>
+                        <select
+                          value={editForm.designation}
+                          onChange={(e) => handleInputChange('designation', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        >
+                          <option value="">Select designation</option>
+                          <option value="Soprano">Soprano</option>
+                          <option value="Alto">Alto</option>
+                          <option value="Tenor">Tenor</option>
+                          <option value="Bass">Bass</option>
+                          <option value="Instrumentalist">Instrumentalist</option>
+                          <option value="Backup Singer">Backup Singer</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Administration</label>
+                        <select
+                          value={editForm.administration}
+                          onChange={(e) => handleInputChange('administration', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        >
+                          <option value="">Select administration</option>
+                          <option value="Coordinator">Coordinator</option>
+                          <option value="Assistant Coordinator">Assistant Coordinator</option>
+                          <option value="Secretary">Secretary</option>
+                          <option value="Treasurer">Treasurer</option>
+                          <option value="Member">Member</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Group</label>
+                      <div className="mt-2 grid grid-cols-1 gap-2">
+                        {availableGroups.map((group) => (
+                          <label key={group} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-300 transition-all">
+                            <input
+                              type="radio"
+                              name="group"
+                              value={group}
+                              checked={selectedGroup === group}
+                              onChange={() => handleGroupSelect(group)}
+                              className="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 focus:ring-purple-500 focus:ring-2"
+                            />
+                            <span className="text-sm text-gray-800 font-medium">{group}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">Select the group you belong to</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Save Message */}
                 {saveMessage && (
-                  <div className={`p-3 rounded-lg text-sm font-medium ${
-                    saveMessage.includes('successfully') 
-                      ? 'bg-green-100 text-green-800 border border-green-200' 
-                      : 'bg-red-100 text-red-800 border border-red-200'
+                  <div className={`p-4 rounded-lg text-sm font-medium ${
+                    saveMessage.includes('successfully')
+                      ? 'bg-green-50 text-green-800 border border-green-200'
+                      : 'bg-red-50 text-red-800 border border-red-200'
                   }`}>
                     {saveMessage}
                   </div>
                 )}
-                
-                <div className="flex gap-3">
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-gray-100">
                   <button
                     onClick={handleSaveProfile}
                     disabled={isSaving}
-                    className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
                   >
                     {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    {isSaving ? 'Saving Changes...' : 'Save Changes'}
                   </button>
                   <button
                     onClick={() => {
@@ -858,7 +868,7 @@ export default function ProfilePage() {
                       setSaveMessage('')
                     }}
                     disabled={isSaving}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
                     Cancel
                   </button>
