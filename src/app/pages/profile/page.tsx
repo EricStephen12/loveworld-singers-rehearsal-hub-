@@ -604,24 +604,29 @@ export default function ProfilePage() {
       {/* Personal Information */}
       <div className="px-4 py-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
-          
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">Personal Information</h3>
+            {isEditing && (
+              <span className="text-xs text-purple-600 font-medium">Editing Mode</span>
+            )}
+          </div>
+
           <div className="space-y-4">
             {isEditing ? (
               <>
                 {/* Profile Image Upload */}
-                <div className="mb-6">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Profile Image</label>
-                  <div className="mt-2 flex items-center gap-4">
-                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center overflow-hidden">
+                <div className="pb-4 border-b border-gray-100">
+                  <label className="text-xs text-gray-700 uppercase tracking-wide font-bold mb-2 block">Profile Image</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-purple-200">
                       {profileImage ? (
-                        <img 
-                          src={profileImage} 
-                          alt="Profile" 
+                        <img
+                          src={profileImage}
+                          alt="Profile"
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User className="w-8 h-8 text-purple-600" />
+                        <User className="w-10 h-10 text-purple-600" />
                       )}
                     </div>
                     <div className="flex-1">
@@ -635,12 +640,12 @@ export default function ProfilePage() {
                       />
                       <label
                         htmlFor="profile-image-upload"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer disabled:opacity-50 font-medium"
                       >
                         <Camera className="w-4 h-4" />
-                        {isUploadingImage ? 'Uploading...' : 'Upload Image'}
+                        {isUploadingImage ? 'Uploading...' : 'Change Photo'}
                       </label>
-                      <p className="text-xs text-gray-500 mt-1">Max 10MB, JPG/PNG/WebP</p>
+                      <p className="text-xs text-gray-500 mt-2">Max 10MB • JPG, PNG, or WebP</p>
                       
                       {/* Upload Progress */}
                       {isUploadingImage && uploadProgress.stage && (

@@ -15,7 +15,8 @@ import {
   File,
   Check,
   CheckCheck,
-  MoreHorizontal
+  MoreHorizontal,
+  X
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ChatService } from '@/lib/chat-service'
@@ -39,10 +40,16 @@ export default function GroupsPage() {
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [showReactions, setShowReactions] = useState<string | null>(null)
+  const [swipedMessage, setSwipedMessage] = useState<string | null>(null)
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null)
+  const [selectedMessage, setSelectedMessage] = useState<string | null>(null)
+  const [showMessageActions, setShowMessageActions] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const touchStartX = useRef<number>(0)
+  const touchCurrentX = useRef<number>(0)
 
   // Load conversations and contacts
   useEffect(() => {
@@ -399,20 +406,88 @@ export default function GroupsPage() {
   const sendMessage = async () => {
     if (!newMessage.trim() || !currentConversation || !user?.id) return
 
+    const messageContent = replyToMessage
+      ? `[Reply to: ${replyToMessage.content}]\n${newMessage.trim()}`
+      : newMessage.trim()
+
     const message = await ChatService.sendMessage(
       currentConversation.id,
       user.id,
-      newMessage.trim()
+      messageContent
     )
 
     if (message) {
       setMessages(prev => [...prev, message])
       setNewMessage('')
+      setReplyToMessage(null)
       setIsTyping(false)
-      
+
       // Clear typing indicator
       await ChatService.setTypingIndicator(currentConversation.id, user.id, false)
     }
+  }
+
+  const handleEmojiClick = (emoji: string) => {
+    setNewMessage(prev => prev + emoji)
+    setShowEmojiPicker(false)
+    inputRef.current?.focus()
+  }
+
+  const handleMicPress = () => {
+    setIsRecording(true)
+    // TODO: Implement actual voice recording
+    setTimeout(() => {
+      setIsRecording(false)
+      alert('Voice recording feature coming soon!')
+    }, 100)
+  }
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('Delete this message?')) return
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId)
+
+      if (!error) {
+        setMessages(prev => prev.filter(m => m.id !== messageId))
+        setShowMessageActions(null)
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
+    }
+  }
+
+  const handleForwardMessage = (message: Message) => {
+    // TODO: Implement forward functionality
+    alert(`Forward message: ${message.content}`)
+    setShowMessageActions(null)
+  }
+
+  const handleSwipeStart = (e: React.TouchEvent, messageId: string) => {
+    touchStartX.current = e.touches[0].clientX
+    setSwipedMessage(messageId)
+  }
+
+  const handleSwipeMove = (e: React.TouchEvent) => {
+    if (!swipedMessage) return
+    touchCurrentX.current = e.touches[0].clientX
+  }
+
+  const handleSwipeEnd = (message: Message) => {
+    const swipeDistance = touchCurrentX.current - touchStartX.current
+
+    if (swipeDistance > 50) {
+      // Swiped right - reply
+      setReplyToMessage(message)
+      inputRef.current?.focus()
+    }
+
+    setSwipedMessage(null)
+    touchStartX.current = 0
+    touchCurrentX.current = 0
   }
 
   const handleTyping = useCallback(async (text: string) => {
@@ -719,8 +794,14 @@ export default function GroupsPage() {
           </div>
         </div>
 
-        {/* Messages - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 pt-20 pb-24">
+        {/* Messages - Scrollable with WhatsApp Pattern Background */}
+        <div
+          className="flex-1 overflow-y-auto p-4 space-y-4 pt-20 pb-24 relative"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d1d5db' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundColor: '#f0f2f5'
+          }}
+        >
           {messages.map((message, index) => {
             const isOwn = message.sender_id === user?.id
             const showAvatar = index === 0 || messages[index - 1].sender_id !== message.sender_id
@@ -728,7 +809,13 @@ export default function GroupsPage() {
               new Date(message.created_at).getTime() - new Date(messages[index + 1].created_at).getTime() > 300000 // 5 minutes
 
             return (
-              <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+              <div
+                key={message.id}
+                className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                onTouchStart={(e) => handleSwipeStart(e, message.id)}
+                onTouchMove={handleSwipeMove}
+                onTouchEnd={() => handleSwipeEnd(message)}
+              >
                 <div className={`flex max-w-xs lg:max-w-md ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
                   {!isOwn && showAvatar && (
                     <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mr-2 mt-1">
@@ -737,8 +824,46 @@ export default function GroupsPage() {
                       </span>
                     </div>
                   )}
-                  
+
                   <div className={`relative group ${isOwn ? 'ml-2' : 'mr-2'}`}>
+                    {/* Message Actions Button */}
+                    <button
+                      onClick={() => setShowMessageActions(showMessageActions === message.id ? null : message.id)}
+                      className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white rounded-full p-1 z-10"
+                    >
+                      <MoreHorizontal className="w-3 h-3" />
+                    </button>
+
+                    {/* Message Actions Menu */}
+                    {showMessageActions === message.id && (
+                      <div className="absolute top-0 right-0 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-20 min-w-[150px]">
+                        <button
+                          onClick={() => {
+                            setReplyToMessage(message)
+                            setShowMessageActions(null)
+                            inputRef.current?.focus()
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                        >
+                          Reply
+                        </button>
+                        <button
+                          onClick={() => handleForwardMessage(message)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                        >
+                          Forward
+                        </button>
+                        {isOwn && (
+                          <button
+                            onClick={() => handleDeleteMessage(message.id)}
+                            className="w-full text-left px-3 py-2 hover:bg-red-50 rounded text-sm text-red-600"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     <div
                       className={`px-4 py-2 rounded-2xl ${
                         isOwn
@@ -836,6 +961,22 @@ export default function GroupsPage() {
 
         {/* Message Input - Fixed at Bottom */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
+          {/* Reply Preview */}
+          {replyToMessage && (
+            <div className="mb-2 bg-purple-50 border-l-4 border-purple-600 p-2 rounded flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs text-purple-600 font-medium">Replying to</p>
+                <p className="text-sm text-gray-700 truncate">{replyToMessage.content}</p>
+              </div>
+              <button
+                onClick={() => setReplyToMessage(null)}
+                className="p-1 hover:bg-purple-100 rounded"
+              >
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
@@ -843,7 +984,7 @@ export default function GroupsPage() {
             >
               <Paperclip className="w-5 h-5 text-gray-600" />
             </button>
-            
+
             <div className="flex-1 relative">
               <input
                 ref={inputRef}
@@ -855,14 +996,14 @@ export default function GroupsPage() {
                 className="w-full px-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-500"
               />
             </div>
-            
+
             <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className="p-2 rounded-full hover:bg-gray-100"
             >
               <Smile className="w-5 h-5 text-gray-600" />
             </button>
-            
+
             {newMessage.trim() ? (
               <button
                 onClick={sendMessage}
@@ -871,11 +1012,30 @@ export default function GroupsPage() {
                 <Send className="w-5 h-5" />
               </button>
             ) : (
-              <button className="p-2 rounded-full hover:bg-gray-100">
-                <Mic className="w-5 h-5 text-gray-600" />
+              <button
+                onClick={handleMicPress}
+                className={`p-2 rounded-full hover:bg-gray-100 ${isRecording ? 'bg-red-100' : ''}`}
+              >
+                <Mic className={`w-5 h-5 ${isRecording ? 'text-red-600' : 'text-gray-600'}`} />
               </button>
             )}
           </div>
+
+          {/* Emoji Picker */}
+          {showEmojiPicker && (
+            <div className="absolute bottom-16 right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-4 grid grid-cols-8 gap-2 max-w-xs">
+              {['😀', '😂', '😍', '🥰', '😎', '🤔', '😢', '😭', '😡', '👍', '👎', '👏', '🙏', '❤️', '🔥', '⭐', '✨', '🎉', '🎊', '🎈', '🎁', '🎵', '🎶', '🎤'].map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiClick(emoji)}
+                  className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+
 
           {/* Attachment Menu */}
           {showAttachmentMenu && (
