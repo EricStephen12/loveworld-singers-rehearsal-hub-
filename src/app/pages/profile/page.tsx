@@ -8,7 +8,6 @@ import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
 import { useAuth } from '@/contexts/AuthContext'
-import { useUltraFastProfile } from '@/hooks/useUltraFastProfile'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
 import { ultraFastUploadProfileImage, ultraFastDeleteImage } from '@/utils/ultraFastImageUpload'
 import { validateImageFile } from '@/utils/imageUpload'
@@ -50,8 +49,7 @@ export default function ProfilePage() {
   const [isClient, setIsClient] = useState(false)
   const [qrGenerated, setQrGenerated] = useState(false)
   const router = useRouter()
-  const { user, signOut } = useAuth()
-  const { profile: currentProfile, loading: isLoading, updateProfile, refreshProfile } = useUltraFastProfile()
+  const { user, signOut, profile: currentProfile, isLoading, refreshProfile } = useAuth()
 
   // Set client flag to prevent hydration issues
   useEffect(() => {
@@ -65,10 +63,30 @@ export default function ProfilePage() {
     }
   }, [user?.id])
 
-  // Keep existing profile completion logic from useAuth
-  const { isProfileComplete } = useAuth()
+  // Profile completion logic
+  const isProfileComplete = currentProfile?.profile_completed || false
   
-  // Force Turbopack rebuild for ultra-fast profile loading
+  // Simple profile update function
+  const updateProfile = async (updates: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No authenticated user')
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id)
+
+      if (error) throw error
+      
+      // Refresh profile data
+      await refreshProfile()
+      return true
+    } catch (error) {
+      console.error('Profile update error:', error)
+      return false
+    }
+  }
 
   // Use default profile data if none is loaded yet - fixed duplicate declaration
   const profileData = currentProfile || {
@@ -507,7 +525,7 @@ export default function ProfilePage() {
                   )}
                 </>
               ) : (
-                <User className="w-12 h-12 text-white" />
+              <User className="w-12 h-12 text-white" />
               )}
             </div>
             <button 

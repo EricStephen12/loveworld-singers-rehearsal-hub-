@@ -310,6 +310,7 @@ export async function createPage(pageData: Omit<PraiseNight, 'songs'>): Promise<
 
 export async function updatePage(id: number, pageData: Partial<Omit<PraiseNight, 'songs'>>): Promise<boolean> {
   try {
+    console.log('🔄 updatePage called with:', { id, pageData });
     const updateData: any = {};
     
     if (pageData.name) updateData.name = pageData.name;
@@ -324,10 +325,14 @@ export async function updatePage(id: number, pageData: Partial<Omit<PraiseNight,
       updateData.countdownseconds = pageData.countdown.seconds;
     }
 
+    console.log('📝 Update data prepared:', updateData);
+
     const { error } = await supabase
       .from('pages')
       .update(updateData)
       .eq('id', id);
+      
+    console.log('📊 Supabase update result:', { error });
 
     if (error) {
       // Check if it's the updated_at field error
@@ -923,6 +928,7 @@ export async function getSongsByCategory(categoryName: string): Promise<PraiseNi
       ]);
 
       praiseNightSongs.push({
+        id: song.id,
         title: song.title,
         status: song.status,
         category: song.category,

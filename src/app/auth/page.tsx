@@ -53,19 +53,11 @@ export default function AuthPage() {
         router.push('/profile-completion')
       } else {
         // Sign in with Supabase
-        await AuthService.signIn(formData.email, formData.password)
-        
-        // Check if profile is complete
-        const isComplete = await AuthService.isProfileComplete()
-        console.log('Profile complete status:', isComplete)
-        
-        if (isComplete) {
-          console.log('Redirecting to /home')
-          router.push('/home')
-        } else {
-          console.log('Redirecting to /profile-completion')
-          router.push('/profile-completion')
-        }
+        const result = await AuthService.signIn(formData.email, formData.password)
+        console.log('Sign in successful:', result)
+
+        // Force a page reload to ensure clean state
+        window.location.href = '/home'
       }
     } catch (error: any) {
       console.error('Auth error:', error)

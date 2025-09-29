@@ -108,7 +108,7 @@ export function useHomeGlobalSearch() {
       { title: 'Media', url: '#', icon: 'Play' },
       { title: 'Ministry Calendar', url: '#', icon: 'Calendar' },
       { title: 'Analytics', url: '#', icon: 'BarChart3' },
-      { title: 'Admin Support', url: '#', icon: 'HelpCircle' }
+      { title: 'Customer Support', url: '/pages/support', icon: 'HelpCircle' }
     ];
 
     features.forEach(feature => {

@@ -6,16 +6,17 @@ import { useRouter } from 'next/navigation'
 import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import { getMenuItems } from '@/config/menuItems'
 import { useHomeGlobalSearch, HomeSearchResult } from '@/hooks/useHomeGlobalSearch'
+import { useAuth } from '@/contexts/AuthContext'
+import AuthGuard from '@/components/AuthGuard'
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter()
+  const { signOut } = useAuth()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
   const [openAbout, setOpenAbout] = useState<number | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   // Use global search hook for comprehensive search
@@ -48,27 +49,7 @@ export default function HomePage() {
     return () => clearInterval(interval)
   }, [carouselImages.length])
 
-  useEffect(() => {
-    // Check if user is authenticated
-    const checkAuth = () => {
-      const authStatus = localStorage.getItem('isAuthenticated')
-      const hasCompletedProfile = localStorage.getItem('hasCompletedProfile')
-      
-      if (authStatus === 'true' && hasCompletedProfile === 'true') {
-        setIsAuthenticated(true)
-      } else {
-        // Redirect to appropriate step
-        if (authStatus !== 'true') {
-          router.push('/auth')
-        } else if (hasCompletedProfile !== 'true') {
-          router.push('/profile-completion')
-        }
-      }
-      setIsLoading(false)
-    }
 
-    checkAuth()
-  }, [router])
 
   const toggleDrawer = () => {
     setIsDrawerOpen(!isDrawerOpen)
@@ -91,14 +72,19 @@ export default function HomePage() {
     }
   }, [isSearchOpen])
 
-  const handleLogout = () => {
-    // Clear localStorage
-    localStorage.removeItem('isAuthenticated')
-    localStorage.removeItem('hasCompletedProfile')
-    localStorage.removeItem('hasSubscribed')
-    
-    // Redirect to auth screen
-    router.push('/auth')
+  const handleLogout = async () => {
+    try {
+      await signOut()
+      // Clear localStorage
+      localStorage.removeItem('isAuthenticated')
+      localStorage.removeItem('hasCompletedProfile')
+      localStorage.removeItem('hasSubscribed')
+
+      // Redirect to auth screen
+      router.push('/auth')
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   // Helper function to get icon component by name
@@ -172,7 +158,7 @@ export default function HomePage() {
     {
       icon: HelpCircle,
       title: 'Admin Support',
-      href: '#',
+      href: '/pages/support',
       badge: null,
     },
   ]
@@ -195,17 +181,9 @@ export default function HomePage() {
     }
   ]
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    )
-  }
 
-  if (!isAuthenticated) {
-    return null // Will redirect
-  }
+
+
 
   return (
     <div className="min-h-screen">
@@ -539,5 +517,13 @@ export default function HomePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <AuthGuard requireAuth={true} requireCompleteProfile={true}>
+      <HomePageContent />
+    </AuthGuard>
   )
 }

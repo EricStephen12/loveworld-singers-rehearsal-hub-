@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import { usePageSearch, PageSearchResult } from "@/hooks/usePageSearch";
 
 function PraiseNightPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const categoryFilter = searchParams.get('category');
   const pageParam = searchParams.get('page');
   const songParam = searchParams.get('song');
@@ -140,10 +141,16 @@ function PraiseNightPageContent() {
     };
   }, []);
 
-  // Map selected Praise Night to its e-card image (fallback to a default)
+  // Use the banner image from the database, fallback to default
   const ecardSrc = useMemo(() => {
     if (!currentPraiseNight) return "/Ecards/1000876785.png";
-
+    
+    // Use the bannerImage from the database if available
+    if (currentPraiseNight.bannerImage) {
+      return currentPraiseNight.bannerImage;
+    }
+    
+    // Fallback to hardcoded images for specific pages
     switch (currentPraiseNight.id) {
       case 16:
         return "/Ecards/1000876785.png";
@@ -521,7 +528,7 @@ function PraiseNightPageContent() {
                 >
                   <Menu className="w-5 h-5 text-gray-600" />
                 </button>
-                {categoryFilter !== 'archive' && (
+                {categoryFilter !== 'archive' && !pageParam && (
                   <button
                     aria-label="Switch Praise Night"
                     onClick={() => setShowDropdown(!showDropdown)}
@@ -734,8 +741,8 @@ function PraiseNightPageContent() {
         )}
       </div>
 
-      {/* Header-level Praise Night Dropdown - Hide for archive */}
-      {showDropdown && categoryFilter !== 'archive' && (
+      {/* Header-level Praise Night Dropdown - Hide for archive and when viewing specific page */}
+      {showDropdown && categoryFilter !== 'archive' && !pageParam && (
         <>
           <div
             className="fixed inset-0 bg-black/20 z-[75]"
@@ -793,8 +800,11 @@ function PraiseNightPageContent() {
                   <button
                     key={praiseNight.id}
                     onClick={() => {
-                      setCurrentPraiseNightState(praiseNight);
-                      // Real-time data automatically includes all songs
+                      // Navigate to praise-night page with this specific page's data
+                      const url = new URL(window.location.href);
+                      url.searchParams.set('page', praiseNight.id.toString());
+                      url.searchParams.delete('category'); // Remove archive filter to show full page
+                      window.location.href = url.toString();
                     }}
                     className={`group relative bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${currentPraiseNight?.id === praiseNight.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
                       }`}
@@ -883,9 +893,12 @@ function PraiseNightPageContent() {
                   <span className="text-xs sm:text-sm font-medium">Songs Schedule</span>
                 </button>
 
-                <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100">
-                    <Mic className="w-3.5 h-3.5 text-rose-600" />
+                <button
+                  onClick={() => router.push('/pages/audio-lab')}
+                  className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start"
+                >
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100">
+                    <Mic className="w-3.5 h-3.5 text-purple-600" />
                   </span>
                   <span className="text-xs sm:text-sm font-medium">Audio Lab</span>
                 </button>
@@ -912,9 +925,12 @@ function PraiseNightPageContent() {
                   <span className="text-xs sm:text-sm font-medium">Songs Schedule</span>
                 </button>
 
-                <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100">
-                    <Mic className="w-3.5 h-3.5 text-rose-600" />
+                <button
+                  onClick={() => router.push('/pages/audio-lab')}
+                  className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start"
+                >
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100">
+                    <Mic className="w-3.5 h-3.5 text-purple-600" />
                   </span>
                   <span className="text-xs sm:text-sm font-medium">Audio Lab</span>
                 </button>
@@ -1046,8 +1062,8 @@ function PraiseNightPageContent() {
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category */}
-      {filteredPraiseNights.length > 0 && (
+      {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category or when viewing from archive */}
+      {filteredPraiseNights.length > 0 && !pageParam && (
         <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
             <div className="w-full flex items-center px-4 sm:px-6 py-4 gap-2">
               {/* Category buttons with text - Take up most of the space */}

@@ -29,7 +29,8 @@ import {
   Save,
   ExternalLink,
   RefreshCw,
-  Users
+  Users,
+  Send
 } from "lucide-react";
 import { PraiseNightSong, Comment, PraiseNight, Category } from '../../types/supabase';
 import { useRealtimeData } from '../../hooks/useRealtimeData';
@@ -38,8 +39,10 @@ import { supabase } from '@/lib/supabase';
 import { clearAllCaches } from '@/utils/cacheBuster';
 import { versionManager } from '@/utils/versionManager';
 import { smartCache } from '@/utils/smartCache';
+import { uploadBannerImage } from '@/utils/imageUpload';
 import EditSongModal from '../../components/EditSongModal';
 import MediaManager from '../../components/MediaManager';
+import SimpleAdminSupport from '../../components/SimpleAdminSupport';
 import { ToastContainer, Toast } from '../../components/Toast';
 
 export default function AdminPage() {
@@ -135,6 +138,7 @@ export default function AdminPage() {
   const [newPageCategoryDescription, setNewPageCategoryDescription] = useState('');
   const [newPageCategory, setNewPageCategory] = useState<'unassigned' | 'pre-rehearsal' | 'ongoing' | 'archive'>('unassigned');
   const [newPageBannerImage, setNewPageBannerImage] = useState('');
+  const [newPageBannerFile, setNewPageBannerFile] = useState<File | null>(null);
 
   // Song editing state
   const [showSongModal, setShowSongModal] = useState(false);
@@ -148,6 +152,13 @@ export default function AdminPage() {
   const [userGroups, setUserGroups] = useState<{[key: string]: string[]}>({});
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userSearchTerm, setUserSearchTerm] = useState('');
+
+  // Support messages state
+  const [supportMessages, setSupportMessages] = useState<any[]>([]);
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replying, setReplying] = useState(false);
 
   // Toast helper functions
   const addToast = (toast: Omit<Toast, 'id'>) => {
@@ -676,13 +687,48 @@ export default function AdminPage() {
   const handleAddPage = async () => {
     if (newPageName.trim()) {
       try {
+        let bannerImageUrl = '';
+        
+        // Upload banner image to Supabase if file is selected (non-blocking)
+        if (newPageBannerFile) {
+          console.log('🚀 Starting fast banner image upload for new page...');
+          
+          // Start upload in background (non-blocking)
+          uploadBannerImage(newPageBannerFile, 0) // 0 is temporary, will be updated after page creation
+            .then((uploadResult) => {
+              if (uploadResult.success) {
+                console.log('✅ Banner image uploaded successfully:', uploadResult.url);
+                addToast({
+                  type: 'success',
+                  message: 'Banner image uploaded successfully!'
+                });
+              } else {
+                console.error('❌ Banner image upload failed:', uploadResult.error);
+                addToast({
+                  type: 'error',
+                  message: `Banner image upload failed: ${uploadResult.error}`
+                });
+              }
+            })
+            .catch((error) => {
+              console.error('❌ Banner upload error:', error);
+              addToast({
+                type: 'error',
+                message: 'Banner image upload failed'
+              });
+            });
+          
+          // Continue with page creation immediately (don't wait for image upload)
+          console.log('⚡ Continuing with page creation while image uploads in background...');
+        }
+        
         const newPage = await createPage({
           id: 0, // Will be set by database
           name: newPageName.trim(),
           date: newPageDate || 'TBD',
           location: newPageLocation || 'TBD',
           category: newPageCategory,
-          bannerImage: newPageBannerImage,
+          bannerImage: bannerImageUrl,
           countdown: {
             days: newPageDays,
             hours: newPageHours,
@@ -707,6 +753,7 @@ export default function AdminPage() {
           setNewPageDescription('');
           setNewPageCategory('unassigned');
           setNewPageBannerImage('');
+          setNewPageBannerFile(null);
           setNewPageDays(0);
           setNewPageHours(0);
           setNewPageMinutes(0);
@@ -726,6 +773,7 @@ export default function AdminPage() {
   };
 
   const handleEditPage = (page: PraiseNight) => {
+    console.log('✏️ handleEditPage called with page:', page);
     setEditingPage(page);
     setNewPageName(page.name);
     setNewPageDate(page.date);
@@ -738,17 +786,61 @@ export default function AdminPage() {
     setNewPageMinutes(page.countdown.minutes);
     setNewPageSeconds(page.countdown.seconds);
     setShowPageModal(true);
+    console.log('✅ Edit page modal opened, editingPage set to:', page);
   };
 
   const handleUpdatePage = async () => {
+    console.log('🔄 handleUpdatePage called');
+    console.log('editingPage:', editingPage);
+    console.log('newPageName:', newPageName);
+    
     if (editingPage && newPageName.trim()) {
       try {
-        const success = await updatePage(editingPage.id, {
+        console.log('🚀 Starting page update...');
+        let bannerImageUrl = newPageBannerImage; // Keep existing image by default
+        
+        // Upload new banner image to Supabase if file is selected (non-blocking)
+        if (newPageBannerFile) {
+          console.log('🚀 Starting fast banner image upload...');
+          
+          // Start upload in background (non-blocking)
+          uploadBannerImage(newPageBannerFile, editingPage.id)
+            .then((uploadResult) => {
+              if (uploadResult.success) {
+                console.log('✅ Banner image uploaded successfully:', uploadResult.url);
+                // Update the page with the new banner URL
+                updatePage(editingPage.id, { bannerImage: uploadResult.url });
+                addToast({
+                  type: 'success',
+                  message: 'Banner image uploaded successfully!'
+                });
+              } else {
+                console.error('❌ Banner image upload failed:', uploadResult.error);
+                addToast({
+                  type: 'error',
+                  message: `Banner image upload failed: ${uploadResult.error}`
+                });
+              }
+            })
+            .catch((error) => {
+              console.error('❌ Banner upload error:', error);
+              addToast({
+                type: 'error',
+                message: 'Banner image upload failed'
+              });
+            });
+          
+          // Continue with page update immediately (don't wait for image upload)
+          console.log('⚡ Continuing with page update while image uploads in background...');
+        }
+        
+        console.log('📝 Updating page with data:', {
+          id: editingPage.id,
           name: newPageName.trim(),
           date: newPageDate,
           location: newPageLocation,
           category: newPageCategory,
-          bannerImage: newPageBannerImage,
+          bannerImage: bannerImageUrl,
           countdown: {
             days: newPageDays,
             hours: newPageHours,
@@ -756,6 +848,22 @@ export default function AdminPage() {
             seconds: newPageSeconds
           }
         });
+        
+        const success = await updatePage(editingPage.id, {
+          name: newPageName.trim(),
+          date: newPageDate,
+          location: newPageLocation,
+          category: newPageCategory,
+          bannerImage: bannerImageUrl,
+          countdown: {
+            days: newPageDays,
+            hours: newPageHours,
+            minutes: newPageMinutes,
+            seconds: newPageSeconds
+          }
+        });
+        
+        console.log('✅ Page update result:', success);
 
         if (success) {
           // Refresh data from Supabase
@@ -774,6 +882,7 @@ export default function AdminPage() {
           setNewPageDescription('');
           setNewPageCategory('unassigned');
           setNewPageBannerImage('');
+          setNewPageBannerFile(null);
           setNewPageDays(0);
           setNewPageHours(0);
           setNewPageMinutes(0);
@@ -965,6 +1074,119 @@ export default function AdminPage() {
     }
   };
 
+  // Support message functions
+  const loadSupportMessages = async () => {
+    setSupportLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('support_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSupportMessages(data || []);
+    } catch (error) {
+      console.error('Error loading support messages:', error);
+      addToast({
+        type: 'error',
+        message: 'Failed to load support messages'
+      });
+    } finally {
+      setSupportLoading(false);
+    }
+  };
+
+  const handleReplyToMessage = async (messageId: string) => {
+    if (!replyText.trim()) return;
+    
+    setReplying(true);
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .update({
+          admin_response: replyText.trim(),
+          admin_responded_at: new Date().toISOString(),
+          status: 'resolved'
+        })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      addToast({
+        type: 'success',
+        message: 'Reply sent successfully'
+      });
+
+      setReplyText('');
+      setSelectedMessage(null);
+      await loadSupportMessages();
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      addToast({
+        type: 'error',
+        message: 'Failed to send reply'
+      });
+    } finally {
+      setReplying(false);
+    }
+  };
+
+  const updateMessageStatus = async (messageId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .update({ status })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      addToast({
+        type: 'success',
+        message: `Message status updated to ${status}`
+      });
+
+      await loadSupportMessages();
+    } catch (error) {
+      console.error('Error updating message status:', error);
+      addToast({
+        type: 'error',
+        message: 'Failed to update message status'
+      });
+    }
+  };
+
+  // Load support messages when Support section is active
+  useEffect(() => {
+    if (activeSection === 'Support') {
+      loadSupportMessages();
+    }
+  }, [activeSection]);
+
+  // Set up real-time subscription for support messages
+  useEffect(() => {
+    if (activeSection !== 'Support') return;
+
+    const channel = supabase
+      .channel('admin_support_messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'support_messages'
+        },
+        (payload) => {
+          console.log('Support message updated:', payload);
+          loadSupportMessages(); // Reload messages when there's an update
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeSection]);
+
   // Load users when Users section is active (ALWAYS refresh)
   useEffect(() => {
     if (activeSection === 'Users') {
@@ -979,6 +1201,7 @@ export default function AdminPage() {
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
     { icon: Music, label: 'Media', active: activeSection === 'Media' },
     { icon: Users, label: 'Users', active: activeSection === 'Users' },
+    { icon: MessageCircle, label: 'Support', active: activeSection === 'Support' },
   ];
 
   // Show loading state
@@ -1123,6 +1346,7 @@ export default function AdminPage() {
                 else if (item.label === 'Categories') setActiveSection('Categories');
                 else if (item.label === 'Media') setActiveSection('Media');
                 else if (item.label === 'Users') setActiveSection('Users');
+                else if (item.label === 'Support') setActiveSection('Support');
                 // Auto-close sidebar on mobile after clicking
                 setSidebarCollapsed(true);
               }}
@@ -1220,6 +1444,7 @@ export default function AdminPage() {
              activeSection === 'Categories' ? 'Categories' : 
              activeSection === 'Media' ? 'Media Library' :
              activeSection === 'Users' ? 'User Management' :
+             activeSection === 'Support' ? 'Support Messages' :
              activeSection === 'Pages' ? 'Pages' : 
              'Admin Dashboard'}
           </h1>
@@ -1508,6 +1733,22 @@ export default function AdminPage() {
             </div>
           )}
 
+          {activeSection === 'Support' && (
+            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">Support Messages</h2>
+                  <p className="text-slate-600 mt-1">
+                    Manage customer support messages and responses
+                  </p>
+                </div>
+              </div>
+
+              {/* Support Messages List */}
+              <SimpleAdminSupport />
+            </div>
+          )}
 
           {activeSection === 'Pages' && (
             <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
@@ -2083,6 +2324,7 @@ export default function AdminPage() {
                   setNewPageDescription('');
                   setNewPageCategory('unassigned');
                   setNewPageBannerImage('');
+                  setNewPageBannerFile(null);
                   setNewPageDays(0);
                   setNewPageHours(0);
                   setNewPageMinutes(0);
@@ -2162,6 +2404,8 @@ export default function AdminPage() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
+                      // Store the actual file for upload
+                      setNewPageBannerFile(file);
                       // Create a preview URL for the uploaded image
                       const previewUrl = URL.createObjectURL(file);
                       setNewPageBannerImage(previewUrl);
@@ -2272,7 +2516,17 @@ export default function AdminPage() {
             {/* Footer */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-4">
               <button
-                onClick={editingPage ? handleUpdatePage : handleAddPage}
+                onClick={() => {
+                  console.log('🔘 Update/Add button clicked');
+                  console.log('editingPage:', editingPage);
+                  if (editingPage) {
+                    console.log('🔄 Calling handleUpdatePage');
+                    handleUpdatePage();
+                  } else {
+                    console.log('➕ Calling handleAddPage');
+                    handleAddPage();
+                  }
+                }}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-colors font-medium"
               >
                 <Save className="w-4 h-4" />
@@ -2288,6 +2542,7 @@ export default function AdminPage() {
                   setNewPageDescription('');
                   setNewPageCategory('unassigned');
                   setNewPageBannerImage('');
+                  setNewPageBannerFile(null);
                   setNewPageDays(0);
                   setNewPageHours(0);
                   setNewPageMinutes(0);
@@ -2305,7 +2560,99 @@ export default function AdminPage() {
         </div>
       )}
 
-      
+      {/* Support Message Reply Modal */}
+      {selectedMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Reply to Support Message</h3>
+                <p className="text-sm text-gray-600 mt-1">From: {selectedMessage.user_name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedMessage(null);
+                  setReplyText('');
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto">
+              <div className="mb-6">
+                <h4 className="font-medium text-gray-900 mb-2">Original Message:</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="font-medium text-gray-900 mb-2">{selectedMessage.subject}</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedMessage.message}</p>
+                  <div className="flex gap-4 mt-3 text-xs text-gray-500">
+                    <span>Category: {selectedMessage.category}</span>
+                    <span>Priority: {selectedMessage.priority}</span>
+                    <span>Date: {new Date(selectedMessage.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedMessage.admin_response && (
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-900 mb-2">Previous Response:</h4>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-sm text-green-700 whitespace-pre-wrap">{selectedMessage.admin_response}</p>
+                    <p className="text-xs text-green-600 mt-2">
+                      Sent on {new Date(selectedMessage.admin_responded_at || '').toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {selectedMessage.admin_response ? 'Update Response:' : 'Your Response:'}
+                </label>
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Type your response here..."
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setSelectedMessage(null);
+                  setReplyText('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReplyToMessage(selectedMessage.id)}
+                disabled={replying || !replyText.trim()}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {replying ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Send Reply
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {/* Song Edit Modal */}
       <EditSongModal
         isOpen={showSongModal}

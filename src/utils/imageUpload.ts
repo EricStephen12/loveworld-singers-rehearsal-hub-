@@ -138,3 +138,150 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
   
   return { valid: true };
 }
+
+// Ultra-fast banner image upload function for admin pages
+export async function uploadBannerImage(
+  file: File,
+  pageId: number
+): Promise<UploadResult> {
+  try {
+    console.log('⚡ Starting ULTRA-FAST banner image upload...');
+    console.log('📁 File details:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+    console.log('📄 Page ID:', pageId);
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      console.log('❌ Invalid file type:', file.type);
+      return {
+        success: false,
+        error: 'Invalid file type. Please upload a JPEG, PNG, or WebP image.'
+      };
+    }
+
+    // Validate file size (max 5MB for faster uploads)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      console.log('❌ File too large:', file.size);
+      return {
+        success: false,
+        error: 'File size too large. Please upload an image smaller than 5MB.'
+      };
+    }
+
+    // Compress image for faster upload
+    const compressedFile = await compressImage(file);
+    console.log('🗜️ Image compressed:', {
+      original: file.size,
+      compressed: compressedFile.size,
+      reduction: `${Math.round((1 - compressedFile.size / file.size) * 100)}%`
+    });
+
+    // Create unique filename
+    const fileExt = 'webp'; // Use WebP for better compression
+    const fileName = `page-${pageId}-banner-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    const filePath = `banner-images/${fileName}`;
+
+    console.log('📤 Uploading compressed image to path:', filePath);
+
+    // Upload with timeout for faster failure detection
+    const uploadPromise = supabase.storage
+      .from('media-files')
+      .upload(filePath, compressedFile, {
+        cacheControl: '31536000', // 1 year cache
+        upsert: true, // Overwrite if exists
+        contentType: 'image/webp'
+      });
+
+    // Add 10 second timeout
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Upload timeout after 10 seconds')), 10000)
+    );
+
+    const { data, error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any;
+
+    if (uploadError) {
+      console.error('❌ Supabase upload error:', uploadError);
+      return {
+        success: false,
+        error: `Upload failed: ${uploadError.message}`
+      };
+    }
+
+    console.log('✅ File uploaded to Supabase storage successfully');
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('media-files')
+      .getPublicUrl(filePath);
+
+    const publicUrl = urlData.publicUrl;
+    console.log('⚡ ULTRA-FAST banner image uploaded successfully:', publicUrl);
+
+    return {
+      success: true,
+      url: publicUrl
+    };
+
+  } catch (error: any) {
+    console.error('❌ Unexpected error during banner upload:', error);
+    return {
+      success: false,
+      error: error.message || 'An unexpected error occurred during upload.'
+    };
+  }
+}
+
+// Image compression function for faster uploads
+async function compressImage(file: File, quality: number = 0.8): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      // Calculate new dimensions (max 1920px width)
+      const maxWidth = 1920;
+      const maxHeight = 1080;
+      let { width, height } = img;
+
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      if (height > maxHeight) {
+        width = (width * maxHeight) / height;
+        height = maxHeight;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      // Draw and compress
+      ctx?.drawImage(img, 0, 0, width, height);
+      
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const compressedFile = new File([blob], file.name, {
+              type: 'image/webp',
+              lastModified: Date.now()
+            });
+            resolve(compressedFile);
+          } else {
+            reject(new Error('Image compression failed'));
+          }
+        },
+        'image/webp',
+        quality
+      );
+    };
+
+    img.onerror = () => reject(new Error('Image loading failed'));
+    img.src = URL.createObjectURL(file);
+  });
+}

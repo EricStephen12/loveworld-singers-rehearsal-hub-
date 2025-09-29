@@ -8,10 +8,10 @@ export default function SplashPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check authentication status using Supabase session
+    // Quick authentication check - no database queries on splash screen
     const checkAuthAndRedirect = async () => {
       try {
-        // Get current session from Supabase
+        // Get current session from Supabase (fast, no database query)
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
@@ -21,20 +21,8 @@ export default function SplashPage() {
         }
 
         if (session?.user) {
-          // User is authenticated, check if profile is complete
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('profile_completed')
-            .eq('id', session.user.id)
-            .single()
-
-          if (profile?.profile_completed) {
-            // User is fully authenticated and profile is complete
-            router.push('/home')
-          } else {
-            // User is authenticated but profile is incomplete
-            router.push('/profile-completion')
-          }
+          // User is authenticated - go to home, let home page handle profile check
+          router.push('/home')
         } else {
           // No session, redirect to auth
           router.push('/auth')
@@ -45,10 +33,8 @@ export default function SplashPage() {
       }
     }
 
-    // Show splash for 2 seconds then redirect
-    const timer = setTimeout(checkAuthAndRedirect, 2000)
-
-    return () => clearTimeout(timer)
+    // Check auth immediately for faster login
+    checkAuthAndRedirect()
   }, [router])
 
   return (

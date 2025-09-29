@@ -1,4 +1,4 @@
-import { Home, User, Bell, Users, Music, Calendar, Play, BarChart3, HelpCircle, LogOut } from 'lucide-react'
+import { Home, User, Bell, Users, Music, Calendar, Play, BarChart3, HelpCircle, LogOut, Headphones } from 'lucide-react'
 
 export type MenuItem = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
@@ -67,7 +67,7 @@ export const getMenuItems = (onLogout?: () => void): MenuItem[] => [
   {
     icon: HelpCircle,
     title: 'Admin Support',
-    href: '#',
+    href: '/pages/support',
     badge: null,
   },
   {
