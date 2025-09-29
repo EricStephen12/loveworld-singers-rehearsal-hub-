@@ -8,6 +8,7 @@ export default function SplashPage() {
   const router = useRouter()
   const { user, isLoading } = useAuth()
   const [hasTimedOut, setHasTimedOut] = useState(false)
+  const [hasRedirected, setHasRedirected] = useState(false)
 
   useEffect(() => {
     // Set a maximum timeout of 3 seconds for auth loading
@@ -20,11 +21,20 @@ export default function SplashPage() {
   }, [])
 
   useEffect(() => {
-    // Wait for auth to load OR timeout, then redirect
-    if (isLoading && !hasTimedOut) return
+    // Prevent multiple redirects
+    if (hasRedirected) return
 
-    // Add small delay to show splash screen briefly (500ms minimum)
+    // Wait for auth to load OR timeout, then redirect
+    if (isLoading && !hasTimedOut) {
+      console.log('Waiting for auth to load...')
+      return
+    }
+
+    console.log('Auth loaded. User:', user ? 'logged in' : 'not logged in')
+
+    // Add small delay to show splash screen briefly (1 second minimum)
     const timer = setTimeout(() => {
+      setHasRedirected(true)
       if (!user) {
         // No user - go to auth
         console.log('Redirecting to auth page')
@@ -34,13 +44,13 @@ export default function SplashPage() {
         console.log('Redirecting to home page')
         router.push('/home')
       }
-    }, 500)
+    }, 1000)
 
     return () => clearTimeout(timer)
-  }, [user, isLoading, hasTimedOut, router])
+  }, [user, isLoading, hasTimedOut, hasRedirected, router])
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex flex-col items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center">
       {/* Background Pattern Overlay */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute top-10 left-10 w-32 h-32 bg-gray-600 rounded-full blur-3xl"></div>
@@ -49,11 +59,11 @@ export default function SplashPage() {
       </div>
 
       {/* Logo with bounce animation */}
-      <div className="relative z-10 flex flex-col items-center">
+      <div className="relative z-10">
         <img
           src="/logo.png"
           alt="LoveWorld Singers Rehearsal Hub"
-          className="object-contain animate-bounce mb-8"
+          className="object-contain animate-bounce"
           style={{
             width: '120px',
             height: '120px',
@@ -62,16 +72,6 @@ export default function SplashPage() {
             animationTimingFunction: 'ease-in-out'
           }}
         />
-
-        {/* Loading spinner */}
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-          <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-          <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-        </div>
-
-        {/* Loading text */}
-        <p className="text-white text-sm mt-4 opacity-80">Loading...</p>
       </div>
     </div>
   )
