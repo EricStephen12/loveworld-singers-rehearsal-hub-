@@ -31,13 +31,13 @@ export default function ProfilePage() {
   })
   const [selectedGroup, setSelectedGroup] = useState<string>('')
   const [availableGroups] = useState([
-    'yourloveworldsingers',
-    'pmc',
-    '24 worship',
-    'teens voice',
-    'orchestra',
-    'international representative',
-    'national representative'
+    'YourLoveWorldSingers',
+    'PMC',
+    '24 Worship',
+    'Teens Voice',
+    'Orchestra',
+    'International Representative',
+    'National Representative'
   ])
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -535,15 +535,15 @@ export default function ProfilePage() {
               <User className="w-12 h-12 text-white" />
               )}
             </div>
-            <button 
+            <button
               onClick={() => {
                 setIsEditing(!isEditing)
                 setSaveMessage('')
               }}
-              className="absolute -bottom-1 -right-1 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition-colors focus:outline-none focus:ring-0 focus:border-0"
-              style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
+              className="absolute bottom-0 right-0 w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition-all hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              aria-label="Edit Profile"
             >
-              <Edit className="w-4 h-4 text-white" />
+              <Edit className="w-5 h-5 text-white" />
             </button>
           </div>
           
@@ -663,7 +663,7 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">First Name</label>
+                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">First Name</label>
                     <input
                       type="text"
                       value={editForm.firstName}
@@ -673,7 +673,7 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Middle Name</label>
+                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Middle Name</label>
                     <input
                       type="text"
                       value={editForm.middleName}
@@ -683,9 +683,9 @@ export default function ProfilePage() {
                     />
                   </div>
                 </div>
-                
+
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Last Name</label>
+                  <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Last Name</label>
                   <input
                     type="text"
                     value={editForm.lastName}
@@ -697,7 +697,7 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Gender</label>
+                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Gender</label>
                     <select
                       value={editForm.gender}
                       onChange={(e) => handleInputChange('gender', e.target.value)}
@@ -709,7 +709,7 @@ export default function ProfilePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Birthday</label>
+                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Birthday</label>
                     <input
                       type="date"
                       value={editForm.birthday}
@@ -718,9 +718,9 @@ export default function ProfilePage() {
                     />
                   </div>
                 </div>
-                
+
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Phone Number</label>
+                  <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Phone Number</label>
                   <input
                     type="tel"
                     value={editForm.phoneNumber}
@@ -732,7 +732,7 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Region</label>
+                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Region</label>
                     <input
                       type="text"
                       value={editForm.region}
@@ -742,7 +742,7 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Zone</label>
+                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Zone</label>
                     <input
                       type="text"
                       value={editForm.zone}
@@ -754,7 +754,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Church</label>
+                  <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Church</label>
                   <input
                     type="text"
                     value={editForm.church}
@@ -766,7 +766,7 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Designation</label>
+                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Designation</label>
                     <select
                       value={editForm.designation}
                       onChange={(e) => handleInputChange('designation', e.target.value)}
@@ -782,7 +782,7 @@ export default function ProfilePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Administration</label>
+                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Administration</label>
                     <select
                       value={editForm.administration}
                       onChange={(e) => handleInputChange('administration', e.target.value)}
@@ -799,23 +799,23 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Group</label>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
+                  <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Group</label>
+                  <div className="mt-2 grid grid-cols-1 gap-2">
                     {availableGroups.map((group) => (
-                      <label key={group} className="flex items-center space-x-2 cursor-pointer">
+                      <label key={group} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-300 transition-all">
                         <input
                           type="radio"
                           name="group"
                           value={group}
                           checked={selectedGroup === group}
                           onChange={() => handleGroupSelect(group)}
-                          className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 focus:ring-purple-500 focus:ring-2"
+                          className="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 focus:ring-purple-500 focus:ring-2"
                         />
-                        <span className="text-sm text-gray-700">{group}</span>
+                        <span className="text-sm text-gray-800 font-medium">{group}</span>
                       </label>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Select the group you belong to</p>
+                  <p className="text-xs text-gray-500 mt-2">Select the group you belong to</p>
                 </div>
                 
                 {saveMessage && (
@@ -934,10 +934,10 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Groups</label>
-              <div className="mt-1 flex flex-wrap gap-2">
+              <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Groups</label>
+              <div className="mt-2 flex flex-wrap gap-2">
                 {userProfile.groups.map((group, index) => (
-                  <span key={index} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                  <span key={index} className="bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-medium">
                     {group}
                   </span>
                 ))}
