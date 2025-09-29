@@ -2,60 +2,29 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-client'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function SplashPage() {
   const router = useRouter()
+  const { user, isLoading } = useAuth()
 
   useEffect(() => {
-    // Ultra-fast authentication check with localStorage first
-    const checkAuthAndRedirect = async () => {
-      try {
-        // INSTANT: Check localStorage first (0ms)
-        const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
-        const hasCompletedProfile = localStorage.getItem('hasCompletedProfile') === 'true'
-        
-        if (isAuthenticated && hasCompletedProfile) {
-          // User is fully authenticated - go directly to home (instant)
-          router.push('/home')
-          return
-        }
-        
-        if (isAuthenticated) {
-          // User needs profile completion
-          router.push('/profile-completion')
-          return
-        }
-        
-        // FAST: Get current session from Supabase (usually <100ms)
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('Session check error:', error)
-          router.push('/auth')
-          return
-        }
-
-        if (session?.user) {
-          // User is authenticated - go to home
-          router.push('/home')
-        } else {
-          // No session, redirect to auth
-          router.push('/auth')
-        }
-      } catch (error) {
-        console.error('Auth check error:', error)
-        router.push('/auth')
-      }
-    }
+    // Wait for auth to load, then redirect
+    if (isLoading) return
 
     // Add small delay to show splash screen briefly (500ms minimum)
     const timer = setTimeout(() => {
-      checkAuthAndRedirect()
+      if (!user) {
+        // No user - go to auth
+        router.push('/auth')
+      } else {
+        // User is authenticated - go to home (no profile check)
+        router.push('/home')
+      }
     }, 500)
-    
+
     return () => clearTimeout(timer)
-  }, [router])
+  }, [user, isLoading, router])
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center">

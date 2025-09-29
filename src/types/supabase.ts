@@ -31,6 +31,89 @@ export interface UserGroup {
   created_at: string;
 }
 
+// Chat System Types
+export interface Conversation {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  created_at: string;
+  updated_at: string;
+  // Populated fields
+  user1?: UserProfile;
+  user2?: UserProfile;
+  last_message?: Message;
+  unread_count?: number;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  message_type: 'text' | 'image' | 'voice' | 'file';
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  is_read: boolean;
+  read_at?: string;
+  created_at: string;
+  // Snapchat-like features
+  is_disappearing: boolean;
+  expires_at?: string;
+  is_screenshot_taken: boolean;
+  screenshot_taken_at?: string;
+  // Populated fields
+  sender?: UserProfile;
+  reactions?: MessageReaction[];
+}
+
+export interface MessageReaction {
+  id: string;
+  message_id: string;
+  user_id: string;
+  reaction_type: 'heart' | 'laugh' | 'wow' | 'sad' | 'angry' | 'thumbs_up';
+  created_at: string;
+  // Populated fields
+  user?: UserProfile;
+}
+
+export interface TypingIndicator {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  is_typing: boolean;
+  updated_at: string;
+  // Populated fields
+  user?: UserProfile;
+}
+
+export interface UserOnlineStatus {
+  id: string;
+  user_id: string;
+  is_online: boolean;
+  last_seen: string;
+  updated_at: string;
+  // Populated fields
+  user?: UserProfile;
+}
+
+// Chat UI Types
+export interface ChatContact {
+  user: UserProfile;
+  shared_groups: string[];
+  last_message?: Message;
+  unread_count: number;
+  is_online: boolean;
+  last_seen?: string;
+}
+
+export interface ChatMessage extends Message {
+  is_own: boolean;
+  show_avatar: boolean;
+  show_timestamp: boolean;
+  show_name: boolean;
+}
+
 export interface Attendance {
   id: string;
   user_id: string;

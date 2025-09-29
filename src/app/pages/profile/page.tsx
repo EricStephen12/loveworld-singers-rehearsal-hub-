@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, LogOut, Menu, X, Bell, Music, BarChart3, HelpCircle, Home, Play } from 'lucide-react'
+import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, LogOut, Menu, X, Bell, Music, BarChart3, HelpCircle, Home, Play, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -29,21 +29,22 @@ export default function ProfilePage() {
     designation: '',
     administration: ''
   })
-  const [userGroups, setUserGroups] = useState<string[]>([])
+  const [selectedGroup, setSelectedGroup] = useState<string>('')
   const [availableGroups] = useState([
-    'Main Choir',
-    'Praise Team', 
-    'Youth Choir',
-    'Children Choir',
-    'Instrumentalists',
-    'Backup Singers',
-    'Sound Team',
-    'Media Team'
+    'yourloveworldsingers',
+    'pmc',
+    '24 worship',
+    'teens voice',
+    'orchestra',
+    'international representative',
+    'national representative'
   ])
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [uploadProgress, setUploadProgress] = useState({ stage: '', progress: 0, message: '' })
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
   const [qrCode, setQrCode] = useState('')
   const [timeLeft, setTimeLeft] = useState(0) // Will be set when QR is generated
   const [isClient, setIsClient] = useState(false)
@@ -158,22 +159,16 @@ export default function ProfilePage() {
       }
       
       const groups = data?.map(item => item.group_name) || []
-      setUserGroups(groups)
-      console.log('📋 Loaded user groups:', groups)
+      setSelectedGroup(groups[0] || '')
+      console.log('📋 Loaded user group:', groups[0] || '')
     } catch (error) {
       console.error('Error loading user groups:', error)
     }
   }
 
-  // Handle group toggle
-  const handleGroupToggle = (groupName: string) => {
-    setUserGroups(prev => {
-      if (prev.includes(groupName)) {
-        return prev.filter(g => g !== groupName)
-      } else {
-        return [...prev, groupName]
-      }
-    })
+  // Handle group selection
+  const handleGroupSelect = (groupName: string) => {
+    setSelectedGroup(groupName)
   }
 
   // Save user groups
@@ -181,7 +176,7 @@ export default function ProfilePage() {
     if (!user?.id) return false
     
     try {
-      console.log('💾 Saving user groups:', userGroups)
+      console.log('💾 Saving user group:', selectedGroup)
       
       // First, delete all existing groups for this user
       const { error: deleteError } = await supabase
@@ -194,27 +189,25 @@ export default function ProfilePage() {
         return false
       }
       
-      // Then, insert new groups
-      if (userGroups.length > 0) {
-        const groupInserts = userGroups.map(groupName => ({
-          user_id: user.id,
-          group_name: groupName
-        }))
-        
+      // Then, insert new group
+      if (selectedGroup) {
         const { error: insertError } = await supabase
           .from('user_groups')
-          .insert(groupInserts)
+          .insert([{
+            user_id: user.id,
+            group_name: selectedGroup
+          }])
         
         if (insertError) {
-          console.error('Error inserting new groups:', insertError)
+          console.error('Error inserting new group:', insertError)
           return false
         }
       }
       
-      console.log('✅ User groups saved successfully')
+      console.log('✅ User group saved successfully')
       return true
     } catch (error) {
-      console.error('Error saving user groups:', error)
+      console.error('Error saving user group:', error)
       return false
     }
   }
@@ -292,6 +285,9 @@ export default function ProfilePage() {
 
   // Handle save profile
   const handleSaveProfile = async () => {
+    setIsSaving(true)
+    setSaveMessage('')
+    
     try {
       console.log('🚀 Starting profile save...')
       console.log('📝 Edit form data:', editForm)
@@ -300,27 +296,32 @@ export default function ProfilePage() {
       
       // Basic validation
       if (!editForm.firstName.trim()) {
-        alert('First name is required')
+        setSaveMessage('First name is required')
+        setTimeout(() => setSaveMessage(''), 2000)
         return
       }
       
       if (!editForm.lastName.trim()) {
-        alert('Last name is required')
+        setSaveMessage('Last name is required')
+        setTimeout(() => setSaveMessage(''), 2000)
         return
       }
       
       if (!editForm.phoneNumber.trim()) {
-        alert('Phone number is required')
+        setSaveMessage('Phone number is required')
+        setTimeout(() => setSaveMessage(''), 2000)
         return
       }
       
       if (!editForm.region.trim()) {
-        alert('Region is required')
+        setSaveMessage('Region is required')
+        setTimeout(() => setSaveMessage(''), 2000)
         return
       }
       
       if (!editForm.church.trim()) {
-        alert('Church is required')
+        setSaveMessage('Church is required')
+        setTimeout(() => setSaveMessage(''), 2000)
         return
       }
       
@@ -351,17 +352,23 @@ export default function ProfilePage() {
       console.log('✅ Groups update result:', groupsSuccess)
       
       if (profileSuccess && groupsSuccess) {
+        setSaveMessage('Profile and group updated successfully!')
         setIsEditing(false)
-        alert('Profile and groups updated successfully!')
+        setTimeout(() => setSaveMessage(''), 2000)
       } else if (profileSuccess) {
+        setSaveMessage('Profile updated successfully, but there was an issue with group.')
         setIsEditing(false)
-        alert('Profile updated successfully, but there was an issue with groups.')
+        setTimeout(() => setSaveMessage(''), 2000)
       } else {
-        alert('Failed to update profile. Please try again.')
+        setSaveMessage('Failed to update profile. Please try again.')
+        setTimeout(() => setSaveMessage(''), 2000)
       }
     } catch (error) {
       console.error('❌ Error saving profile:', error)
-      alert(`Error saving profile: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setSaveMessage(`Error saving profile: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setTimeout(() => setSaveMessage(''), 2000)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -430,7 +437,7 @@ export default function ProfilePage() {
     socialId: profileData.social_id || profileData.email || '',
     
     // Additional Profile Data (these would come from other tables in a real app)
-    groups: userGroups.length > 0 ? userGroups : ["No groups assigned"], // Use actual user groups
+    groups: selectedGroup ? [selectedGroup] : ["No group assigned"], // Use actual user group
     joinDate: profileData.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
     totalRehearsals: 0, // TODO: Calculate from attendance records
     attendanceRate: 0, // TODO: Calculate from attendance records
@@ -529,7 +536,10 @@ export default function ProfilePage() {
               )}
             </div>
             <button 
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => {
+                setIsEditing(!isEditing)
+                setSaveMessage('')
+              }}
               className="absolute -bottom-1 -right-1 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition-colors focus:outline-none focus:ring-0 focus:border-0"
               style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
             >
@@ -789,33 +799,51 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Groups</label>
+                  <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Group</label>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     {availableGroups.map((group) => (
                       <label key={group} className="flex items-center space-x-2 cursor-pointer">
                         <input
-                          type="checkbox"
-                          checked={userGroups.includes(group)}
-                          onChange={() => handleGroupToggle(group)}
-                          className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                          type="radio"
+                          name="group"
+                          value={group}
+                          checked={selectedGroup === group}
+                          onChange={() => handleGroupSelect(group)}
+                          className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 focus:ring-purple-500 focus:ring-2"
                         />
                         <span className="text-sm text-gray-700">{group}</span>
                       </label>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Select all groups you belong to</p>
+                  <p className="text-xs text-gray-500 mt-1">Select the group you belong to</p>
                 </div>
+                
+                {saveMessage && (
+                  <div className={`p-3 rounded-lg text-sm font-medium ${
+                    saveMessage.includes('successfully') 
+                      ? 'bg-green-100 text-green-800 border border-green-200' 
+                      : 'bg-red-100 text-red-800 border border-red-200'
+                  }`}>
+                    {saveMessage}
+                  </div>
+                )}
                 
                 <div className="flex gap-3">
                   <button
                     onClick={handleSaveProfile}
-                    className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                    disabled={isSaving}
+                    className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Save Changes
+                    {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                   </button>
                   <button
-                    onClick={() => setIsEditing(false)}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                    onClick={() => {
+                      setIsEditing(false)
+                      setSaveMessage('')
+                    }}
+                    disabled={isSaving}
+                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>

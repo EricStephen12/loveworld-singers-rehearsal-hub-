@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { AuthService } from '@/lib/auth-service'
@@ -23,6 +23,19 @@ export default function AuthPage() {
     password: '',
     confirmPassword: ''
   })
+
+  // Check for URL error parameters on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const urlError = urlParams.get('error')
+    const urlMessage = urlParams.get('message')
+    
+    if (urlError && urlMessage) {
+      setError(urlMessage)
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

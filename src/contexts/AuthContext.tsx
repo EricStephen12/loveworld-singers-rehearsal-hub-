@@ -74,15 +74,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user || null)
         
         if (session?.user) {
-          // Load profile in background (non-blocking)
-          AuthService.getCurrentUserProfile()
-            .then(userProfile => {
-              setProfile(userProfile)
-              console.log('Auth change profile load:', userProfile)
-            })
-            .catch(error => {
-              console.error('Auth change profile load error:', error)
-            })
+          // Load profile immediately
+          try {
+            const userProfile = await AuthService.getCurrentUserProfile()
+            setProfile(userProfile)
+            console.log('Auth change profile load:', userProfile)
+          } catch (error) {
+            console.error('Auth change profile load error:', error)
+            setProfile(null)
+          }
         } else {
           setProfile(null)
         }
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const isProfileComplete = profile?.profile_completed || false
+  const isProfileComplete = profile?.profile_completed === true
 
   return (
     <AuthContext.Provider

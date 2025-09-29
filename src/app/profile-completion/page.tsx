@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, User, MapPin, Users, ChevronDown, Loader2, Check, Sparkles, Heart, Music } from 'lucide-react'
 import { AuthService } from '@/lib/auth-service'
+import { supabase } from '@/lib/supabase-client'
 import type { ProfileCompletionData } from '@/types/supabase'
 
 export default function ProfileCompletionPage() {
@@ -24,6 +25,16 @@ export default function ProfileCompletionPage() {
     designation: '' as 'Soprano' | 'Alto' | 'Tenor' | 'Bass' | 'Instrumentalist' | 'Backup Singer' | '',
     administration: '' as 'Coordinator' | 'Assistant Coordinator' | 'Secretary' | 'Treasurer' | 'Member' | ''
   })
+  const [selectedGroup, setSelectedGroup] = useState<string>('')
+  const [availableGroups] = useState([
+    'yourloveworldsingers',
+    'pmc',
+    '24 worship',
+    'teens voice',
+    'orchestra',
+    'international representative',
+    'national representative'
+  ])
 
   // Pre-populate first name and last name from user metadata
   useEffect(() => {
@@ -52,8 +63,12 @@ export default function ProfileCompletionPage() {
     }))
   }
 
+  const handleGroupSelect = (groupName: string) => {
+    setSelectedGroup(groupName)
+  }
+
   const handleNext = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1)
     } else {
       handleComplete()
@@ -65,6 +80,47 @@ export default function ProfileCompletionPage() {
       setCurrentStep(currentStep - 1)
     } else {
       router.back()
+    }
+  }
+
+  // Save user groups to database
+  const saveUserGroups = async (userId: string, groups: string[]) => {
+    try {
+      console.log('💾 Saving user groups:', groups)
+      
+      // First, delete all existing groups for this user
+      const { error: deleteError } = await supabase
+        .from('user_groups')
+        .delete()
+        .eq('user_id', userId)
+      
+      if (deleteError) {
+        console.error('Error deleting existing groups:', deleteError)
+        return false
+      }
+      
+      // Then, insert new groups
+      if (groups.length > 0) {
+        const groupInserts = groups.map(groupName => ({
+          user_id: userId,
+          group_name: groupName
+        }))
+        
+        const { error: insertError } = await supabase
+          .from('user_groups')
+          .insert(groupInserts)
+        
+        if (insertError) {
+          console.error('Error inserting new groups:', insertError)
+          return false
+        }
+      }
+      
+      console.log('✅ User groups saved successfully')
+      return true
+    } catch (error) {
+      console.error('Error saving user groups:', error)
+      return false
     }
   }
 
@@ -108,6 +164,11 @@ export default function ProfileCompletionPage() {
       }
 
       await AuthService.completeProfile(profileData)
+      
+      // Save user group
+      if (selectedGroup) {
+        await saveUserGroups(user.id, [selectedGroup])
+      }
       
       // Set localStorage values for authentication state
       localStorage.setItem('isAuthenticated', 'true')
@@ -322,6 +383,45 @@ export default function ProfileCompletionPage() {
           </div>
         )
 
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-blue-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Ministry Group</h2>
+              <p className="text-gray-600 text-sm">Select the group you belong to</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {availableGroups.map((group) => (
+                  <label key={group} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                    <input
+                      type="radio"
+                      name="group"
+                      value={group}
+                      checked={selectedGroup === group}
+                      onChange={() => handleGroupSelect(group)}
+                      className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 focus:ring-purple-500 focus:ring-2"
+                    />
+                    <span className="text-sm text-gray-700 font-medium">{group}</span>
+                  </label>
+                ))}
+              </div>
+              
+              {selectedGroup && (
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                  <p className="text-sm text-purple-800">
+                    <strong>Selected Group:</strong> {selectedGroup}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+
       default:
         return null
     }
@@ -340,7 +440,7 @@ export default function ProfileCompletionPage() {
         
         <div className="text-center">
           <h1 className="text-lg font-semibold text-gray-800">Complete Profile</h1>
-          <p className="text-sm text-gray-500">Step {currentStep} of 3</p>
+          <p className="text-sm text-gray-500">Step {currentStep} of 4</p>
         </div>
 
         <button
@@ -356,7 +456,7 @@ export default function ProfileCompletionPage() {
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
             className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(currentStep / 3) * 100}%` }}
+            style={{ width: `${(currentStep / 4) * 100}%` }}
           ></div>
         </div>
       </div>
@@ -391,7 +491,7 @@ export default function ProfileCompletionPage() {
             className="flex-1 py-4 bg-purple-600 text-white font-semibold rounded-xl transition-colors hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {currentStep === 3 ? 'Complete Profile' : 'Next'}
+            {currentStep === 4 ? 'Complete Profile' : 'Next'}
           </button>
         </div>
       </div>

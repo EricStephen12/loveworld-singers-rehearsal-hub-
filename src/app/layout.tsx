@@ -6,6 +6,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 import RealtimeNotifications from '@/components/RealtimeNotifications'
 import VersionChecker from '@/components/VersionChecker'
+import ScreenshotPrevention from '@/components/ScreenshotPrevention'
 
 // Use system fonts as fallback to avoid Google Fonts network issues
 const inter = { 
@@ -92,6 +93,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${poppins.variable} ${outfit.variable} font-sans`}>
         <AuthProvider>
           <AudioProvider>
+            <ScreenshotPrevention />
             <VersionChecker />
             <main className="min-h-screen bg-gray-50">
               {children}

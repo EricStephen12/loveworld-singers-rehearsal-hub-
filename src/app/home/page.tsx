@@ -128,7 +128,7 @@ function HomePageContent() {
     {
       icon: Users,
       title: 'Groups',
-      href: '#',
+      href: '/pages/groups',
       badge: null,
     },
     {
@@ -522,7 +522,7 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <AuthGuard requireAuth={true} requireCompleteProfile={true}>
+    <AuthGuard requireAuth={true} requireCompleteProfile={false}>
       <HomePageContent />
     </AuthGuard>
   )

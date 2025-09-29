@@ -11,13 +11,13 @@ interface AuthGuardProps {
   redirectTo?: string;
 }
 
-export default function AuthGuard({ 
-  children, 
-  requireAuth = true, 
+export default function AuthGuard({
+  children,
+  requireAuth = true,
   requireCompleteProfile = true,
-  redirectTo 
+  redirectTo
 }: AuthGuardProps) {
-  const { user, isLoading, isProfileComplete } = useAuth();
+  const { user, profile, isLoading, isProfileComplete } = useAuth();
   const router = useRouter();
   const [shouldRender, setShouldRender] = useState(false);
 
@@ -34,8 +34,14 @@ export default function AuthGuard({
       return;
     }
 
+    // If user exists but profile hasn't loaded yet, wait
+    if (user && !profile) {
+      console.log('AuthGuard: Waiting for profile to load...');
+      return;
+    }
+
     // If complete profile is required but profile is not complete
-    if (requireCompleteProfile && user && !isProfileComplete) {
+    if (requireCompleteProfile && user && profile && !isProfileComplete) {
       console.log('AuthGuard: Profile incomplete, redirecting to profile completion');
       router.push('/profile-completion');
       return;
@@ -43,7 +49,7 @@ export default function AuthGuard({
 
     // If we get here, all requirements are met
     setShouldRender(true);
-  }, [user, isLoading, isProfileComplete, requireAuth, requireCompleteProfile, redirectTo, router]);
+  }, [user, profile, isLoading, isProfileComplete, requireAuth, requireCompleteProfile, redirectTo, router]);
 
   // Show loading while checking auth
   if (isLoading) {

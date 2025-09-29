@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import SplashScreen from './SplashScreen'
 import AuthScreen from './AuthScreen'
 import ProfileCompletionScreen from './ProfileCompletionScreen'
+import { useAuth } from '@/contexts/AuthContext'
 // Subscription components removed
 
 interface MobileLayoutProps {
@@ -11,6 +12,7 @@ interface MobileLayoutProps {
 }
 
 export default function MobileLayout({ children }: MobileLayoutProps) {
+  const { user, profile, isLoading, isProfileComplete } = useAuth()
   const [showSplash, setShowSplash] = useState(true)
   const [showAuth, setShowAuth] = useState(false)
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
@@ -34,38 +36,47 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       setIsMobile(isMobileDevice || isSmallScreen)
     }
 
-    // FAST: Check if user is already authenticated (localStorage is instant)
-    const checkAuthStatus = () => {
-      const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
-      const hasCompletedProfile = localStorage.getItem('hasCompletedProfile') === 'true'
-      
-      if (isAuthenticated && hasCompletedProfile) {
-        // User is fully set up, skip all screens immediately
-        setShowSplash(false)
-        setShowAuth(false)
-        setShowProfileCompletion(false)
-      } else if (isAuthenticated) {
-        // User needs to complete profile
-        setShowSplash(false)
-        setShowAuth(false)
-        setShowProfileCompletion(true)
-      } else {
-        // User needs to authenticate
-        setShowSplash(false)
-        setShowAuth(true)
-        setShowProfileCompletion(false)
-      }
-      
-      setIsInitialized(true)
-    }
-
-    // Run checks immediately (no delays)
     checkMobile()
-    checkAuthStatus()
     window.addEventListener('resize', checkMobile)
 
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  // Handle authentication state changes
+  useEffect(() => {
+    console.log('🔍 MobileLayout Debug:', {
+      isLoading,
+      user: !!user,
+      isProfileComplete,
+      showSplash,
+      showAuth,
+      showProfileCompletion
+    })
+
+    if (isLoading) return // Wait for auth to load
+
+    if (!user) {
+      // No user - show auth screen
+      console.log('📱 No user - showing auth screen')
+      setShowSplash(false)
+      setShowAuth(true)
+      setShowProfileCompletion(false)
+    } else if (!isProfileComplete) {
+      // User exists but profile not complete - show profile completion
+      console.log('📱 User exists but profile not complete - showing profile completion')
+      setShowSplash(false)
+      setShowAuth(false)
+      setShowProfileCompletion(true)
+    } else {
+      // User is fully authenticated and profile complete - show main app
+      console.log('📱 User fully authenticated - showing main app')
+      setShowSplash(false)
+      setShowAuth(false)
+      setShowProfileCompletion(false)
+    }
+    
+    setIsInitialized(true)
+  }, [user, isProfileComplete, isLoading])
 
   const handleSplashComplete = () => {
     setShowSplash(false)
@@ -79,7 +90,6 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     lastName: string
     email: string
   }) => {
-    localStorage.setItem('isAuthenticated', 'true')
     if (socialData) {
       setSocialData(socialData)
       setShowAuth(false)
@@ -90,7 +100,6 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   }
 
   const handleProfileComplete = () => {
-    localStorage.setItem('hasCompletedProfile', 'true')
     setShowProfileCompletion(false)
     // Subscription removed - user goes directly to main app
   }
@@ -103,7 +112,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   // Subscription functionality removed
 
   // Show loading while checking authentication status
-  if (!isInitialized) {
+  if (isLoading || !isInitialized) {
     return (
       <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>

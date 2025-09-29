@@ -10,17 +10,37 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession()
-        
+        // Check for error parameters in URL
+        const urlParams = new URLSearchParams(window.location.search)
+        const error = urlParams.get('error')
+        const errorCode = urlParams.get('error_code')
+        const errorDescription = urlParams.get('error_description')
+
         if (error) {
-          console.error('Auth callback error:', error)
-          router.push('/auth?error=callback_error')
+          console.error('Auth callback error:', { error, errorCode, errorDescription })
+          
+          // Handle specific error cases
+          if (errorCode === 'otp_expired') {
+            router.push('/auth?error=link_expired&message=Password reset link has expired. Please request a new one.')
+          } else if (errorCode === 'access_denied') {
+            router.push('/auth?error=access_denied&message=Access denied. Please try again.')
+          } else {
+            router.push(`/auth?error=${error}&message=${errorDescription || 'Authentication failed'}`)
+          }
+          return
+        }
+
+        // Try to get session
+        const { data, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          router.push('/auth?error=session_error&message=Failed to establish session')
           return
         }
 
         if (data.session) {
           // Check if this is a password recovery session
-          const urlParams = new URLSearchParams(window.location.search)
           const type = urlParams.get('type')
           
           if (type === 'recovery') {
@@ -32,11 +52,11 @@ export default function AuthCallbackPage() {
           }
         } else {
           // No session, redirect to auth
-          router.push('/auth')
+          router.push('/auth?error=no_session&message=No active session found')
         }
       } catch (error) {
         console.error('Auth callback error:', error)
-        router.push('/auth?error=callback_error')
+        router.push('/auth?error=callback_error&message=An unexpected error occurred')
       }
     }
 
