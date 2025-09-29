@@ -666,7 +666,11 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                {/* Basic Information Section */}
+                <div className="pt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Basic Information</h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">First Name</label>
                     <input
@@ -677,30 +681,30 @@ export default function ProfilePage() {
                       placeholder="Enter first name"
                     />
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Middle Name</label>
-                    <input
-                      type="text"
-                      value={editForm.middleName}
-                      onChange={(e) => handleInputChange('middleName', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Enter middle name"
-                    />
-                  </div>
-                </div>
+                      <div>
+                        <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Middle Name</label>
+                        <input
+                          type="text"
+                          value={editForm.middleName}
+                          onChange={(e) => handleInputChange('middleName', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          placeholder="Enter middle name"
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Last Name</label>
-                  <input
-                    type="text"
-                    value={editForm.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter last name"
-                  />
-                </div>
+                    <div>
+                      <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Last Name</label>
+                      <input
+                        type="text"
+                        value={editForm.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Enter last name"
+                      />
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Gender</label>
                     <select
