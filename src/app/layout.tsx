@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Poppins, Outfit } from 'next/font/google'
 import './globals.css'
 import PWAInstall from '@/components/PWAInstall'
 import { AudioProvider } from '@/contexts/AudioContext'
@@ -8,25 +7,21 @@ import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 import RealtimeNotifications from '@/components/RealtimeNotifications'
 import VersionChecker from '@/components/VersionChecker'
 
-const inter = Inter({ 
-  subsets: ['latin'],
+// Use system fonts as fallback to avoid Google Fonts network issues
+const inter = { 
   variable: '--font-inter',
-  display: 'swap'
-})
+  className: 'font-sans'
+};
 
-const poppins = Poppins({
-  subsets: ['latin'],
+const poppins = { 
   variable: '--font-poppins',
-  display: 'swap',
-  weight: ['300', '400', '500', '600', '700']
-})
+  className: 'font-display'
+};
 
-const outfit = Outfit({
-  subsets: ['latin'],
+const outfit = { 
   variable: '--font-outfit',
-  display: 'swap',
-  weight: ['300', '400', '500', '600', '700', '800']
-})
+  className: 'font-heading'
+};
 
 // Generate a unique version for cache busting
 const APP_VERSION = Date.now().toString();
