@@ -1743,6 +1743,15 @@ export default function AdminPage() {
                     Manage customer support messages and responses
                   </p>
                 </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={loadSupportMessages}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh
+                  </button>
+                </div>
               </div>
 
               {/* Support Messages List */}

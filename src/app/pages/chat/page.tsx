@@ -48,8 +48,8 @@ export default function ChatPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* WhatsApp-style header */}
-      <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 py-3 flex items-center justify-between shadow-sm">
+      {/* WhatsApp-style header - Fixed */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-600 to-purple-700 px-4 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
@@ -59,12 +59,14 @@ export default function ChatPage() {
           </button>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
-              </div>
+              <img 
+                src="/logo.png" 
+                alt="Celvez Logo" 
+                className="w-8 h-8 rounded-full object-cover"
+              />
             </div>
             <div>
-              <h1 className="font-semibold text-white text-base">Admin Support</h1>
+              <h1 className="font-semibold text-white text-base">LWSRH Support</h1>
               <p className="text-xs text-purple-100">Online now</p>
             </div>
           </div>
@@ -94,8 +96,8 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+      {/* Messages area - Add top padding for fixed header */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-1 pt-20 pb-24">
         {chatMessages.map((message, index) => {
           const showTimestamp = index === 0 || 
             new Date(message.timestamp).getTime() - new Date(chatMessages[index - 1].timestamp).getTime() > 300000; // 5 minutes
@@ -117,9 +119,11 @@ export default function ChatPage() {
                   {/* Avatar */}
                   {message.isBot && (
                     <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-white" />
-                      </div>
+                      <img 
+                        src="/logo.png" 
+                        alt="Celvez Logo" 
+                        className="w-6 h-6 rounded-full object-cover"
+                      />
                     </div>
                   )}
                   
@@ -161,9 +165,11 @@ export default function ChatPage() {
           <div className="flex justify-start mb-1">
             <div className="flex items-end gap-2">
               <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-white" />
-                </div>
+                <img 
+                  src="/logo.png" 
+                  alt="Celvez Logo" 
+                  className="w-6 h-6 rounded-full object-cover"
+                />
               </div>
               <div className="bg-white px-4 py-2 rounded-2xl rounded-bl-sm shadow-sm">
                 <div className="flex gap-1">
@@ -178,8 +184,8 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* WhatsApp-style input */}
-      <div className="bg-white border-t border-gray-200 p-4">
+      {/* WhatsApp-style input - Fixed */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 p-4 shadow-lg">
         <div className="flex items-end gap-3">
           {/* Emoji button */}
           <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">

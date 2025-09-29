@@ -280,6 +280,36 @@ export class AuthService {
     }
   }
 
+  // Reset password
+  static async resetPassword(email: string) {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback`
+      })
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Reset password error:', error)
+      throw error
+    }
+  }
+
+  // Update password
+  static async updatePassword(newPassword: string) {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Update password error:', error)
+      throw error
+    }
+  }
+
   // Listen to auth state changes
   static onAuthStateChange(callback: (event: string, session: any) => void) {
     return supabase.auth.onAuthStateChange(callback)

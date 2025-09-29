@@ -13,6 +13,9 @@ export default function AuthPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -92,6 +95,22 @@ export default function AuthPage() {
       ...prev,
       [e.target.name]: e.target.value
     }))
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
+    
+    try {
+      await AuthService.resetPassword(forgotPasswordEmail)
+      setForgotPasswordSuccess(true)
+    } catch (error: any) {
+      console.error('Forgot password error:', error)
+      setError(error.message || 'Failed to send reset email')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -201,6 +220,19 @@ export default function AuthPage() {
                 </button>
               </div>
 
+              {/* Forgot Password Link - Only show for login */}
+              {isLogin && (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-purple-600 text-sm font-medium hover:text-purple-700 transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
+
               {!isLogin && (
                 <div className="relative">
                   <input
@@ -293,6 +325,85 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Reset Password</h2>
+              <p className="text-gray-600 text-sm">
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
+            </div>
+
+            {forgotPasswordSuccess ? (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Email Sent!</h3>
+                <p className="text-gray-600 text-sm mb-6">
+                  We've sent a password reset link to <strong>{forgotPasswordEmail}</strong>
+                </p>
+                <button
+                  onClick={() => {
+                    setShowForgotPassword(false)
+                    setForgotPasswordSuccess(false)
+                    setForgotPasswordEmail('')
+                  }}
+                  className="w-full py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                    required
+                  />
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-red-600 text-sm">{error}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(false)
+                      setForgotPasswordEmail('')
+                      setError('')
+                    }}
+                    className="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex-1 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Send Reset Link
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

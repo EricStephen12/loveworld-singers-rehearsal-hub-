@@ -93,9 +93,9 @@ export default function SimpleAdminSupport() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-purple-700 rounded-full flex items-center justify-center shadow-lg">
+          <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
             <MessageCircle className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -103,15 +103,26 @@ export default function SimpleAdminSupport() {
             <p className="text-sm text-gray-600">{messages.length} total messages</p>
           </div>
         </div>
-        <button
-          onClick={() => {
-            console.log('🔍 Running admin debug...');
-            debugAdminSupport();
-          }}
-          className="px-3 py-2 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-700 transition-colors shadow-sm"
-        >
-          🔍 Debug
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              console.log('🔄 Manual refresh clicked');
+              loadMessages();
+            }}
+            className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+          >
+            🔄 Refresh
+          </button>
+          <button
+            onClick={() => {
+              console.log('🔍 Running admin debug...');
+              debugAdminSupport();
+            }}
+            className="px-3 py-2 bg-orange-600 text-white rounded text-sm hover:bg-orange-700"
+          >
+            🔍 Debug
+          </button>
+        </div>
       </div>
 
       {/* Messages List */}
@@ -125,51 +136,44 @@ export default function SimpleAdminSupport() {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {messages.map((message) => (
-              <div key={message.id} className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-lg transition-all duration-200 hover:border-purple-200">
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div key={message.id} className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <h4 className="font-semibold text-gray-900 text-base sm:text-lg truncate">{message.subject}</h4>
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap shadow-sm ${getStatusColor(message.status)}`}>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h4 className="font-medium text-gray-900 text-sm sm:text-base truncate">{message.subject}</h4>
+                        <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${getStatusColor(message.status)}`}>
                           {message.status.replace('_', ' ')}
                         </span>
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap shadow-sm ${getPriorityColor(message.priority)}`}>
+                        <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${getPriorityColor(message.priority)}`}>
                           {message.priority}
                         </span>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mb-3">
-                        <div className="flex items-center gap-1.5">
-                          <User className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
-                          <span className="truncate font-medium">{message.userName}</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mb-2">
+                        <div className="flex items-center gap-1">
+                          <User className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="truncate">{message.userName}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
+                        <div className="flex items-center gap-1">
+                          <Mail className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span className="truncate">{message.userEmail}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span className="whitespace-nowrap">{new Date(message.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
 
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
-                        <p className="text-sm text-gray-800 leading-relaxed break-words">{message.message}</p>
-                      </div>
+                      <p className="text-sm text-gray-800 mb-3 break-words">{message.message}</p>
                     
                       {message.adminResponse && (
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 mb-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                              <MessageCircle className="w-3 h-3 text-white" />
-                            </div>
-                            <p className="text-sm font-semibold text-green-800">Admin Response</p>
-                          </div>
-                          <p className="text-sm text-green-700 break-words leading-relaxed mb-2">{message.adminResponse}</p>
-                          <p className="text-xs text-green-600">
+                        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-xs sm:text-sm font-medium text-green-800 mb-1">Admin Response:</p>
+                          <p className="text-xs sm:text-sm text-green-700 break-words">{message.adminResponse}</p>
+                          <p className="text-xs text-green-600 mt-1">
                             Responded on {new Date(message.adminRespondedAt || '').toLocaleDateString()}
                           </p>
                         </div>
@@ -177,21 +181,20 @@ export default function SimpleAdminSupport() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 border-t border-gray-100">
                     <button
                       onClick={() => {
                         setSelectedMessage(message);
                         setReplyText(''); // Always start with empty text for new replies
                       }}
-                      className="flex items-center justify-center gap-2 px-4 py-2 text-sm bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-medium shadow-sm"
+                      className="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
                     >
-                      <Send className="w-4 h-4" />
                       {message.adminResponse ? 'Reply Again' : 'Reply'}
                     </button>
                     <select
                       value={message.status}
                       onChange={(e) => updateStatus(message.id, e.target.value)}
-                      className="px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors bg-white"
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                     >
                       <option value="pending">Pending</option>
                       <option value="in_progress">In Progress</option>

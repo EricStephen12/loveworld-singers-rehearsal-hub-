@@ -34,33 +34,32 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       setIsMobile(isMobileDevice || isSmallScreen)
     }
 
-    // Check if user is already authenticated
+    // FAST: Check if user is already authenticated (localStorage is instant)
     const checkAuthStatus = () => {
       const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
       const hasCompletedProfile = localStorage.getItem('hasCompletedProfile') === 'true'
+      
       if (isAuthenticated && hasCompletedProfile) {
-        // User is fully set up, skip all screens
+        // User is fully set up, skip all screens immediately
         setShowSplash(false)
         setShowAuth(false)
         setShowProfileCompletion(false)
-        // Subscription removed
       } else if (isAuthenticated) {
         // User needs to complete profile
         setShowSplash(false)
         setShowAuth(false)
         setShowProfileCompletion(true)
-        // Subscription removed
       } else {
         // User needs to authenticate
         setShowSplash(false)
         setShowAuth(true)
         setShowProfileCompletion(false)
-        // Subscription removed
       }
       
       setIsInitialized(true)
     }
 
+    // Run checks immediately (no delays)
     checkMobile()
     checkAuthStatus()
     window.addEventListener('resize', checkMobile)

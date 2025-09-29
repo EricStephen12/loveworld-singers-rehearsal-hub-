@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Play, Pause, MoreHorizontal, Clock, Repeat, Heart, ChevronRight } from 'lucide-react';
+import { Play, Pause, MoreHorizontal, Clock, Repeat, Heart } from 'lucide-react';
 import BottomSheet from './BottomSheet';
 
 interface SongCardProps {
@@ -12,7 +12,6 @@ interface SongCardProps {
   isPlaying?: boolean;
   onPlay: () => void;
   onPause: () => void;
-  index: number;
 }
 
 export default function SongCard({
@@ -22,8 +21,7 @@ export default function SongCard({
   practiced,
   isPlaying = false,
   onPlay,
-  onPause,
-  index
+  onPause
 }: SongCardProps) {
   const [showOptions, setShowOptions] = useState(false);
 
@@ -37,61 +35,46 @@ export default function SongCard({
 
   return (
     <>
-      <div className={`bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group cursor-pointer ${
-        isPlaying 
-          ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-200/50 bg-purple-50/30'
-          : 'ring-1 ring-black/5'
-      }`}>
-        {/* Song Header - Matching App Style */}
+      <div className="bg-white rounded-2xl p-4 border border-gray-100 hover:border-purple-200 hover:shadow-lg transition-all duration-200 active:scale-[0.98]">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm">
-              <span className="text-sm font-semibold text-purple-600">
-                {index + 1}
-              </span>
-            </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-slate-900 text-sm group-hover:text-black leading-tight">
-                {title}
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5 leading-tight font-bold">
-                Artist: {artist}
-              </p>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 truncate">{title}</h3>
+            <p className="text-sm text-gray-600 truncate">{artist}</p>
+            
+            <div className="flex items-center gap-3 mt-3">
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Clock className="w-3 h-3" />
+                <span>{duration}</span>
+              </div>
+              
+              <div className="flex items-center gap-1 text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
+                <Repeat className="w-3 h-3" />
+                <span>{practiced}x</span>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Practice Count */}
-            <div className="px-2 py-1 bg-purple-100 rounded-full">
-              <span className="text-xs font-bold text-purple-600">
-                x{practiced}
-              </span>
-            </div>
-            {/* Duration */}
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              <Clock className="w-3 h-3" />
-              <span>{duration}</span>
-            </div>
-            {/* Play/Pause Button */}
+          
+          <div className="flex items-center gap-2 ml-4">
+            <button
+              onClick={() => setShowOptions(true)}
+              className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+            >
+              <MoreHorizontal className="w-4 h-4 text-gray-600" />
+            </button>
+            
             <button
               onClick={handlePlayPause}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
                 isPlaying 
                   ? 'bg-purple-600 hover:bg-purple-700 shadow-lg' 
                   : 'bg-purple-600 hover:bg-purple-700 hover:shadow-lg'
               }`}
             >
               {isPlaying ? (
-                <Pause className="w-4 h-4 text-white" />
+                <Pause className="w-5 h-5 text-white" />
               ) : (
-                <Play className="w-4 h-4 text-white ml-0.5" />
+                <Play className="w-5 h-5 text-white ml-0.5" />
               )}
-            </button>
-            {/* Options Button */}
-            <button
-              onClick={() => setShowOptions(true)}
-              className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-slate-200 transition-colors"
-            >
-              <ChevronRight className="w-3 h-3 text-slate-500 group-hover:translate-x-0.5 transition-all duration-200" />
             </button>
           </div>
         </div>

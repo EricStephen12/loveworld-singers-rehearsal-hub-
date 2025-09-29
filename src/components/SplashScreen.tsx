@@ -23,7 +23,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
       // Fallback timer in case video doesn't load or play
       const fallbackTimer = setTimeout(() => {
         onComplete()
-      }, 5000) // 5 second fallback
+      }, 2000) // 2 second fallback - much faster
       
       return () => {
         video.removeEventListener('ended', handleVideoEnd)
@@ -33,7 +33,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
       // If video doesn't load, use fallback timer
       const timer = setTimeout(() => {
         onComplete()
-      }, 3000)
+      }, 1500) // 1.5 second fallback - much faster
       
       return () => clearTimeout(timer)
     }

@@ -8,10 +8,26 @@ export default function SplashPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Quick authentication check - no database queries on splash screen
+    // Ultra-fast authentication check with localStorage first
     const checkAuthAndRedirect = async () => {
       try {
-        // Get current session from Supabase (fast, no database query)
+        // INSTANT: Check localStorage first (0ms)
+        const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+        const hasCompletedProfile = localStorage.getItem('hasCompletedProfile') === 'true'
+        
+        if (isAuthenticated && hasCompletedProfile) {
+          // User is fully authenticated - go directly to home (instant)
+          router.push('/home')
+          return
+        }
+        
+        if (isAuthenticated) {
+          // User needs profile completion
+          router.push('/profile-completion')
+          return
+        }
+        
+        // FAST: Get current session from Supabase (usually <100ms)
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
@@ -21,7 +37,7 @@ export default function SplashPage() {
         }
 
         if (session?.user) {
-          // User is authenticated - go to home, let home page handle profile check
+          // User is authenticated - go to home
           router.push('/home')
         } else {
           // No session, redirect to auth
@@ -33,8 +49,12 @@ export default function SplashPage() {
       }
     }
 
-    // Check auth immediately for faster login
-    checkAuthAndRedirect()
+    // Add small delay to show splash screen briefly (500ms minimum)
+    const timer = setTimeout(() => {
+      checkAuthAndRedirect()
+    }, 500)
+    
+    return () => clearTimeout(timer)
   }, [router])
 
   return (
