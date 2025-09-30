@@ -531,6 +531,14 @@ export async function updateSong(songId: number, songData: Partial<PraiseNightSo
       songId,
       category: songData.category,
       title: songData.title,
+      leadSinger: songData.leadSinger,
+      writer: songData.writer,
+      conductor: songData.conductor,
+      key: songData.key,
+      tempo: songData.tempo,
+      leadKeyboardist: songData.leadKeyboardist,
+      leadGuitarist: songData.leadGuitarist,
+      drummer: songData.drummer,
       hasHistory: !!songData.history,
       historyCount: songData.history?.length || 0
     });
@@ -542,13 +550,14 @@ export async function updateSong(songId: number, songData: Partial<PraiseNightSo
     }
 
     const updateData: any = {};
-    
-    if (songData.title) updateData.title = songData.title;
-    if (songData.status) updateData.status = songData.status;
-    if (songData.category) {
+
+    if (songData.title !== undefined) updateData.title = songData.title;
+    if (songData.status !== undefined) updateData.status = songData.status;
+    if (songData.category !== undefined) {
       updateData.category = songData.category;
       console.log('💾 Updating category to:', songData.category);
     }
+    // Always update these fields if they're in songData (even if empty string)
     if (songData.leadSinger !== undefined) updateData.leadsinger = songData.leadSinger;
     if (songData.writer !== undefined) updateData.writer = songData.writer;
     if (songData.conductor !== undefined) updateData.conductor = songData.conductor;
@@ -557,13 +566,13 @@ export async function updateSong(songId: number, songData: Partial<PraiseNightSo
     if (songData.leadKeyboardist !== undefined) updateData.leadkeyboardist = songData.leadKeyboardist;
     if (songData.leadGuitarist !== undefined) updateData.leadguitarist = songData.leadGuitarist;
     if (songData.drummer !== undefined) updateData.drummer = songData.drummer;
-    if (songData.lyrics) updateData.lyrics = songData.lyrics;
-    if (songData.solfas) updateData.solfas = songData.solfas;
+    if (songData.lyrics !== undefined) updateData.lyrics = songData.lyrics;
+    if (songData.solfas !== undefined) updateData.solfas = songData.solfas;
     if (songData.rehearsalCount !== undefined) updateData.rehearsalcount = songData.rehearsalCount;
     if (songData.comments !== undefined) updateData.comments = songData.comments;
     // Handle audio file updates - always update both fields together
-    updateData.audiofile = songData.audioFile || null;
-    updateData.mediaid = songData.mediaId || null;
+    if (songData.audioFile !== undefined) updateData.audiofile = songData.audioFile || null;
+    if (songData.mediaId !== undefined) updateData.mediaid = songData.mediaId || null;
     
     // Remove any fields that might not exist in the database
     delete updateData.history; // Don't try to update history field directly

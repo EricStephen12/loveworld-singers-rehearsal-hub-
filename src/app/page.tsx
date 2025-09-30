@@ -54,7 +54,7 @@ export default function SplashPage() {
       <div className="relative z-10">
         <img
           src="/logo.png"
-          alt="LoveWorld Singers Rehearsal Hub"
+          alt="LoveWorld Singers Rehearsal Hub Portal"
           className="object-contain animate-bounce"
           style={{
             width: '120px',
