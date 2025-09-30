@@ -44,6 +44,7 @@ import { uploadBannerImage } from '@/utils/imageUpload';
 import EditSongModal from '../../components/EditSongModal';
 import MediaManager from '../../components/MediaManager';
 import SimpleAdminSupport from '../../components/SimpleAdminSupport';
+import WhatsAppAdminSupport from '../../components/WhatsAppAdminSupport';
 import { ToastContainer, Toast } from '../../components/Toast';
 
 // Admin users database (in production, this should be in Supabase)
@@ -192,9 +193,16 @@ export default function AdminPage() {
     }
 
     console.log(`👋 Admin logged out: ${currentAdmin?.fullName}`);
+
+    // Clear session
+    localStorage.removeItem('admin_session');
+
+    // Clear state
     setIsAuthenticated(false);
     setCurrentAdmin(null);
-    localStorage.removeItem('admin_session');
+
+    // Force page reload to show login screen
+    window.location.reload();
   };
 
   
@@ -567,12 +575,21 @@ export default function AdminPage() {
         
         if (success) {
           console.log('✅ Song updated successfully, refreshing data...');
+
+          // Clear all caches
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('cached_pages_data');
+            localStorage.removeItem('cached_pages_timestamp');
+            localStorage.removeItem('cached_songs_data');
+            localStorage.removeItem('cached_songs_timestamp');
+          }
+
           await refreshData();
           setTimeout(async () => {
             await refreshData();
             console.log('✅ Second refresh completed');
           }, 500);
-          
+
           // Handle category changes
           if (selectedCategory && songData.category && selectedCategory !== songData.category) {
             console.log('🔄 Song moved from', selectedCategory, 'to', songData.category);
@@ -584,10 +601,14 @@ export default function AdminPage() {
               }
             }, 100);
           }
-          
+
+          // Close modal
+          setShowSongModal(false);
+          setEditingSong(null);
+
           addToast({
             type: 'success',
-            message: 'Song updated successfully!'
+            message: 'Song updated successfully! All admins will see changes.'
           });
         } else {
           throw new Error('Failed to update song in database');
@@ -811,7 +832,7 @@ export default function AdminPage() {
           // WAIT for upload to complete
           const uploadResult = await uploadBannerImage(newPageBannerFile, 0); // 0 is temporary
 
-          if (uploadResult.success) {
+          if (uploadResult.success && uploadResult.url) {
             console.log('✅ Banner image uploaded successfully:', uploadResult.url);
             bannerImageUrl = uploadResult.url; // Use the uploaded URL
             addToast({
@@ -822,7 +843,7 @@ export default function AdminPage() {
             console.error('❌ Banner image upload failed:', uploadResult.error);
             addToast({
               type: 'error',
-              message: `Banner image upload failed: ${uploadResult.error}`
+              message: `Banner image upload failed: ${uploadResult.error || 'Unknown error'}`
             });
             // Don't create the page if image upload failed
             return;
@@ -934,7 +955,7 @@ export default function AdminPage() {
           // WAIT for upload to complete
           const uploadResult = await uploadBannerImage(newPageBannerFile, editingPage.id);
 
-          if (uploadResult.success) {
+          if (uploadResult.success && uploadResult.url) {
             console.log('✅ Banner image uploaded successfully:', uploadResult.url);
             bannerImageUrl = uploadResult.url; // Use the new uploaded URL
             addToast({
@@ -945,7 +966,7 @@ export default function AdminPage() {
             console.error('❌ Banner image upload failed:', uploadResult.error);
             addToast({
               type: 'error',
-              message: `Banner image upload failed: ${uploadResult.error}`
+              message: `Banner image upload failed: ${uploadResult.error || 'Unknown error'}`
             });
             // Don't update the page if image upload failed
             return;
@@ -1333,9 +1354,9 @@ export default function AdminPage() {
     { icon: Home, label: 'Home', active: false },
     { icon: FileText, label: 'Pages', active: activeSection === 'Pages' },
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
-    { icon: Music, label: 'Media', active: activeSection === 'Media' },
     { icon: Users, label: 'Users', active: activeSection === 'Users' },
     { icon: MessageCircle, label: 'Support', active: activeSection === 'Support' },
+    { icon: Music, label: 'Media', active: activeSection === 'Media' },
   ];
 
   // Show loading state
@@ -1478,9 +1499,9 @@ export default function AdminPage() {
               onClick={() => {
                 if (item.label === 'Pages') setActiveSection('Pages');
                 else if (item.label === 'Categories') setActiveSection('Categories');
-                else if (item.label === 'Media') setActiveSection('Media');
                 else if (item.label === 'Users') setActiveSection('Users');
                 else if (item.label === 'Support') setActiveSection('Support');
+                else if (item.label === 'Media') setActiveSection('Media');
                 // Auto-close sidebar on mobile after clicking
                 setSidebarCollapsed(true);
               }}
@@ -1663,23 +1684,8 @@ export default function AdminPage() {
           )}
 
           {activeSection === 'Media' && (
-            <div className="fixed inset-0 z-50 bg-white overflow-hidden">
-              <div className="h-full flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-                  <h2 className="text-xl font-semibold text-gray-900">Media Library</h2>
-                  <button
-                    onClick={() => setActiveSection('Pages')}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto">
-                  <MediaManager />
-                </div>
-              </div>
+            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
+              <MediaManager />
             </div>
           )}
 
@@ -1915,7 +1921,7 @@ export default function AdminPage() {
               </div>
 
               {/* Support Messages List */}
-              <SimpleAdminSupport />
+              <WhatsAppAdminSupport />
             </div>
           )}
 

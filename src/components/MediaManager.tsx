@@ -365,12 +365,12 @@ export default function MediaManager({
   const folders = ['all', ...Array.from(new Set(files.map(f => f.folder).filter(Boolean)))];
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="overflow-y-auto overflow-x-hidden bg-transparent">
       {/* Header */}
-      <div className="flex-shrink-0 p-3 border-b border-gray-200">
+      <div className="mb-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-2xl font-bold text-gray-900">
               {selectionMode ? 'Select Media' : 'Media Library'}
             </h2>
             {selectionMode && selectedFile && (
@@ -444,7 +444,7 @@ export default function MediaManager({
       </div>
 
       {/* Upload Area */}
-      <div className="flex-shrink-0 p-3 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 bg-gray-50">
         <div
           ref={dropZoneRef}
           onDragOver={handleDragOver}
@@ -490,7 +490,7 @@ export default function MediaManager({
       </div>
 
       {/* View Controls */}
-      <div className="flex-shrink-0 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-white">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setViewMode('grid')}
@@ -516,7 +516,7 @@ export default function MediaManager({
       </div>
 
       {/* Files Grid/List */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div className="p-4">
         {uploading && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-blue-700 text-sm">Uploading files...</p>

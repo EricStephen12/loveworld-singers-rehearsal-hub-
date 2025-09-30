@@ -497,6 +497,11 @@ export default function EditSongModal({
 
       console.log('🎵 Final songData being saved:', {
         title: songData.title,
+        writer: songData.writer,
+        leadSinger: songData.leadSinger,
+        conductor: songData.conductor,
+        key: songData.key,
+        tempo: songData.tempo,
         audioFile: songData.audioFile,
         mediaId: songData.mediaId,
         mediaIdType: typeof songData.mediaId,
@@ -522,8 +527,8 @@ export default function EditSongModal({
         onUpdate(updatedSong);
       }
       
-      // Manual history creation - no automatic history
-      if (false && detectSignificantChanges().length > 0 && song?.id) {
+      // Automatic history creation for significant changes
+      if (detectSignificantChanges().length > 0 && song?.id) {
         const significantChanges = detectSignificantChanges();
         console.log('🎯 Creating automatic history entries for:', significantChanges);
         

@@ -62,13 +62,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    await AuthService.signOut()
-    setUser(null)
-    setSession(null)
-    setProfile(null)
+    try {
+      await AuthService.signOut()
+      setUser(null)
+      setSession(null)
+      setProfile(null)
 
-    // Clear cached profile
-    localStorage.removeItem('cached_user_profile')
+      // Clear all cached data
+      localStorage.removeItem('cached_user_profile')
+      localStorage.removeItem('cached_session')
+      localStorage.removeItem('cached_pages_data')
+      localStorage.removeItem('cached_pages_timestamp')
+
+      // Force redirect to auth page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth'
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Force redirect even if there's an error
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth'
+      }
+    }
   }
 
   useEffect(() => {

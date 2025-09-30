@@ -32,9 +32,9 @@ export default function MediaSelectionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-white z-[60] flex flex-col w-screen h-screen">
-      <div className="bg-white w-full h-full flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 flex-shrink-0">
+    <div className="fixed inset-0 bg-white z-[60] overflow-y-auto w-screen h-screen">
+      <div className="bg-white w-full min-h-screen">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 sticky top-0 bg-white z-10">
           <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
           <button
             onClick={onClose}
@@ -43,7 +43,7 @@ export default function MediaSelectionModal({
             <X className="w-6 h-6 text-slate-500" />
           </button>
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="p-4">
           <MediaManager
             onSelectFile={(file) => {
               onFileSelect(file);

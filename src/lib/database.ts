@@ -175,7 +175,7 @@ export async function getAllPages(): Promise<PraiseNight[]> {
             status: song.status,
             category: song.category,
             leadSinger: song.leadsinger,
-            writtenBy: song.writer,
+            writer: song.writer,
             conductor: song.conductor,
             key: song.key,
             tempo: song.tempo,
@@ -186,6 +186,8 @@ export async function getAllPages(): Promise<PraiseNight[]> {
             solfas: song.solfas,
             rehearsalCount: song.rehearsalcount || 1,
             audioFile: audioFile,
+            mediaId: song.mediaid,
+            praiseNightId: song.praisenightid,
             comments: [], // Load comments on demand for better performance
             history: []   // Load history on demand for better performance
           };
@@ -586,6 +588,11 @@ export async function updateSong(songId: number, songData: Partial<PraiseNightSo
     console.log('💾 Updating song in database:', {
       songId,
       updateData,
+      writer: updateData.writer,
+      leadSinger: updateData.leadsinger,
+      conductor: updateData.conductor,
+      key: updateData.key,
+      tempo: updateData.tempo,
       audiofile: updateData.audiofile,
       mediaid: updateData.mediaid,
       hasAudioFile: !!updateData.audiofile,

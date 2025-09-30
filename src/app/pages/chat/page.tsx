@@ -66,38 +66,38 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
-      {/* Modern responsive header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
+    <div className="min-h-screen bg-[#E5DDD5] flex flex-col">
+      {/* WhatsApp-style header */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-400 to-purple-500 shadow-md">
         <div className="px-4 py-3 flex items-center justify-between max-w-4xl mx-auto">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-105"
+              className="p-2 -ml-2 text-white hover:bg-white/20 rounded-full transition-all duration-200"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg">
                   <img
                     src="/logo.png"
                     alt="Support"
                     className="w-8 h-8 rounded-full object-cover"
                   />
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-purple-500 rounded-full"></div>
               </div>
               <div>
-                <h1 className="font-semibold text-gray-900 text-lg">LWSRH Support</h1>
-                <p className="text-sm text-green-600 font-medium">Online • Usually replies instantly</p>
+                <h1 className="font-semibold text-white text-base">LWSRH Support</h1>
+                <p className="text-xs text-purple-100">Online</p>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsMenuOpen(true)}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200"
+              className="p-2 text-white hover:bg-white/20 rounded-full transition-all duration-200"
             >
               <MoreVertical className="w-5 h-5" />
             </button>
@@ -107,89 +107,73 @@ export default function ChatPage() {
       
       {/* Error Message */}
       {error && (
-        <div className="fixed top-20 left-4 right-4 z-40 bg-red-50 border border-red-200 rounded-xl p-4 shadow-lg animate-slide-down">
-          <div className="flex items-center gap-3 text-red-700">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="text-sm font-medium">{error}</span>
+        <div className="fixed top-16 left-4 right-4 z-40 bg-red-100 border border-red-300 rounded-lg p-3 shadow-md animate-fadeIn max-w-4xl mx-auto">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm">{error}</span>
           </div>
         </div>
       )}
 
       {/* Loading State */}
       {loading && (
-        <div className="flex items-center justify-center p-12">
-          <div className="flex flex-col items-center gap-4">
+        <div className="flex items-center justify-center p-12 pt-24">
+          <div className="flex flex-col items-center gap-3">
             <div className="relative">
-              <div className="w-12 h-12 border-4 border-purple-200 rounded-full"></div>
-              <div className="absolute top-0 left-0 w-12 h-12 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-10 h-10 border-3 border-purple-200 rounded-full"></div>
+              <div className="absolute top-0 left-0 w-10 h-10 border-3 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
-            <p className="text-gray-600 text-sm font-medium">Loading messages...</p>
+            <p className="text-gray-600 text-sm">Loading messages...</p>
           </div>
         </div>
       )}
 
-      {/* Messages area - Responsive with better spacing */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 pt-24 pb-32 max-w-4xl mx-auto w-full">
-        <div className="space-y-4">
+      {/* WhatsApp-style messages area with pattern background */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 pt-20 pb-28 max-w-4xl mx-auto w-full" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4c5b9' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+      }}>
+        <div className="space-y-3">
           {chatMessages.map((message, index) => {
-            const showTimestamp = index === 0 || 
+            const showTimestamp = index === 0 ||
               new Date(message.timestamp).getTime() - new Date(chatMessages[index - 1].timestamp).getTime() > 300000; // 5 minutes
-            
+
             return (
-              <div key={message.id} className="animate-fade-in">
-                {/* Timestamp */}
+              <div key={message.id} className="animate-fadeIn">
+                {/* Date separator */}
                 {showTimestamp && (
-                  <div className="flex justify-center mb-4">
-                    <div className="bg-white/80 backdrop-blur-sm text-gray-600 text-xs px-4 py-2 rounded-full shadow-sm border border-gray-200/50">
-                      {message.timestamp.toLocaleDateString()} {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className="flex justify-center my-4">
+                    <div className="bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-3 py-1.5 rounded-lg shadow-sm">
+                      {message.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                   </div>
                 )}
-                
-                {/* Message */}
-                <div className={`flex ${message.isBot ? 'justify-start' : 'justify-end'} mb-2`}>
-                  <div className={`flex items-end gap-3 max-w-[85%] sm:max-w-[70%] md:max-w-[60%] lg:max-w-[50%] ${message.isBot ? 'flex-row' : 'flex-row-reverse'}`}>
-                    {/* Avatar */}
-                    {message.isBot && (
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <img
-                          src="/logo.png"
-                          alt="Support"
-                          className="w-6 h-6 rounded-full object-cover"
-                        />
-                      </div>
-                    )}
-                    
-                    {/* Message bubble */}
+
+                {/* Message bubble */}
+                <div className={`flex ${message.isBot ? 'justify-start' : 'justify-end'} mb-1`}>
+                  <div className={`max-w-[85%] sm:max-w-[75%] ${message.isBot ? '' : ''}`}>
+                    {/* Message content */}
                     <div
-                      className={`px-4 py-3 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${
+                      className={`px-3 py-2 rounded-lg shadow-sm ${
                         message.isBot
-                          ? 'bg-white text-gray-900 rounded-bl-md border border-gray-100'
-                          : 'bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-br-md'
+                          ? 'bg-white text-gray-900 rounded-tl-none'
+                          : 'bg-[#DCF8C6] text-gray-900 rounded-tr-none'
                       }`}
                     >
                       <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.text}</div>
-                      <div className={`flex items-center justify-end gap-1 mt-2 ${
-                        message.isBot ? 'text-gray-500' : 'text-purple-200'
+                      <div className={`flex items-center justify-end gap-1 mt-1 ${
+                        message.isBot ? 'text-gray-500' : 'text-gray-600'
                       }`}>
-                        <span className="text-xs">
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <span className="text-[10px]">
+                          {message.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
                         </span>
                         {!message.isBot && (
-                          <div className="flex items-center gap-1">
-                            <Check className="w-3 h-3" />
-                            <Check className="w-3 h-3 -ml-1" />
+                          <div className="flex items-center">
+                            <Check className="w-3.5 h-3.5 text-blue-500" />
+                            <Check className="w-3.5 h-3.5 -ml-2 text-blue-500" />
                           </div>
                         )}
                       </div>
                     </div>
-                    
-                    {/* User avatar */}
-                    {!message.isBot && (
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -198,21 +182,12 @@ export default function ChatPage() {
 
           {/* Typing indicator */}
           {isTyping && (
-            <div className="flex justify-start mb-2 animate-fade-in">
-              <div className="flex items-end gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <img
-                    src="/logo.png"
-                    alt="Support"
-                    className="w-6 h-6 rounded-full object-cover"
-                  />
-                </div>
-                <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-md shadow-lg border border-gray-100">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
+            <div className="flex justify-start mb-1 animate-fadeIn">
+              <div className="bg-white px-4 py-2.5 rounded-lg rounded-tl-none shadow-sm">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
             </div>
@@ -220,17 +195,12 @@ export default function ChatPage() {
 
           {/* Sending indicator */}
           {isSending && (
-            <div className="flex justify-end mb-2 animate-fade-in">
-              <div className="flex items-end gap-3">
-                <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-3 rounded-2xl rounded-br-md shadow-lg">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-purple-200 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-purple-200 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-purple-200 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </div>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <User className="w-5 h-5 text-white" />
+            <div className="flex justify-end mb-1 animate-fadeIn">
+              <div className="bg-[#DCF8C6] px-4 py-2.5 rounded-lg rounded-tr-none shadow-sm">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
             </div>
@@ -239,44 +209,44 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Modern responsive input area */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200/50 shadow-lg">
-        <div className="px-4 py-4 max-w-4xl mx-auto">
-          <div className="flex items-end gap-3">
+      {/* WhatsApp-style input area */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#F0F0F0] border-t border-gray-300 shadow-lg">
+        <div className="px-3 py-2 max-w-4xl mx-auto">
+          <div className="flex items-end gap-2">
             {/* Emoji button */}
-            <button 
+            <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="p-3 text-gray-500 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-105"
+              className="p-2 text-gray-600 hover:bg-gray-200 rounded-full transition-all duration-200"
             >
               <Smile className="w-5 h-5" />
             </button>
             
             {/* Input field */}
-            <div className="flex-1 bg-gray-100 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-inner">
+            <div className="flex-1 max-w-[calc(100%-60px)] bg-white rounded-3xl px-4 py-2.5 flex items-center gap-2 shadow-sm border border-gray-200">
               <input
                 ref={inputRef}
                 type="text"
                 value={input}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
-                placeholder="Type a message..."
-                className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-500 text-sm resize-none"
+                placeholder="Message"
+                className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-500 text-[15px] min-w-0"
                 disabled={isSending}
               />
-              {/* Attachment button */}
-              <button className="p-2 text-gray-500 hover:bg-gray-200 rounded-full transition-all duration-200 hover:scale-105">
-                <Paperclip className="w-4 h-4" />
+              {/* Attachment button - hide on small screens */}
+              <button className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition-all duration-200 hidden sm:block">
+                <Paperclip className="w-5 h-5" />
               </button>
             </div>
-            
-            {/* Send button */}
+
+            {/* Send button - always visible */}
             <button
               onClick={handleSend}
               disabled={!input.trim() || isSending}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
+              className={`w-11 h-11 flex-shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${
                 input.trim() && !isSending
-                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 shadow-lg hover:scale-105 active:scale-95'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  ? 'bg-purple-400 text-white hover:bg-purple-500 shadow-md active:scale-95'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
               {isSending ? (

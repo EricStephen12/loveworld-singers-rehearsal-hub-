@@ -188,21 +188,14 @@ export async function uploadBannerImage(
 
     console.log('📤 Uploading compressed image to path:', filePath);
 
-    // Upload with timeout for faster failure detection
-    const uploadPromise = supabase.storage
+    // Upload directly without timeout (Supabase handles timeouts internally)
+    const { data, error: uploadError } = await supabase.storage
       .from('media-files')
       .upload(filePath, compressedFile, {
         cacheControl: '31536000', // 1 year cache
         upsert: true, // Overwrite if exists
         contentType: 'image/webp'
       });
-
-    // Add 10 second timeout
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Upload timeout after 10 seconds')), 10000)
-    );
-
-    const { data, error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any;
 
     if (uploadError) {
       console.error('❌ Supabase upload error:', uploadError);

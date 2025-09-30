@@ -144,12 +144,22 @@ function PraiseNightPageContent() {
   // Use the banner image from the database, fallback to default
   const ecardSrc = useMemo(() => {
     if (!currentPraiseNight) return "/Ecards/1000876785.png";
-    
+
+    console.log('🖼️ Banner Image Debug:', {
+      pageId: currentPraiseNight.id,
+      pageName: currentPraiseNight.name,
+      bannerImage: currentPraiseNight.bannerImage,
+      hasBannerImage: !!currentPraiseNight.bannerImage
+    });
+
     // Use the bannerImage from the database if available
     if (currentPraiseNight.bannerImage) {
+      console.log('✅ Using database banner image:', currentPraiseNight.bannerImage);
       return currentPraiseNight.bannerImage;
     }
-    
+
+    console.log('⚠️ No banner image in database, using fallback');
+
     // Fallback to hardcoded images for specific pages
     switch (currentPraiseNight.id) {
       case 16:
