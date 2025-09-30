@@ -799,37 +799,34 @@ export default function AdminPage() {
       try {
         let bannerImageUrl = '';
         
-        // Upload banner image to Supabase if file is selected (non-blocking)
+        // Upload banner image to Supabase if file is selected (WAIT for upload)
         if (newPageBannerFile) {
-          console.log('🚀 Starting fast banner image upload for new page...');
-          
-          // Start upload in background (non-blocking)
-          uploadBannerImage(newPageBannerFile, 0) // 0 is temporary, will be updated after page creation
-            .then((uploadResult) => {
-              if (uploadResult.success) {
-                console.log('✅ Banner image uploaded successfully:', uploadResult.url);
-                addToast({
-                  type: 'success',
-                  message: 'Banner image uploaded successfully!'
-                });
-              } else {
-                console.error('❌ Banner image upload failed:', uploadResult.error);
-                addToast({
-                  type: 'error',
-                  message: `Banner image upload failed: ${uploadResult.error}`
-                });
-              }
-            })
-            .catch((error) => {
-              console.error('❌ Banner upload error:', error);
-              addToast({
-                type: 'error',
-                message: 'Banner image upload failed'
-              });
+          console.log('🚀 Starting banner image upload for new page...');
+
+          addToast({
+            type: 'info',
+            message: 'Uploading banner image...'
+          });
+
+          // WAIT for upload to complete
+          const uploadResult = await uploadBannerImage(newPageBannerFile, 0); // 0 is temporary
+
+          if (uploadResult.success) {
+            console.log('✅ Banner image uploaded successfully:', uploadResult.url);
+            bannerImageUrl = uploadResult.url; // Use the uploaded URL
+            addToast({
+              type: 'success',
+              message: 'Banner image uploaded successfully!'
             });
-          
-          // Continue with page creation immediately (don't wait for image upload)
-          console.log('⚡ Continuing with page creation while image uploads in background...');
+          } else {
+            console.error('❌ Banner image upload failed:', uploadResult.error);
+            addToast({
+              type: 'error',
+              message: `Banner image upload failed: ${uploadResult.error}`
+            });
+            // Don't create the page if image upload failed
+            return;
+          }
         }
         
         const newPage = await createPage({
@@ -848,15 +845,31 @@ export default function AdminPage() {
         });
 
         if (newPage) {
+          // Clear all caches to ensure fresh data for all admins
+          console.log('🧹 Clearing all caches...');
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('cached_pages_data');
+            localStorage.removeItem('cached_pages_timestamp');
+            localStorage.removeItem('cached_songs_data');
+            localStorage.removeItem('cached_songs_timestamp');
+          }
+
           // Refresh data from Supabase
+          console.log('🔄 Refreshing data from Supabase...');
           await refreshData();
-          
+
+          // Force a second refresh after a short delay to ensure all admins see changes
+          setTimeout(async () => {
+            console.log('🔄 Second refresh for real-time sync...');
+            await refreshData();
+          }, 500);
+
           // Show success toast
           addToast({
             type: 'success',
-            message: `Page "${newPageName.trim()}" added successfully!`
+            message: `Page "${newPageName.trim()}" added successfully! All admins will see changes.`
           });
-          
+
           setNewPageName('');
           setNewPageDate('');
           setNewPageLocation('');
@@ -903,45 +916,40 @@ export default function AdminPage() {
     console.log('🔄 handleUpdatePage called');
     console.log('editingPage:', editingPage);
     console.log('newPageName:', newPageName);
-    
+
     if (editingPage && newPageName.trim()) {
       try {
         console.log('🚀 Starting page update...');
         let bannerImageUrl = newPageBannerImage; // Keep existing image by default
-        
-        // Upload new banner image to Supabase if file is selected (non-blocking)
+
+        // Upload new banner image to Supabase if file is selected (WAIT for upload)
         if (newPageBannerFile) {
-          console.log('🚀 Starting fast banner image upload...');
-          
-          // Start upload in background (non-blocking)
-          uploadBannerImage(newPageBannerFile, editingPage.id)
-            .then((uploadResult) => {
-              if (uploadResult.success) {
-                console.log('✅ Banner image uploaded successfully:', uploadResult.url);
-                // Update the page with the new banner URL
-                updatePage(editingPage.id, { bannerImage: uploadResult.url });
-                addToast({
-                  type: 'success',
-                  message: 'Banner image uploaded successfully!'
-                });
-              } else {
-                console.error('❌ Banner image upload failed:', uploadResult.error);
-                addToast({
-                  type: 'error',
-                  message: `Banner image upload failed: ${uploadResult.error}`
-                });
-              }
-            })
-            .catch((error) => {
-              console.error('❌ Banner upload error:', error);
-              addToast({
-                type: 'error',
-                message: 'Banner image upload failed'
-              });
+          console.log('🚀 Starting banner image upload...');
+
+          addToast({
+            type: 'info',
+            message: 'Uploading banner image...'
+          });
+
+          // WAIT for upload to complete
+          const uploadResult = await uploadBannerImage(newPageBannerFile, editingPage.id);
+
+          if (uploadResult.success) {
+            console.log('✅ Banner image uploaded successfully:', uploadResult.url);
+            bannerImageUrl = uploadResult.url; // Use the new uploaded URL
+            addToast({
+              type: 'success',
+              message: 'Banner image uploaded successfully!'
             });
-          
-          // Continue with page update immediately (don't wait for image upload)
-          console.log('⚡ Continuing with page update while image uploads in background...');
+          } else {
+            console.error('❌ Banner image upload failed:', uploadResult.error);
+            addToast({
+              type: 'error',
+              message: `Banner image upload failed: ${uploadResult.error}`
+            });
+            // Don't update the page if image upload failed
+            return;
+          }
         }
         
         console.log('📝 Updating page with data:', {
@@ -976,15 +984,31 @@ export default function AdminPage() {
         console.log('✅ Page update result:', success);
 
         if (success) {
+          // Clear all caches to ensure fresh data for all admins
+          console.log('🧹 Clearing all caches...');
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('cached_pages_data');
+            localStorage.removeItem('cached_pages_timestamp');
+            localStorage.removeItem('cached_songs_data');
+            localStorage.removeItem('cached_songs_timestamp');
+          }
+
           // Refresh data from Supabase
+          console.log('🔄 Refreshing data from Supabase...');
           await refreshData();
-          
+
+          // Force a second refresh after a short delay to ensure all admins see changes
+          setTimeout(async () => {
+            console.log('🔄 Second refresh for real-time sync...');
+            await refreshData();
+          }, 500);
+
           // Show success toast
           addToast({
             type: 'success',
-            message: `Page "${newPageName.trim()}" updated successfully!`
+            message: `Page "${newPageName.trim()}" updated successfully! All admins will see changes.`
           });
-          
+
           setEditingPage(null);
           setNewPageName('');
           setNewPageDate('');
@@ -2543,7 +2567,10 @@ export default function AdminPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
                   Banner Image
                 </label>
+
+                {/* Hidden file input */}
                 <input
+                  id="banner-image-input"
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
@@ -2556,22 +2583,51 @@ export default function AdminPage() {
                       setNewPageBannerImage(previewUrl);
                     }
                   }}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
+                  className="hidden"
                 />
+
+                {/* Choose Image Button */}
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('banner-image-input')?.click()}
+                  className="w-full px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium rounded-lg border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {newPageBannerFile ? 'Change Image' : 'Choose Image'}
+                </button>
+
                 {newPageBannerImage && (
-                  <div className="mt-2">
+                  <div className="mt-3">
                     <img
                       src={newPageBannerImage}
                       alt="Banner preview"
-                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-purple-200 shadow-sm"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Banner image preview
-                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-gray-600">
+                        {newPageBannerFile ? `Selected: ${newPageBannerFile.name}` : 'Current banner image'}
+                      </p>
+                      {newPageBannerFile && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewPageBannerFile(null);
+                            setNewPageBannerImage(editingPage?.bannerImage || '');
+                            const fileInput = document.getElementById('banner-image-input') as HTMLInputElement;
+                            if (fileInput) fileInput.value = '';
+                          }}
+                          className="text-xs text-red-600 hover:text-red-700 font-medium"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
-                  Upload a banner image for this page (JPG, PNG, etc.)
+                <p className="text-xs text-gray-500 mt-2">
+                  Upload a banner image for this page (JPG, PNG, WebP - Max 5MB)
                 </p>
               </div>
 

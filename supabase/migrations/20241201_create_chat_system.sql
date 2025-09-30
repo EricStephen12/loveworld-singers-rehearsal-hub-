@@ -220,3 +220,5 @@ BEGIN
   WHERE ug1.user_id = user1_uuid AND ug2.user_id = user2_uuid;
 END;
 $$ LANGUAGE plpgsql;
+
+
