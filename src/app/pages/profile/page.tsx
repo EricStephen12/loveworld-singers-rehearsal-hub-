@@ -378,6 +378,13 @@ export default function ProfilePage() {
     router.push('/auth')
   }
 
+  // Only redirect if authentication is complete and no user is found
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/auth')
+    }
+  }, [isLoading, user, router])
+
   // Show loading state while authentication is being checked
   if (isLoading) {
     return (
@@ -389,13 +396,6 @@ export default function ProfilePage() {
       </div>
     )
   }
-
-  // Only redirect if authentication is complete and no user is found
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/auth')
-    }
-  }, [isLoading, user, router])
 
   if (!isLoading && !user) {
     return null
