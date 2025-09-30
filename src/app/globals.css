@@ -1,0 +1,452 @@
+@import "tailwindcss";
+
+/* Mobile App-like Behavior */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  min-height: max(884px, 100dvh);
+  background: linear-gradient(180deg, #F0F4F3 0%, #D8E0DE 100%);
+}
+
+/* iOS Blur Effect */
+.ios-blur {
+  background-color: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* Enhanced Touch Targets */
+button, 
+a, 
+[role="button"], 
+input[type="button"], 
+input[type="submit"] {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Scrollbar Styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+}
+
+.scrollbar-track-gray-100::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+
+:root {
+  --background: #ffffff;
+  --foreground: #64748b;
+  --card: #ffffff;
+  --card-foreground: #64748b;
+  --popover: #ffffff;
+  --popover-foreground: #64748b;
+  --primary: #6366f1;
+  --primary-foreground: #fafafa;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #64748b;
+  --muted: #f5f5f5;
+  --muted-foreground: #94a3b8;
+  --accent: #f5f5f5;
+  --accent-foreground: #64748b;
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #6366f1;
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  --font-mono: var(--font-geist-mono, 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace);
+  --font-display: var(--font-poppins, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  --font-heading: var(--font-outfit, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  --font-ios: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #f8fafc;
+    --foreground: #64748b;
+    --card: #ffffff;
+    --card-foreground: #64748b;
+    --popover: #ffffff;
+    --popover-foreground: #64748b;
+    --primary: #6366f1;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f5f9;
+    --secondary-foreground: #64748b;
+    --muted: #f1f5f9;
+    --muted-foreground: #94a3b8;
+    --accent: #f1f5f9;
+    --accent-foreground: #64748b;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+    --ring: #6366f1;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* Beautiful Typography System */
+
+/* Poppins - Modern, clean, iOS-inspired */
+.font-poppins {
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.font-poppins-light {
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+.font-poppins-medium {
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.font-poppins-semibold {
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.font-poppins-bold {
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Outfit - Modern, geometric, perfect for headings */
+.font-outfit {
+  font-family: var(--font-outfit), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.font-outfit-light {
+  font-family: var(--font-outfit), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+.font-outfit-medium {
+  font-family: var(--font-outfit), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.font-outfit-semibold {
+  font-family: var(--font-outfit), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.font-outfit-bold {
+  font-family: var(--font-outfit), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.font-outfit-extrabold {
+  font-family: var(--font-outfit), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* iOS-style system fonts */
+.font-ios {
+  font-family: var(--font-ios);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.font-ios-medium {
+  font-family: var(--font-ios);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.font-ios-semibold {
+  font-family: var(--font-ios);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Legacy support for existing classes */
+.font-display {
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.font-display-light {
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.font-display-medium {
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.font-display-bold {
+  font-family: var(--font-poppins), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Mobile-first responsive improvements */
+@media (max-width: 640px) {
+  /* Improve touch targets */
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+  
+  /* Better spacing for mobile */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Prevent horizontal scroll */
+  * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Improve readability */
+  p, span, div {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
+/* Tablet improvements */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Mobile-first optimizations */
+.mobile-optimized {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Touch-friendly buttons */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Mobile viewport fixes */
+@supports (-webkit-touch-callout: none) {
+  .mobile-optimized {
+    height: -webkit-fill-available;
+  }
+}
+
+/* Prevent zoom on input focus */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Remove all focus outlines and borders */
+button:focus, 
+input:focus, 
+select:focus, 
+textarea:focus,
+a:focus,
+button:active,
+input:active,
+select:active,
+textarea:active,
+a:active {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove all button outlines and borders */
+button {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove all input outlines and borders */
+input, textarea, select {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove all link outlines */
+a {
+  outline: none !important;
+  text-decoration: none !important;
+}
+
+/* Album Art Breathing Animation */
+@keyframes pulse-gentle {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  50% { 
+    transform: scale(1.02);
+    box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.15), 0 15px 20px -5px rgba(0, 0, 0, 0.08), 0 0 30px rgba(147, 51, 234, 0.2);
+  }
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 3s ease-in-out infinite;
+}
+
+/* FAB Button Running Breath Animation */
+@keyframes fabBreathe {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 15px #9333ea, 0 0 30px #9333ea, 0 0 45px #9333ea;
+    filter: drop-shadow(0 0 6px #9333ea);
+  }
+  25% {
+    transform: scale(1.08);
+    box-shadow: 0 0 25px #a855f7, 0 0 50px #a855f7, 0 0 75px #a855f7;
+    filter: drop-shadow(0 0 10px #a855f7);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 0 35px #c084fc, 0 0 70px #c084fc, 0 0 105px #c084fc;
+    filter: drop-shadow(0 0 14px #c084fc);
+  }
+  75% {
+    transform: scale(1.08);
+    box-shadow: 0 0 25px #a855f7, 0 0 50px #a855f7, 0 0 75px #a855f7;
+    filter: drop-shadow(0 0 10px #a855f7);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px #9333ea, 0 0 30px #9333ea, 0 0 45px #9333ea;
+    filter: drop-shadow(0 0 6px #9333ea);
+  }
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar { 
+  display: none;  /* Safari and Chrome */
+}
+
+/* Custom animations for chat */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
