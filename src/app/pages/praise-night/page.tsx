@@ -18,6 +18,7 @@ import SharedDrawer from "@/components/SharedDrawer";
 import { getMenuItems } from "@/config/menuItems";
 import { useAudio } from "@/contexts/AudioContext";
 import { usePageSearch, PageSearchResult } from "@/hooks/usePageSearch";
+import GlobalMiniPlayer from "@/components/GlobalMiniPlayer";
 
 function PraiseNightPageContent() {
   const searchParams = useSearchParams();
@@ -106,15 +107,23 @@ function PraiseNightPageContent() {
 
   // Filter states
   const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard');
-  const [activeCategory, setActiveCategory] = useState<string>(''); // Will be set when categories load
+  const [activeCategory, setActiveCategory] = useState<string>(songCategories[0] || ''); // ✅ Set first category immediately
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
 
-  // Set active category when categories are loaded
+  // ✅ Update active category when categories change (e.g., switching pages)
   useEffect(() => {
-    if (songCategories.length > 0 && !activeCategory) {
+    if (songCategories.length > 0) {
+      // Always set to first category when categories change
       setActiveCategory(songCategories[0]);
     }
-  }, [songCategories, activeCategory]);
+  }, [songCategories]);
+
+  // ✅ Reset filter to 'heard' when switching pages
+  useEffect(() => {
+    if (currentPraiseNight) {
+      setActiveFilter('heard');
+    }
+  }, [currentPraiseNight]);
 
   // Song detail modal states
   const [selectedSong, setSelectedSong] = useState<any>(null);
@@ -800,9 +809,9 @@ function PraiseNightPageContent() {
                   ) : categoryFilter === 'archive' ? (
                     <Archive className="w-8 h-8 text-slate-400" />
                   ) : (
-                    <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                   )}
                 </div>
                 <div className="text-slate-500 text-sm mb-2 font-medium">
@@ -1241,6 +1250,9 @@ function PraiseNightPageContent() {
           }}
         />
       )}
+      
+      {/* Mini Player - Only shows on praise night page */}
+      <GlobalMiniPlayer />
     </div>
   );
 }

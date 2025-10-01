@@ -132,14 +132,18 @@ export default function AdminPage() {
         if (admin && session.expiresAt > Date.now()) {
           setCurrentAdmin(admin);
           setIsAuthenticated(true);
+          console.log('✅ Admin session restored:', admin.fullName);
         } else {
           // Session expired or invalid
+          console.log('❌ Admin session expired or invalid');
           localStorage.removeItem('admin_session');
         }
       } catch (error) {
         console.error('Invalid admin session:', error);
         localStorage.removeItem('admin_session');
       }
+    } else {
+      console.log('❌ No admin session found');
     }
   }, []);
 
@@ -156,14 +160,14 @@ export default function AdminPage() {
       setIsAuthenticated(true);
       setCurrentAdmin(admin);
 
-      // Create session with 8 hour expiry
+      // Create session with 24 hour expiry
       const session = {
         adminId: admin.id,
         username: admin.username,
         fullName: admin.fullName,
         role: admin.role,
         loginTime: Date.now(),
-        expiresAt: Date.now() + (8 * 60 * 60 * 1000) // 8 hours
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
       };
 
       localStorage.setItem('admin_session', JSON.stringify(session));

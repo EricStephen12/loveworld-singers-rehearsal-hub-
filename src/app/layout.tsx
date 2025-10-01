@@ -3,7 +3,6 @@ import './globals.css'
 import PWAInstall from '@/components/PWAInstall'
 import { AudioProvider } from '@/contexts/AudioContext'
 import { AuthProvider } from '@/contexts/AuthContext'
-import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 import RealtimeNotifications from '@/components/RealtimeNotifications'
 import VersionChecker from '@/components/VersionChecker'
 import ScreenshotPrevention from '@/components/ScreenshotPrevention'
@@ -102,13 +101,12 @@ export default function RootLayout({
         <ServiceWorkerRegistration />
         <AuthProvider>
           <AudioProvider>
-            <ScreenshotPrevention />
+            {/* <ScreenshotPrevention /> DISABLED for development */}
             <VersionChecker />
-            <main className="min-h-screen bg-gray-50">
+            <main className="h-full w-full bg-gray-50">
               {children}
             </main>
             <PWAInstall />
-            <GlobalMiniPlayer />
             <RealtimeNotifications />
           </AudioProvider>
         </AuthProvider>

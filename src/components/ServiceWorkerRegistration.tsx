@@ -5,21 +5,50 @@ import { useEffect } from 'react'
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      console.log('❌ Service Worker not supported in this environment')
+      return
+    }
+
+    // Skip service worker in development if needed
+    if (process.env.NODE_ENV === 'development' && window.location.hostname === 'localhost') {
+      console.log('⚠️ Skipping Service Worker in development mode')
       return
     }
 
     // Register the ultra-fast service worker for best performance
     const registerSW = async () => {
       try {
-        const registration = await navigator.serviceWorker.register('/sw-ultra-fast.js', {
-          scope: '/',
-          updateViaCache: 'none' // Always check for updates
-        })
+        // Check if already registered
+        const existingRegistration = await navigator.serviceWorker.getRegistration()
+        if (existingRegistration) {
+          console.log('🚀 Service Worker already registered:', existingRegistration.scope)
+          return
+        }
 
-        console.log('🚀 Ultra Fast Service Worker registered:', registration.scope)
+        console.log('🔄 Attempting to register service worker...')
+        
+        let registration
+        try {
+          // Try ultra-fast service worker first
+          registration = await navigator.serviceWorker.register('/sw-ultra-fast.js', {
+            scope: '/',
+            updateViaCache: 'none'
+          })
+          console.log('🚀 Ultra Fast Service Worker registered successfully:', registration.scope)
+        } catch (ultraFastError) {
+          console.log('⚠️ Ultra-fast SW failed, trying fallback...')
+          // Fallback to basic service worker
+          registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            updateViaCache: 'none'
+          })
+          console.log('🚀 Fallback Service Worker registered successfully:', registration.scope)
+        }
 
         // Check for updates immediately
-        registration.update()
+        if (registration.update) {
+          registration.update()
+        }
 
         // Listen for updates
         registration.addEventListener('updatefound', () => {
@@ -29,7 +58,9 @@ export default function ServiceWorkerRegistration() {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 // New version available - activate immediately
                 console.log('🔄 New version available, updating...')
-                newWorker.postMessage({ type: 'SKIP_WAITING' })
+                if (newWorker && newWorker.postMessage) {
+                  newWorker.postMessage({ type: 'SKIP_WAITING' })
+                }
               }
             })
           }
@@ -42,19 +73,31 @@ export default function ServiceWorkerRegistration() {
         })
 
       } catch (error) {
-        console.error('Service Worker registration failed:', error)
+        console.error('❌ Service Worker registration failed:', error)
+        console.error('Error details:', {
+          name: error instanceof Error ? error.name : 'Unknown',
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        })
       }
+    }
+
+    // Register with delay to ensure page is fully loaded
+    const registerWithDelay = () => {
+      setTimeout(() => {
+        registerSW()
+      }, 1000) // 1 second delay
     }
 
     // Register on load
     if (document.readyState === 'complete') {
-      registerSW()
+      registerWithDelay()
     } else {
-      window.addEventListener('load', registerSW)
+      window.addEventListener('load', registerWithDelay)
     }
 
     return () => {
-      window.removeEventListener('load', registerSW)
+      window.removeEventListener('load', registerWithDelay)
     }
   }, [])
 

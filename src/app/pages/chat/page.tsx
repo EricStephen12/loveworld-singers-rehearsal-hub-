@@ -71,12 +71,12 @@ export default function ChatPage() {
       <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-400 to-purple-500 shadow-md">
         <div className="px-4 py-3 flex items-center justify-between max-w-4xl mx-auto">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.back()}
+        <button
+          onClick={() => router.back()}
               className="p-2 -ml-2 text-white hover:bg-white/20 rounded-full transition-all duration-200"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg">
@@ -87,20 +87,20 @@ export default function ChatPage() {
                   />
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-purple-500 rounded-full"></div>
-              </div>
+        </div>
               <div>
                 <h1 className="font-semibold text-white text-base">LWSRH Support</h1>
                 <p className="text-xs text-purple-100">Online</p>
               </div>
             </div>
-          </div>
+        </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsMenuOpen(true)}
               className="p-2 text-white hover:bg-white/20 rounded-full transition-all duration-200"
             >
               <MoreVertical className="w-5 h-5" />
-            </button>
+          </button>
           </div>
         </div>
       </div>
@@ -133,11 +133,11 @@ export default function ChatPage() {
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4c5b9' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
       }}>
         <div className="space-y-3">
-          {chatMessages.map((message, index) => {
+        {chatMessages.map((message, index) => {
             const showTimestamp = index === 0 ||
               new Date(message.timestamp).getTime() - new Date(chatMessages[index - 1].timestamp).getTime() > 300000; // 5 minutes
 
-            return (
+          return (
               <div key={message.id} className="animate-fadeIn">
                 {/* Date separator */}
                 {showTimestamp && (
@@ -145,8 +145,8 @@ export default function ChatPage() {
                     <div className="bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-3 py-1.5 rounded-lg shadow-sm">
                       {message.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
-                  </div>
-                )}
+                </div>
+              )}
 
                 {/* Message bubble */}
                 <div className={`flex ${message.isBot ? 'justify-start' : 'justify-end'} mb-1`}>
@@ -174,11 +174,11 @@ export default function ChatPage() {
                         )}
                       </div>
                     </div>
-                  </div>
+                </div>
                 </div>
               </div>
             );
-          })}
+        })}
 
           {/* Typing indicator */}
           {isTyping && (
@@ -219,16 +219,16 @@ export default function ChatPage() {
               className="p-2 text-gray-600 hover:bg-gray-200 rounded-full transition-all duration-200"
             >
               <Smile className="w-5 h-5" />
-            </button>
-            
+          </button>
+
             {/* Input field */}
             <div className="flex-1 max-w-[calc(100%-60px)] bg-white rounded-3xl px-4 py-2.5 flex items-center gap-2 shadow-sm border border-gray-200">
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={handleInputChange}
-                onKeyPress={handleKeyPress}
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
                 placeholder="Message"
                 className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-500 text-[15px] min-w-0"
                 disabled={isSending}
@@ -237,25 +237,25 @@ export default function ChatPage() {
               <button className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition-all duration-200 hidden sm:block">
                 <Paperclip className="w-5 h-5" />
               </button>
-            </div>
+          </div>
 
             {/* Send button - always visible */}
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isSending}
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || isSending}
               className={`w-11 h-11 flex-shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${
                 input.trim() && !isSending
                   ? 'bg-purple-400 text-white hover:bg-purple-500 shadow-md active:scale-95'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
-            >
-              {isSending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </button>
-          </div>
+          >
+            {isSending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </button>
+        </div>
           
         </div>
       </div>

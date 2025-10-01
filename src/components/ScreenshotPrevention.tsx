@@ -18,7 +18,7 @@ export default function ScreenshotPrevention() {
           -webkit-tap-highlight-color: transparent !important;
         }
         
-        /* Prevent text selection */
+        // Prevent text selection
         body {
           -webkit-user-select: none !important;
           -moz-user-select: none !important;
@@ -26,7 +26,7 @@ export default function ScreenshotPrevention() {
           user-select: none !important;
         }
         
-        /* Allow text selection in input fields */
+        // Allow text selection in input fields
         input, textarea, [contenteditable] {
           -webkit-user-select: text !important;
           -moz-user-select: text !important;
@@ -100,7 +100,6 @@ export default function ScreenshotPrevention() {
     }
 
     const cleanup = preventScreenshot()
-
     return cleanup
   }, [])
 
@@ -130,5 +129,3 @@ export default function ScreenshotPrevention() {
 
   return null
 }
-
-

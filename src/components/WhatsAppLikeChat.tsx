@@ -1,75 +1,53 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { ArrowLeft, Users, MessageCircle, Phone, Video, MoreVertical, Search, Send, Smile, Paperclip, Camera, Mic, X, Check, CheckCheck, Clock, UserPlus, Settings, Archive, Trash2, Star, Pin, Volume2, VolumeX, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/lib/supabase'
-import { 
-  ArrowLeft, 
-  Send, 
-  MoreVertical, 
-  Users, 
-  Search, 
-  Phone, 
-  Video, 
-  Paperclip, 
-  Smile,
-  Check,
-  CheckCheck,
-  Clock,
-  Loader2,
-  MessageCircle,
-  Plus,
-  UserPlus,
-  Heart,
-  Star,
-  User
-} from 'lucide-react'
+import { supabase } from '@/lib/supabase-client'
 
-interface ChatMessage {
-  id: string
-  content: string
-  sender_id: string
-  sender_name: string
-  sender_image?: string
-  created_at: string
-  message_type: 'text' | 'image' | 'voice' | 'file'
-  is_read: boolean
-  read_at?: string
-}
-
-interface ChatGroup {
-  id: string
-  name: string
-  description: string
-  group_type: 'pmc' | 'loveworld_singers' | 'region' | 'zone' | 'church' | 'designation' | 'administration'
-  group_value: string
-  members: GroupMember[]
-  last_message?: ChatMessage
-  unread_count: number
-  created_at: string
-}
-
-interface GroupMember {
+interface Member {
   id: string
   user_id: string
   first_name: string
   last_name: string
-  profile_image_url?: string
-  designation?: string
-  administration?: string
+  profile_image_url: string
+  designation: string
+  administration: string
   is_admin: boolean
+}
+
+interface Group {
+  id: string
+  name: string
+  description: string
+  members: Member[]
+  unread_count: number
+  last_message?: string
+  last_message_time?: string
+  created_at: string
 }
 
 interface Friend {
   id: string
   user_id: string
-  friend_id: string
   first_name: string
   last_name: string
-  profile_image_url?: string
-  status: 'pending' | 'accepted' | 'blocked'
-  last_message?: ChatMessage
-  unread_count: number
+  profile_image_url: string
+  designation: string
+  administration: string
+  is_online: boolean
+  last_seen?: string
+}
+
+interface Message {
+  id: string
+  sender_id: string
+  sender_name: string
+  sender_image: string
+  content: string
+  timestamp: string
+  is_read: boolean
+  message_type: 'text' | 'image' | 'audio' | 'video'
 }
 
 interface WhatsAppLikeChatProps {
@@ -79,242 +57,131 @@ interface WhatsAppLikeChatProps {
 
 export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatProps) {
   const { user, profile } = useAuth()
-  const [groups, setGroups] = useState<ChatGroup[]>([])
+  const [activeTab, setActiveTab] = useState<'groups' | 'friends'>('groups')
+  const [groups, setGroups] = useState<Group[]>([])
   const [friends, setFriends] = useState<Friend[]>([])
-  const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null)
-  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([])
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState<'groups' | 'friends' | 'chat'>('groups')
-  const [showGroupMembers, setShowGroupMembers] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isPinned, setIsPinned] = useState(false)
+  const [showGroupInfo, setShowGroupInfo] = useState(false)
+  const [showAddFriendModal, setShowAddFriendModal] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [showMenu, setShowMenu] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [showVoiceMessage, setShowVoiceMessage] = useState(false)
+  const [showCallModal, setShowCallModal] = useState(false)
+  const [showVideoModal, setShowVideoModal] = useState(false)
+  const [showEmojiModal, setShowEmojiModal] = useState(false)
+  const [showAttachmentModal, setShowAttachmentModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const groupsLoadedRef = useRef(false)
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  // Load user's groups
+  // Simple group loading - same as profile page
   const loadUserGroups = async () => {
-    if (!user) return
+    if (!user?.id) {
+      console.log('❌ No user ID available')
+      return
+    }
+
+    console.log('🔄 Loading groups from database...')
 
     try {
-      setLoading(true)
+      // ✅ Use EXACT same approach as profile page
+      const { data, error } = await supabase
+        .from('user_groups')
+        .select('group_name')
+        .eq('user_id', user.id)
       
-      // For now, use dummy data to show how it works
-      const dummyGroups: ChatGroup[] = [
-        {
-          id: 'pmc-group',
-          name: 'PMC Group',
-          description: 'Pastor Chris Ministry Choir',
-          group_type: 'pmc',
-          group_value: 'PMC',
-          members: [
-            {
-              id: 'user1',
-              user_id: 'user1',
-              first_name: 'Sarah',
-              last_name: 'Johnson',
-              profile_image_url: '',
-              designation: 'PMC',
-              administration: 'Coordinator',
-              is_admin: true
-            },
-            {
-              id: 'user2',
-              user_id: 'user2',
-              first_name: 'Michael',
-              last_name: 'Chen',
-              profile_image_url: '',
-              designation: 'PMC',
-              administration: 'Member',
-              is_admin: false
-            },
-            {
-              id: 'user3',
-              user_id: 'user3',
-              first_name: 'Emily',
-              last_name: 'Williams',
-              profile_image_url: '',
-              designation: 'PMC',
-              administration: 'Member',
-              is_admin: false
-            }
-          ],
-          unread_count: 3,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: 'loveworld-singers',
-          name: 'LoveWorld Singers',
-          description: 'All LoveWorld Singers',
-          group_type: 'loveworld_singers',
-          group_value: 'LoveWorld Singers',
-          members: [
-            {
-              id: 'user4',
-              user_id: 'user4',
-              first_name: 'David',
-              last_name: 'Martinez',
-              profile_image_url: '',
-              designation: 'Soprano',
-              administration: 'Member',
-              is_admin: false
-            },
-            {
-              id: 'user5',
-              user_id: 'user5',
-              first_name: 'Jessica',
-              last_name: 'Brown',
-              profile_image_url: '',
-              designation: 'Alto',
-              administration: 'Member',
-              is_admin: false
-            },
-            {
-              id: 'user6',
-              user_id: 'user6',
-              first_name: 'Robert',
-              last_name: 'Davis',
-              profile_image_url: '',
-              designation: 'Tenor',
-              administration: 'Member',
-              is_admin: false
-            }
-          ],
-          unread_count: 1,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: 'lagos-region',
-          name: 'Lagos Region',
-          description: 'Singers from Lagos region',
-          group_type: 'region',
-          group_value: 'Lagos',
-          members: [
-            {
-              id: 'user7',
-              user_id: 'user7',
-              first_name: 'Grace',
-              last_name: 'Okafor',
-              profile_image_url: '',
-              designation: 'Soprano',
-              administration: 'Member',
-              is_admin: false
-            },
-            {
-              id: 'user8',
-              user_id: 'user8',
-              first_name: 'James',
-              last_name: 'Adebayo',
-              profile_image_url: '',
-              designation: 'Bass',
-              administration: 'Member',
-              is_admin: false
-            }
-          ],
-          unread_count: 0,
-          created_at: new Date().toISOString()
-        },
-        {
-          id: 'soprano-group',
-          name: 'Soprano Group',
-          description: 'All Sopranos',
-          group_type: 'designation',
-          group_value: 'Soprano',
-          members: [
-            {
-              id: 'user9',
-              user_id: 'user9',
-              first_name: 'Mary',
-              last_name: 'Thompson',
-              profile_image_url: '',
-              designation: 'Soprano',
-              administration: 'Member',
-              is_admin: false
-            },
-            {
-              id: 'user10',
-              user_id: 'user10',
-              first_name: 'Lisa',
-              last_name: 'Anderson',
-              profile_image_url: '',
-              designation: 'Soprano',
-              administration: 'Member',
-              is_admin: false
-            }
-          ],
-          unread_count: 0,
-          created_at: new Date().toISOString()
-        }
-      ]
+      if (error) {
+        console.error('❌ Error loading user groups:', error)
+        return
+      }
+      
+      const userGroupNames = data?.map(item => item.group_name) || []
+      console.log('📋 User group names:', userGroupNames)
 
-      setGroups(dummyGroups)
-      setLoading(false)
+      // Simple group definitions
+      const allGroups: Record<string, any> = {
+        'yourloveworldsingers': {
+          id: 'yourloveworldsingers',
+          name: 'Your LoveWorld Singers',
+          description: 'Your LoveWorld Singers group'
+        },
+        'PMC': {
+          id: 'pmc',
+          name: 'PMC',
+          description: 'Pastor Chris Ministry Choir'
+        },
+        '24 Worship': {
+          id: '24-worship',
+          name: '24 Worship',
+          description: '24 Worship group'
+        },
+        'Main Choir': {
+          id: 'main-choir',
+          name: 'Main Choir',
+          description: 'Main Choir group'
+        },
+        'Teens Voice': {
+          id: 'teens-voice',
+          name: 'Teens Voice',
+          description: 'Teens Voice group'
+        },
+        'Orchestra': {
+          id: 'orchestra',
+          name: 'Orchestra',
+          description: 'Orchestra group'
+        }
+      }
+
+      // Create groups for each group the user belongs to
+      const userJoinedGroups = userGroupNames
+        .filter(groupName => allGroups[groupName])
+        .map(groupName => ({
+          ...allGroups[groupName],
+          members: [
+            {
+              id: user.id,
+              user_id: user.id,
+              first_name: profile?.first_name || 'User',
+              last_name: profile?.last_name || '',
+              profile_image_url: profile?.profile_image_url || '',
+              designation: allGroups[groupName].name,
+              administration: profile?.administration || 'Member',
+              is_admin: false
+            }
+          ],
+          unread_count: 0,
+          created_at: new Date().toISOString()
+        }))
+
+      console.log(`✅ Created ${userJoinedGroups.length} groups for user:`, userJoinedGroups.map(g => g.name))
+      setGroups(userJoinedGroups)
+      groupsLoadedRef.current = true
+
     } catch (error) {
-      console.error('Error loading groups:', error)
-      setLoading(false)
+      console.error('❌ Error loading user groups:', error)
     }
   }
 
-  // Load user's friends
+  // Load friends from database
   const loadFriends = async () => {
-    if (!user) return
+    if (!user?.id) return
 
-    try {
-      // For now, use dummy data to show how it works
-      const dummyFriends: Friend[] = [
-        {
-          id: 'friend1',
-          user_id: user.id,
-          friend_id: 'user1',
-          first_name: 'Sarah',
-          last_name: 'Johnson',
-          profile_image_url: '',
-          status: 'accepted',
-          unread_count: 2
-        },
-        {
-          id: 'friend2',
-          user_id: user.id,
-          friend_id: 'user2',
-          first_name: 'Michael',
-          last_name: 'Chen',
-          profile_image_url: '',
-          status: 'accepted',
-          unread_count: 0
-        },
-        {
-          id: 'friend3',
-          user_id: user.id,
-          friend_id: 'user3',
-          first_name: 'Emily',
-          last_name: 'Williams',
-          profile_image_url: '',
-          status: 'accepted',
-          unread_count: 1
-        }
-      ]
-
-      setFriends(dummyFriends)
-    } catch (error) {
-      console.error('Error loading friends:', error)
-    }
-  }
-
-  // Load group members
-  const loadGroupMembers = async (groupId: string) => {
     try {
       const { data, error } = await supabase
-        .from('group_members')
+        .from('friends')
         .select(`
-          *,
-          profiles!group_members_user_id_fkey(
+          id,
+          friend_id,
+          friend:profiles!friends_friend_id_fkey(
             id,
             first_name,
             last_name,
@@ -323,256 +190,288 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
             administration
           )
         `)
-        .eq('group_id', groupId)
+        .eq('user_id', user.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error loading friends:', error)
+        return
+      }
 
-      const formattedMembers: GroupMember[] = (data || []).map(member => ({
-        id: member.user_id,
-        user_id: member.user_id,
-        first_name: member.profiles?.first_name || '',
-        last_name: member.profiles?.last_name || '',
-        profile_image_url: member.profiles?.profile_image_url,
-        designation: member.profiles?.designation,
-        administration: member.profiles?.administration,
-        is_admin: member.is_admin || false
-      }))
+      const friendsList = data?.map((friend: any) => ({
+        id: friend.friend_id,
+        user_id: friend.friend_id,
+        first_name: friend.friend?.first_name || 'Unknown',
+        last_name: friend.friend?.last_name || '',
+        profile_image_url: friend.friend?.profile_image_url || '',
+        designation: friend.friend?.designation || 'Member',
+        administration: friend.friend?.administration || 'Member',
+        is_online: Math.random() > 0.5, // Random for now
+        last_seen: new Date().toISOString()
+      })) || []
 
-      setGroupMembers(formattedMembers)
+      setFriends(friendsList)
     } catch (error) {
-      console.error('Error loading group members:', error)
+      console.error('Error loading friends:', error)
     }
   }
 
-  // Load messages for selected group
+  // Load group messages
   const loadGroupMessages = async (groupId: string) => {
     try {
-      // For now, use dummy messages to show how it works
-      const dummyMessages: ChatMessage[] = [
-        {
-          id: 'msg1',
-          content: 'Good morning everyone! Ready for rehearsal today? 🎵',
-          sender_id: 'user1',
-          sender_name: 'Sarah Johnson',
-          sender_image: '',
-          created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-          message_type: 'text',
-          is_read: true,
-          read_at: new Date(Date.now() - 1000 * 60 * 25).toISOString()
-        },
-        {
-          id: 'msg2',
-          content: 'Yes! I\'m excited for today\'s session',
-          sender_id: 'user2',
-          sender_name: 'Michael Chen',
-          sender_image: '',
-          created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
-          message_type: 'text',
-          is_read: true,
-          read_at: new Date(Date.now() - 1000 * 60 * 20).toISOString()
-        },
-        {
-          id: 'msg3',
-          content: 'Don\'t forget to bring your song sheets!',
-          sender_id: 'user3',
-          sender_name: 'Emily Williams',
-          sender_image: '',
-          created_at: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
-          message_type: 'text',
-          is_read: true,
-          read_at: new Date(Date.now() - 1000 * 60 * 15).toISOString()
-        },
-        {
-          id: 'msg4',
-          content: 'I\'ll be there in 10 minutes',
-          sender_id: user?.id || 'current-user',
-          sender_name: 'You',
-          sender_image: '',
-          created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-          message_type: 'text',
-          is_read: true,
-          read_at: new Date(Date.now() - 1000 * 60 * 5).toISOString()
-        }
-      ]
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select(`
+          id,
+          sender_id,
+          content,
+          created_at,
+          sender:profiles!chat_messages_sender_id_fkey(
+            first_name,
+            last_name,
+            profile_image_url
+          )
+        `)
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: true })
 
-      setMessages(dummyMessages)
+      if (error) {
+        console.error('Error loading messages:', error)
+        return
+      }
+
+      const messagesList = data?.map((msg: any) => ({
+        id: msg.id,
+        sender_id: msg.sender_id,
+        sender_name: `${msg.sender?.first_name || ''} ${msg.sender?.last_name || ''}`.trim(),
+        sender_image: msg.sender?.profile_image_url || '',
+        content: msg.content,
+        timestamp: msg.created_at,
+        is_read: true,
+        message_type: 'text' as const
+      })) || []
+
+      setMessages(messagesList)
     } catch (error) {
       console.error('Error loading messages:', error)
     }
   }
 
-  // Send message to group
+  // Send group message
   const sendGroupMessage = async () => {
-    if (!newMessage.trim() || !selectedGroup || sending) return
+    if (!newMessage.trim() || !selectedGroup) return
 
-    setSending(true)
     try {
       const { error } = await supabase
-        .from('group_messages')
+        .from('chat_messages')
         .insert({
           group_id: selectedGroup.id,
           sender_id: user?.id,
-          content: newMessage.trim(),
-          message_type: 'text'
+          content: newMessage.trim()
         })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error sending message:', error)
+        return
+      }
 
       setNewMessage('')
+      // Reload messages
       loadGroupMessages(selectedGroup.id)
     } catch (error) {
       console.error('Error sending message:', error)
-    } finally {
-      setSending(false)
     }
   }
 
   // Add friend
-  const addFriend = async (friendId: string) => {
-    if (!user) return
+  const addFriend = async (memberId: string) => {
+    if (!user?.id) return
 
     try {
       const { error } = await supabase
         .from('friends')
         .insert({
           user_id: user.id,
-          friend_id: friendId,
-          status: 'pending'
+          friend_id: memberId
         })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error adding friend:', error)
+        return
+      }
 
-      // Reload friends
+      console.log('✅ Friend added successfully')
+      // Reload friends list
       loadFriends()
     } catch (error) {
       console.error('Error adding friend:', error)
     }
   }
 
-  // Handle group selection
-  const handleGroupSelect = (group: ChatGroup) => {
-    setSelectedGroup(group)
-    setActiveTab('chat')
-    loadGroupMembers(group.id)
-    loadGroupMessages(group.id)
+  // Handle member click
+  const handleMemberClick = (member: Member) => {
+    setSelectedMember(member)
+    setShowAddFriendModal(true)
   }
 
-  // Handle friend selection
-  const handleFriendSelect = (friend: Friend) => {
-    setSelectedFriend(friend)
-    setActiveTab('chat')
-    // Load individual messages here
+  // Handle call
+  const handleCall = () => {
+    console.log('📞 Call button clicked!')
+    setShowCallModal(true)
   }
 
-  // Handle key press
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      if (selectedGroup) {
-        sendGroupMessage()
-      }
-    }
+  // Handle video call
+  const handleVideoCall = () => {
+    console.log('📹 Video call button clicked!')
+    setShowVideoModal(true)
+  }
+
+  // Handle voice message
+  const handleVoiceMessage = () => {
+    console.log('🎤 Voice message button clicked!')
+    setShowVoiceMessage(true)
+    setIsRecording(true)
+    console.log('🎤 Starting voice recording...')
+  }
+
+  // Stop voice recording
+  const stopVoiceRecording = () => {
+    setIsRecording(false)
+    setShowVoiceMessage(false)
+    console.log('🎤 Voice recording stopped')
+    // Here you would process and send the voice message
   }
 
   // Load data on mount
   useEffect(() => {
-    if (isOpen && user) {
-      loadUserGroups()
-      loadFriends()
+    const loadData = async () => {
+      if (isOpen && user) {
+        groupsLoadedRef.current = false
+        await loadUserGroups()
+        loadFriends()
+      }
     }
+    
+    loadData()
   }, [isOpen, user])
+
+  // Listen for profile changes and refresh groups
+  useEffect(() => {
+    const handleProfileUpdate = async () => {
+      console.log('🔄 Profile updated, refreshing groups...')
+      if (user) {
+        await loadUserGroups()
+      }
+    }
+
+    // Listen for custom events when profile is updated
+    window.addEventListener('profileUpdated', handleProfileUpdate)
+    window.addEventListener('groupsUpdated', handleProfileUpdate)
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate)
+      window.removeEventListener('groupsUpdated', handleProfileUpdate)
+    }
+  }, [user])
+
+  // Load messages when group is selected
+  useEffect(() => {
+    if (selectedGroup) {
+      loadGroupMessages(selectedGroup.id)
+    }
+  }, [selectedGroup])
+
+  // Auto scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-full transition-colors"
-          >
+      <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="p-2 hover:bg-purple-700 rounded-full">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-lg font-semibold">
-              {activeTab === 'groups' && 'Groups'}
-              {activeTab === 'friends' && 'Friends'}
-              {activeTab === 'chat' && (selectedGroup?.name || selectedFriend?.first_name)}
-            </h1>
-            <p className="text-sm opacity-90">
-              {activeTab === 'groups' && 'Your automatic groups'}
-              {activeTab === 'friends' && 'Your friends'}
-              {activeTab === 'chat' && (selectedGroup?.description || 'Personal chat')}
-            </p>
+            <h1 className="text-lg font-semibold">Chat</h1>
+            <p className="text-sm text-purple-100">LoveWorld Singers</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <button className="p-2 hover:bg-white/20 rounded-full transition-colors">
-            <Search className="w-5 h-5" />
+        <div className="flex items-center gap-2">
+          <button className="p-2 hover:bg-purple-700 rounded-full">
+            <Camera className="w-5 h-5" />
           </button>
-          <button className="p-2 hover:bg-white/20 rounded-full transition-colors">
+          <button className="p-2 hover:bg-purple-700 rounded-full">
             <MoreVertical className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white border-b border-gray-200 flex">
-        <button
-          onClick={() => setActiveTab('groups')}
-          className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
-            activeTab === 'groups' 
-              ? 'text-purple-600 border-b-2 border-purple-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Groups
-        </button>
-        <button
-          onClick={() => setActiveTab('friends')}
-          className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
-            activeTab === 'friends' 
-              ? 'text-purple-600 border-b-2 border-purple-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Friends
-        </button>
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('groups')}
+            className={`flex-1 py-3 px-4 text-center font-medium ${
+              activeTab === 'groups'
+                ? 'text-purple-600 border-b-2 border-purple-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Groups
+          </button>
+          <button
+            onClick={() => setActiveTab('friends')}
+            className={`flex-1 py-3 px-4 text-center font-medium ${
+              activeTab === 'friends'
+                ? 'text-purple-600 border-b-2 border-purple-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Friends
+          </button>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-white">
         {activeTab === 'groups' && (
-          <div className="p-4">
-            {loading ? (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+          <div className="bg-white">
+            {groups.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500 p-4">
+                <Users className="w-12 h-12 mb-2" />
+                <p className="text-center">No groups found</p>
+                <p className="text-sm text-center mt-1">Complete your profile to join a group</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-0">
                 {groups.map((group) => (
                   <div
                     key={group.id}
-                    onClick={() => handleGroupSelect(group)}
-                    className="flex items-center space-x-3 p-4 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all cursor-pointer"
+                    onClick={() => setSelectedGroup(group)}
+                    className="flex items-center p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                      <Users className="w-6 h-6" />
+                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                      <Users className="w-6 h-6 text-purple-600" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate">{group.name}</h3>
-                      <p className="text-sm text-gray-500 truncate">{group.description}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {group.members.length} members
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">{group.name}</h3>
+                      <p className="text-sm text-gray-500">{group.description}</p>
+                      <p className="text-xs text-gray-400">{group.members.length} members</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400">
+                        {new Date(group.created_at).toLocaleDateString()}
                       </p>
+                      {group.unread_count > 0 && (
+                        <div className="w-5 h-5 bg-purple-500 text-white text-xs rounded-full flex items-center justify-center mt-1">
+                          {group.unread_count}
+                        </div>
+                      )}
                     </div>
-                    {group.unread_count > 0 && (
-                      <div className="bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
-                        {group.unread_count}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -581,187 +480,540 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
         )}
 
         {activeTab === 'friends' && (
-          <div className="p-4">
-            <div className="space-y-3">
-              {friends.map((friend) => (
-                <div
-                  key={friend.id}
-                  onClick={() => handleFriendSelect(friend)}
-                  className="flex items-center space-x-3 p-4 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all cursor-pointer"
-                >
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                    {friend.profile_image_url ? (
-                      <img 
-                        src={friend.profile_image_url} 
-                        alt={friend.first_name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="w-6 h-6" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">
-                      {friend.first_name} {friend.last_name}
-                    </h3>
-                    <p className="text-sm text-gray-500">Online</p>
-                  </div>
-                  {friend.unread_count > 0 && (
-                    <div className="bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
-                      {friend.unread_count}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'chat' && selectedGroup && (
-          <div className="flex flex-col h-full">
-            {/* Chat Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setActiveTab('groups')}
-                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="font-semibold">{selectedGroup.name}</h2>
-                  <p className="text-sm opacity-90">{selectedGroup.members.length} members</p>
-                </div>
+          <div className="bg-white">
+            {friends.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500 p-4">
+                <Users className="w-12 h-12 mb-2" />
+                <p className="text-center">No friends found</p>
+                <p className="text-sm text-center mt-1">Add friends to start chatting</p>
               </div>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => setShowGroupMembers(!showGroupMembers)}
-                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
-                >
-                  <Users className="w-5 h-5" />
-                </button>
-                <button className="p-2 hover:bg-white/20 rounded-full transition-colors">
-                  <Phone className="w-5 h-5" />
-                </button>
-                <button className="p-2 hover:bg-white/20 rounded-full transition-colors">
-                  <Video className="w-5 h-5" />
-                </button>
-                <button className="p-2 hover:bg-white/20 rounded-full transition-colors">
-                  <MoreVertical className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Group Members List */}
-            {showGroupMembers && (
-              <div className="bg-white border-b border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Group Members</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {groupMembers.map((member) => (
-                    <div key={member.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
-                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm">
-                        {member.profile_image_url ? (
-                          <img 
-                            src={member.profile_image_url} 
-                            alt={member.first_name}
-                            className="w-8 h-8 rounded-full object-cover"
+            ) : (
+              <div className="space-y-0">
+                {friends.map((friend) => (
+                  <div
+                    key={friend.id}
+                    onClick={() => setSelectedFriend(friend)}
+                    className="flex items-center p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                  >
+                    <div className="relative">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                        {friend.profile_image_url ? (
+                          <img
+                            src={friend.profile_image_url}
+                            alt={friend.first_name}
+                            className="w-12 h-12 rounded-full object-cover"
                           />
                         ) : (
-                          <User className="w-4 h-4" />
+                          <Users className="w-6 h-6 text-gray-400" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {member.first_name} {member.last_name}
-                        </p>
-                        <p className="text-xs text-gray-500">{member.designation}</p>
-                      </div>
-                      <button
-                        onClick={() => addFriend(member.user_id)}
-                        className="p-1 text-gray-400 hover:text-purple-600 transition-colors"
-                        title="Add to friends"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto bg-gray-50 p-4 space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                      message.sender_id === user?.id
-                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
-                        : 'bg-white text-gray-900 shadow-sm'
-                    }`}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    <div className={`flex items-center justify-end mt-1 space-x-1 ${
-                      message.sender_id === user?.id ? 'text-white/70' : 'text-gray-500'
-                    }`}>
-                      <span className="text-xs">
-                        {new Date(message.created_at).toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </span>
-                      {message.sender_id === user?.id && (
-                        <CheckCheck className="w-3 h-3" />
+                      {friend.is_online && (
+                        <div className="absolute bottom-0 right-3 w-3 h-3 bg-purple-500 border-2 border-white rounded-full"></div>
                       )}
                     </div>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">
+                        {friend.first_name} {friend.last_name}
+                      </h3>
+                      <p className="text-sm text-gray-500">{friend.designation}</p>
+                      <p className="text-xs text-gray-400">
+                        {friend.is_online ? 'Online' : `Last seen ${new Date(friend.last_seen || '').toLocaleTimeString()}`}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Message Input */}
-            <div className="bg-white border-t border-gray-200 p-4">
-              <div className="flex items-center space-x-3">
-                <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors">
-                  <Paperclip className="w-5 h-5" />
-                </button>
-                <div className="flex-1 relative">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type a message..."
-                    className="w-full px-4 py-3 bg-gray-100 rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                  <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700 transition-colors">
-                    <Smile className="w-5 h-5" />
-                  </button>
-                </div>
-                <button
-                  onClick={sendGroupMessage}
-                  disabled={!newMessage.trim() || sending}
-                  className="p-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-full hover:from-purple-600 hover:to-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {sending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
-                  )}
-                </button>
+                ))}
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Chat Interface */}
+      {(selectedGroup || selectedFriend) && (
+        <div className="absolute inset-0 bg-white z-10 flex flex-col">
+          {/* Chat Header */}
+          <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button onClick={() => { setSelectedGroup(null); setSelectedFriend(null) }} className="p-2 hover:bg-purple-700 rounded-full">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {selectedGroup?.name || `${selectedFriend?.first_name} ${selectedFriend?.last_name}`}
+                </h2>
+                <p className="text-sm text-purple-100">
+                  {selectedGroup ? `${selectedGroup.members.length} members` : selectedFriend?.designation}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowGroupInfo(true)}
+                className="p-2 hover:bg-purple-700 rounded-full"
+                title="Group Info"
+              >
+                <Users className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={handleCall}
+                className="p-2 hover:bg-purple-700 rounded-full"
+                title="Call"
+              >
+                <Phone className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={handleVideoCall}
+                className="p-2 hover:bg-purple-700 rounded-full"
+                title="Video Call"
+              >
+                <Video className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={() => {
+                  console.log('📋 Menu button clicked!')
+                  setShowMenu(!showMenu)
+                }}
+                className="p-2 hover:bg-purple-700 rounded-full"
+                title="Menu"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Menu Dropdown */}
+          {showMenu && (
+            <div className="absolute top-16 right-4 bg-white rounded-lg shadow-lg border border-gray-200 z-10 min-w-48">
+              <div className="py-2">
+                <button 
+                  onClick={() => {
+                    setIsMuted(!isMuted)
+                    setShowMenu(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3"
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  {isMuted ? 'Unmute' : 'Mute'}
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsPinned(!isPinned)
+                    setShowMenu(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3"
+                >
+                  <Pin className="w-4 h-4" />
+                  {isPinned ? 'Unpin' : 'Pin'}
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowGroupInfo(true)
+                    setShowMenu(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3"
+                >
+                  <Users className="w-4 h-4" />
+                  Group Info
+                </button>
+                <button 
+                  onClick={() => {
+                    console.log('📋 View media')
+                    setShowMenu(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3"
+                >
+                  <Camera className="w-4 h-4" />
+                  View Media
+                </button>
+                <button 
+                  onClick={() => {
+                    console.log('🗑️ Clear chat')
+                    setShowMenu(false)
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear Chat
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    message.sender_id === user?.id
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-gray-200 text-gray-900'
+                  }`}
+                >
+                  <p className="text-sm">{message.content}</p>
+                  <p className="text-xs mt-1 opacity-70">
+                    {new Date(message.timestamp).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Message Input */}
+          <div className="border-t border-gray-200 p-4">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  console.log('😊 Emoji button clicked!')
+                  setShowEmojiModal(true)
+                }}
+                className="p-2 text-gray-500 hover:text-gray-700"
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={() => {
+                  console.log('📎 Attachment button clicked!')
+                  setShowAttachmentModal(true)
+                }}
+                className="p-2 text-gray-500 hover:text-gray-700"
+              >
+                <Paperclip className="w-5 h-5" />
+              </button>
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendGroupMessage()}
+                  placeholder="Type a message..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              {newMessage.trim() ? (
+                <button
+                  onClick={sendGroupMessage}
+                  className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              ) : (
+                <button
+                  onMouseDown={handleVoiceMessage}
+                  onMouseUp={stopVoiceRecording}
+                  onTouchStart={handleVoiceMessage}
+                  onTouchEnd={stopVoiceRecording}
+                  className={`p-2 rounded-full transition-colors ${
+                    isRecording 
+                      ? 'bg-red-500 text-white' 
+                      : 'bg-purple-500 text-white hover:bg-purple-600'
+                  }`}
+                  title="Hold to record voice message"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+            
+            {/* Voice Message Recording */}
+            {showVoiceMessage && (
+              <div className="mt-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-purple-700">
+                    {isRecording ? 'Recording... Hold to continue' : 'Release to send'}
+                  </span>
+                  <button
+                    onClick={stopVoiceRecording}
+                    className="ml-auto text-red-600 hover:text-red-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Group Info Modal */}
+      {showGroupInfo && selectedGroup && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-20 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden">
+            <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Group Members</h3>
+              <button 
+                onClick={() => setShowGroupInfo(false)}
+                className="p-2 hover:bg-purple-700 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              <div className="space-y-3">
+                {selectedGroup.members.map((member) => (
+                  <div 
+                    key={member.id}
+                    onClick={() => handleMemberClick(member)}
+                    className="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-200"
+                  >
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                      {member.profile_image_url ? (
+                        <img
+                          src={member.profile_image_url}
+                          alt={member.first_name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <Users className="w-5 h-5 text-purple-600" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">
+                        {member.first_name} {member.last_name}
+                      </h4>
+                      <p className="text-sm text-gray-500">{member.designation}</p>
+                      <p className="text-xs text-gray-400">{member.administration}</p>
+                    </div>
+                    <button className="p-2 text-purple-600 hover:bg-purple-50 rounded-full">
+                      <UserPlus className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Friend Modal */}
+      {showAddFriendModal && selectedMember && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-30 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-sm">
+            <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Add Friend</h3>
+              <button 
+                onClick={() => setShowAddFriendModal(false)}
+                className="p-2 hover:bg-purple-700 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  {selectedMember.profile_image_url ? (
+                    <img
+                      src={selectedMember.profile_image_url}
+                      alt={selectedMember.first_name}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <Users className="w-6 h-6 text-purple-600" />
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900">
+                    {selectedMember.first_name} {selectedMember.last_name}
+                  </h4>
+                  <p className="text-sm text-gray-500">{selectedMember.designation}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    addFriend(selectedMember.user_id)
+                    setShowAddFriendModal(false)
+                  }}
+                  className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Add Friend
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedFriend({
+                      id: selectedMember.user_id,
+                      user_id: selectedMember.user_id,
+                      first_name: selectedMember.first_name,
+                      last_name: selectedMember.last_name,
+                      profile_image_url: selectedMember.profile_image_url,
+                      designation: selectedMember.designation,
+                      administration: selectedMember.administration,
+                      is_online: true,
+                      last_seen: new Date().toISOString()
+                    })
+                    setShowAddFriendModal(false)
+                    setSelectedGroup(null)
+                  }}
+                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Chat Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Call Modal */}
+      {showCallModal && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-30 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-sm">
+            <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Start Call</h3>
+              <button 
+                onClick={() => setShowCallModal(false)}
+                className="p-2 hover:bg-purple-700 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Phone className="w-8 h-8 text-purple-600" />
+                </div>
+                <h4 className="font-medium text-gray-900">
+                  {selectedGroup ? `Call ${selectedGroup.name}` : `Call ${selectedFriend?.first_name}`}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  {selectedGroup ? `${selectedGroup.members.length} members` : selectedFriend?.designation}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    console.log('📞 Starting call...')
+                    setShowCallModal(false)
+                  }}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Start Call
+                </button>
+                <button
+                  onClick={() => setShowCallModal(false)}
+                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Call Modal */}
+      {showVideoModal && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-30 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-sm">
+            <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Start Video Call</h3>
+              <button 
+                onClick={() => setShowVideoModal(false)}
+                className="p-2 hover:bg-purple-700 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Video className="w-8 h-8 text-purple-600" />
+                </div>
+                <h4 className="font-medium text-gray-900">
+                  {selectedGroup ? `Video Call ${selectedGroup.name}` : `Video Call ${selectedFriend?.first_name}`}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  {selectedGroup ? `${selectedGroup.members.length} members` : selectedFriend?.designation}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    console.log('📹 Starting video call...')
+                    setShowVideoModal(false)
+                  }}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Start Video Call
+                </button>
+                <button
+                  onClick={() => setShowVideoModal(false)}
+                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Emoji Modal */}
+      {showEmojiModal && (
+        <div className="absolute bottom-20 left-4 bg-white rounded-lg shadow-lg border border-gray-200 z-30 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-gray-900">Emojis</h3>
+            <button 
+              onClick={() => setShowEmojiModal(false)}
+              className="p-1 hover:bg-gray-100 rounded"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-8 gap-2">
+            {['😀', '😂', '😍', '🥰', '😎', '🤔', '👍', '👎', '❤️', '🔥', '💯', '🎉', '😢', '😡', '🤯', '👏'].map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => {
+                  setNewMessage(prev => prev + emoji)
+                  setShowEmojiModal(false)
+                }}
+                className="w-8 h-8 text-lg hover:bg-gray-100 rounded"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Attachment Modal */}
+      {showAttachmentModal && (
+        <div className="absolute bottom-20 left-4 bg-white rounded-lg shadow-lg border border-gray-200 z-30 p-4 min-w-48">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-gray-900">Attach</h3>
+            <button 
+              onClick={() => setShowAttachmentModal(false)}
+              className="p-1 hover:bg-gray-100 rounded"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            <button className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+              <Camera className="w-5 h-5 text-gray-600" />
+              <span>Camera</span>
+            </button>
+            <button className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+              <Paperclip className="w-5 h-5 text-gray-600" />
+              <span>Document</span>
+            </button>
+            <button className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+              <Users className="w-5 h-5 text-gray-600" />
+              <span>Contact</span>
+            </button>
+            <button className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+              <Mic className="w-5 h-5 text-gray-600" />
+              <span>Audio</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

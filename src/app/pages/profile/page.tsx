@@ -30,14 +30,14 @@ export default function ProfilePage() {
     administration: ''
   })
   const [selectedGroup, setSelectedGroup] = useState<string>('')
+  // ✅ UPDATED: Match database values exactly
   const [availableGroups] = useState([
-    'YourLoveWorldSingers',
-    'PMC',
-    '24 Worship',
-    'Teens Voice',
-    'Orchestra',
-    'International Representative',
-    'National Representative'
+    { value: 'yourloveworldsingers', label: 'Your LoveWorld Singers' },
+    { value: 'PMC', label: 'PMC (Pastor Chris Ministry Choir)' },
+    { value: 'Main Choir', label: 'Main Choir' },
+    { value: '24 Worship', label: '24 Worship' },
+    { value: 'Teens Voice', label: 'Teens Voice' },
+    { value: 'Orchestra', label: 'Orchestra' }
   ])
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -70,21 +70,66 @@ export default function ProfilePage() {
   // Simple profile update function
   const updateProfile = async (updates: any) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No authenticated user')
+      console.log('🔍 Getting authenticated user...')
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError) {
+        console.error('❌ Auth error:', authError)
+        throw new Error(`Authentication error: ${authError.message}`)
+      }
+      
+      if (!user) {
+        console.error('❌ No authenticated user found')
+        throw new Error('No authenticated user')
+      }
 
-      const { error } = await supabase
+      console.log('👤 User ID:', user.id)
+      console.log('📝 Update data:', updates)
+
+      // Test authentication and profile access before update
+      const { data: testData, error: testError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      if (testError) {
+        console.error('❌ Profile access test failed:', testError)
+        throw new Error(`Cannot access profile: ${testError.message}`)
+      }
+
+      console.log('✅ Profile access test passed:', testData)
+
+      const { data, error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', user.id)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Database update error:', error)
+        console.error('❌ Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
+        
+        // Check if it's an RLS error
+        if (error.message.includes('row-level security') || error.message.includes('RLS')) {
+          throw new Error(`Permission denied: ${error.message}. Please check your authentication status.`)
+        }
+        
+        throw new Error(`Database error: ${error.message}`)
+      }
+
+      console.log('✅ Update successful:', data)
       
       // Refresh profile data
       await refreshProfile()
       return true
     } catch (error) {
-      console.error('Profile update error:', error)
+      console.error('❌ Profile update error:', error)
       return false
     }
   }
@@ -268,8 +313,16 @@ export default function ProfilePage() {
 
   // Handle save profile
   const handleSaveProfile = async () => {
+    console.log('🚀 Starting profile save process...')
     setIsSaving(true)
-    setSaveMessage('')
+    setSaveMessage('🔄 Saving changes...')
+    
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.log('⏰ Profile save timeout - resetting state')
+      setIsSaving(false)
+      setSaveMessage('Save operation timed out. Please try again.')
+    }, 10000) // 10 second timeout
     
     try {
       console.log('🚀 Starting profile save...')
@@ -281,30 +334,35 @@ export default function ProfilePage() {
       if (!editForm.firstName.trim()) {
         setSaveMessage('First name is required')
         setTimeout(() => setSaveMessage(''), 2000)
+        setIsSaving(false)
         return
       }
       
       if (!editForm.lastName.trim()) {
         setSaveMessage('Last name is required')
         setTimeout(() => setSaveMessage(''), 2000)
+        setIsSaving(false)
         return
       }
       
       if (!editForm.phoneNumber.trim()) {
         setSaveMessage('Phone number is required')
         setTimeout(() => setSaveMessage(''), 2000)
+        setIsSaving(false)
         return
       }
       
       if (!editForm.region.trim()) {
         setSaveMessage('Region is required')
         setTimeout(() => setSaveMessage(''), 2000)
+        setIsSaving(false)
         return
       }
       
       if (!editForm.church.trim()) {
         setSaveMessage('Church is required')
         setTimeout(() => setSaveMessage(''), 2000)
+        setIsSaving(false)
         return
       }
       
@@ -324,34 +382,57 @@ export default function ProfilePage() {
       
       console.log('📤 Sending update data:', updateData)
       
+      // Test database connection first
+      console.log('🔍 Testing database connection...')
+      const { data: testData, error: testError } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1)
+      
+      if (testError) {
+        console.error('❌ Database connection failed:', testError)
+        setSaveMessage(`Database connection failed: ${testError.message}`)
+        return
+      }
+      
+      console.log('✅ Database connection successful:', testData)
+      
       // Update profile using the ultra-fast hook
       const profileSuccess = await updateProfile(updateData)
       
       console.log('✅ Profile update result:', profileSuccess)
-      
-      // Save user groups
+
+      // ✅ NOW SAVE USER GROUPS (RLS issue is fixed!)
+      console.log('💾 Saving user groups...')
       const groupsSuccess = await saveUserGroups()
-      
+
       console.log('✅ Groups update result:', groupsSuccess)
-      
+
       if (profileSuccess && groupsSuccess) {
-        setSaveMessage('Profile and group updated successfully!')
+        setSaveMessage('✅ Profile and groups updated successfully!')
         setIsEditing(false)
-        setTimeout(() => setSaveMessage(''), 2000)
+        setTimeout(() => setSaveMessage(''), 5000)
+        
+        // Dispatch event to notify other components that groups were updated
+        window.dispatchEvent(new CustomEvent('groupsUpdated', { 
+          detail: { groups: selectedGroup } 
+        }))
+        console.log('📢 Dispatched groupsUpdated event with group:', selectedGroup)
       } else if (profileSuccess) {
-        setSaveMessage('Profile updated successfully, but there was an issue with group.')
-        setIsEditing(false)
-        setTimeout(() => setSaveMessage(''), 2000)
+        setSaveMessage('✅ Profile updated! ⚠️ Groups update failed.')
+        setTimeout(() => setSaveMessage(''), 5000)
       } else {
-        setSaveMessage('Failed to update profile. Please try again.')
-        setTimeout(() => setSaveMessage(''), 2000)
+        setSaveMessage('❌ Failed to update profile. Check console for details.')
+        setTimeout(() => setSaveMessage(''), 5000)
       }
     } catch (error) {
       console.error('❌ Error saving profile:', error)
       setSaveMessage(`Error saving profile: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setTimeout(() => setSaveMessage(''), 2000)
     } finally {
+      clearTimeout(timeoutId)
       setIsSaving(false)
+      console.log('✅ Profile save process completed - resetting saving state')
     }
   }
 
@@ -540,13 +621,18 @@ export default function ProfilePage() {
           </h2>
           <p className="text-xs text-gray-500 mb-4">{userProfile.email || 'user@example.com'}</p>
           
-          <div className="flex items-center justify-center space-x-2">
+          <div className="flex items-center justify-center space-x-2 flex-wrap gap-2">
             <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-poppins-medium">
               {userProfile.designation || 'Member'}
             </span>
             <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-poppins-medium">
               {userProfile.administration || 'General'}
             </span>
+            {selectedGroup && (
+              <span className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full font-poppins-medium">
+                {availableGroups.find(g => g.value === selectedGroup)?.label || selectedGroup}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -660,7 +746,7 @@ export default function ProfilePage() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] text-gray-600 font-medium italic">First Name</label>
+                    <label className="text-sm text-gray-700 font-bold">First Name</label>
                     <input
                       type="text"
                       value={editForm.firstName}
@@ -670,7 +756,7 @@ export default function ProfilePage() {
                     />
                   </div>
                       <div>
-                        <label className="text-[10px] text-gray-600 font-medium italic">Middle Name</label>
+                        <label className="text-sm text-gray-700 font-bold">Middle Name</label>
                         <input
                           type="text"
                           value={editForm.middleName}
@@ -682,7 +768,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label className="text-[10px] text-gray-600 font-medium italic">Last Name</label>
+                      <label className="text-sm text-gray-700 font-bold">Last Name</label>
                       <input
                         type="text"
                         value={editForm.lastName}
@@ -694,7 +780,7 @@ export default function ProfilePage() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] text-gray-600 font-medium italic">Gender</label>
+                        <label className="text-sm text-gray-700 font-bold">Gender</label>
                         <select
                           value={editForm.gender}
                           onChange={(e) => handleInputChange('gender', e.target.value)}
@@ -706,7 +792,7 @@ export default function ProfilePage() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-[10px] text-gray-600 font-medium italic">Birthday</label>
+                        <label className="text-sm text-gray-700 font-bold">Birthday</label>
                         <input
                           type="date"
                           value={editForm.birthday}
@@ -717,7 +803,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label className="text-[10px] text-gray-600 font-medium italic">Phone Number</label>
+                      <label className="text-sm text-gray-700 font-bold">Phone Number</label>
                       <input
                         type="tel"
                         value={editForm.phoneNumber}
@@ -735,7 +821,7 @@ export default function ProfilePage() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] text-gray-600 font-medium italic">Region</label>
+                        <label className="text-sm text-gray-700 font-bold">Region</label>
                         <input
                           type="text"
                           value={editForm.region}
@@ -745,7 +831,7 @@ export default function ProfilePage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] text-gray-600 font-medium italic">Zone</label>
+                        <label className="text-sm text-gray-700 font-bold">Zone</label>
                         <input
                           type="text"
                           value={editForm.zone}
@@ -757,7 +843,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label className="text-[10px] text-gray-600 font-medium italic">Church</label>
+                      <label className="text-sm text-gray-700 font-bold">Church</label>
                       <input
                         type="text"
                         value={editForm.church}
@@ -775,7 +861,7 @@ export default function ProfilePage() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] text-gray-600 font-medium italic">Designation</label>
+                        <label className="text-sm text-gray-700 font-bold">Designation</label>
                         <select
                           value={editForm.designation}
                           onChange={(e) => handleInputChange('designation', e.target.value)}
@@ -791,7 +877,7 @@ export default function ProfilePage() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-[10px] text-gray-600 font-medium italic">Administration</label>
+                        <label className="text-sm text-gray-700 font-bold">Administration</label>
                         <select
                           value={editForm.administration}
                           onChange={(e) => handleInputChange('administration', e.target.value)}
@@ -808,19 +894,19 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label className="text-[10px] text-gray-600 font-medium italic">Group</label>
+                      <label className="text-sm text-gray-700 font-bold">Group</label>
                       <div className="mt-2 grid grid-cols-1 gap-2">
                         {availableGroups.map((group) => (
-                          <label key={group} className="flex items-center space-x-3 cursor-pointer p-2 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-300 transition-all">
+                          <label key={group.value} className="flex items-center space-x-3 cursor-pointer p-2 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-300 transition-all">
                             <input
                               type="radio"
                               name="group"
-                              value={group}
-                              checked={selectedGroup === group}
-                              onChange={() => handleGroupSelect(group)}
+                              value={group.value}
+                              checked={selectedGroup === group.value}
+                              onChange={() => handleGroupSelect(group.value)}
                               className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 focus:ring-purple-500 focus:ring-2"
                             />
-                            <span className="text-xs text-gray-800 font-medium italic font-serif">{group}</span>
+                            <span className="text-xs text-gray-800 font-medium italic font-serif">{group.label}</span>
                           </label>
                         ))}
                       </div>
