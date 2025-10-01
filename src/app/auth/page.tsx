@@ -184,7 +184,7 @@ export default function AuthPage() {
           <div className="flex items-center justify-center mb-6">
             <img 
               src="/logo.png" 
-              alt="LoveWorld Praise Logo" 
+              alt="Loveworld Singers Rehearsal Hub" 
               className="object-contain"
               style={{ width: '60px', height: '60px' }}
             />

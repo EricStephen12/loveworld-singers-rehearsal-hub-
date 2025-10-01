@@ -287,27 +287,91 @@ export default function EditSongModal({
     return text.replace(/\n/g, '<br>');
   };
 
-  // Helper function to handle paste events and strip formatting
+  // Helper function to handle paste events and preserve formatting
   const handlePaste = (e: React.ClipboardEvent, currentValue: string, setValue: (value: string) => void) => {
     e.preventDefault();
     const clipboardData = e.clipboardData || (window as any).clipboardData;
-    const pastedText = clipboardData.getData('text/plain') || clipboardData.getData('text');
     
-    // Strip any remaining formatting and normalize whitespace
-    const cleanText = pastedText
-      .replace(/\s+/g, ' ') // Replace multiple whitespace with single space
-      .trim(); // Remove leading/trailing whitespace
+    // Try to get HTML content first (preserves formatting)
+    let htmlContent = clipboardData.getData('text/html');
+    const plainText = clipboardData.getData('text/plain') || clipboardData.getData('text');
     
-    const target = e.target as HTMLInputElement;
-    const start = target.selectionStart || 0;
-    const end = target.selectionEnd || 0;
-    const newValue = currentValue.substring(0, start) + cleanText + currentValue.substring(end);
-    setValue(newValue);
+    if (htmlContent) {
+      // Clean the HTML while preserving formatting
+      const cleanHtml = cleanPastedHtml(htmlContent);
+      setValue(cleanHtml);
+    } else if (plainText) {
+      // Fallback to plain text with line breaks preserved
+      const textWithBreaks = plainText.replace(/\n/g, '<br>');
+      setValue(textWithBreaks);
+    }
+  };
+
+  // Helper function to clean pasted HTML while preserving formatting
+  const cleanPastedHtml = (html: string): string => {
+    // Create a temporary div to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
     
-    // Set cursor position after pasted text
-    setTimeout(() => {
-      target.selectionStart = target.selectionEnd = start + cleanText.length;
-    }, 0);
+    // Remove unwanted attributes but keep formatting tags
+    const allowedTags = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+    const allowedAttributes = ['style'];
+    
+    const cleanNode = (node: Node): Node | null => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.cloneNode(true);
+      }
+      
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as Element;
+        const tagName = element.tagName.toLowerCase();
+        
+        if (allowedTags.includes(tagName)) {
+          const newElement = document.createElement(tagName);
+          
+          // Copy allowed attributes
+          allowedAttributes.forEach(attr => {
+            if (element.hasAttribute(attr)) {
+              newElement.setAttribute(attr, element.getAttribute(attr) || '');
+            }
+          });
+          
+          // Copy style attribute but clean it
+          if (element.hasAttribute('style')) {
+            const style = element.getAttribute('style') || '';
+            // Keep only safe CSS properties
+            const safeStyle = style
+              .split(';')
+              .filter(prop => {
+                const [property] = prop.split(':');
+                return ['font-weight', 'font-style', 'text-decoration', 'color', 'background-color'].includes(property.trim());
+              })
+              .join(';');
+            if (safeStyle) {
+              newElement.setAttribute('style', safeStyle);
+            }
+          }
+          
+          // Process child nodes
+          Array.from(element.childNodes).forEach(child => {
+            const cleanedChild = cleanNode(child);
+            if (cleanedChild) {
+              newElement.appendChild(cleanedChild);
+            }
+          });
+          
+          return newElement;
+        } else {
+          // For disallowed tags, just return the text content
+          return document.createTextNode(element.textContent || '');
+        }
+      }
+      
+      return null;
+    };
+    
+    const cleanedNode = cleanNode(tempDiv);
+    return cleanedNode && 'innerHTML' in cleanedNode ? (cleanedNode as Element).innerHTML : html;
   };
 
   // Initialize form when song changes

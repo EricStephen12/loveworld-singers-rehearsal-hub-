@@ -75,6 +75,10 @@ export default function TiptapEditor({
       attributes: {
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[200px] p-2 sm:p-4',
       },
+      handlePaste: (view, event, slice) => {
+        // Allow default paste behavior to preserve formatting
+        return false;
+      },
     },
   });
 

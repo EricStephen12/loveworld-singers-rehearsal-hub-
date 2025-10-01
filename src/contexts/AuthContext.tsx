@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null
   })
 
-  const [isLoading, setIsLoading] = useState(false) // Start as false since we have cached data
+  const [isLoading, setIsLoading] = useState(false) // ✅ Always false - instant load with cache
 
   const refreshProfile = async () => {
     console.log('Refreshing profile...')

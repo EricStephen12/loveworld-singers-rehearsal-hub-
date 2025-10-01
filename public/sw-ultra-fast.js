@@ -1,11 +1,11 @@
-// ULTRA FAST Service Worker - Aggressive Caching for Instant Loading
+// ULTRA FAST Service Worker - INSTANT LOADING with Aggressive Caching
 
-const CACHE_VERSION = 'ultra-fast-v2.2.0'; // Static version for stability
+const CACHE_VERSION = 'ultra-fast-v3.0.0'; // ✅ Updated for instant loading
 const CACHE_NAMES = {
-  STATIC: 'static-ultra-fast-v2',
-  API: 'api-ultra-fast-v2',
-  IMAGES: 'images-ultra-fast-v2',
-  PAGES: 'pages-ultra-fast-v2'
+  STATIC: 'static-ultra-fast-v3',
+  API: 'api-ultra-fast-v3',
+  IMAGES: 'images-ultra-fast-v3',
+  PAGES: 'pages-ultra-fast-v3'
 };
 
 // Cache EVERYTHING aggressively

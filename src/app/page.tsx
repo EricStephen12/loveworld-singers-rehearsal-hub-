@@ -6,28 +6,15 @@ import { useAuth } from '@/contexts/AuthContext'
 
 export default function SplashPage() {
   const router = useRouter()
-  const { user, isLoading } = useAuth()
+  const { user } = useAuth()
   const [hasRedirected, setHasRedirected] = useState(false)
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false)
 
-  // Minimum splash time (500ms)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [])
-
+  // ✅ INSTANT REDIRECT - No splash delay
   useEffect(() => {
     // Prevent multiple redirects
     if (hasRedirected) return
 
-    // Wait for minimum time AND auth to load
-    if (!minTimeElapsed || isLoading) {
-      return
-    }
-
-    // Redirect immediately once ready
+    // Redirect INSTANTLY - no waiting
     setHasRedirected(true)
 
     if (!user) {
@@ -39,7 +26,7 @@ export default function SplashPage() {
       console.log('✅ Splash: User authenticated, redirecting to home')
       router.replace('/home')
     }
-  }, [user, isLoading, hasRedirected, minTimeElapsed, router])
+  }, [user, hasRedirected, router])
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center">

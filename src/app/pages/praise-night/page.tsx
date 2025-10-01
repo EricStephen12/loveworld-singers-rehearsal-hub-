@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2, Flag } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2, Flag, Archive } from "lucide-react";
 import SongDetailModal from "@/components/SongDetailModal";
 import { PraiseNightSong, PraiseNight } from "@/types/supabase";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
@@ -187,7 +187,7 @@ function PraiseNightPageContent() {
 
   const menuItems = getMenuItems(handleLogout)
 
-  // iOS-style mini countdown timer - now using centralized data
+  // Persistent countdown timer that continues even when page is closed
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -195,60 +195,73 @@ function PraiseNightPageContent() {
     seconds: 0,
   })
 
-  // Initialize countdown and make it count down
+  // Initialize persistent countdown timer
   useEffect(() => {
     if (!currentPraiseNight) {
       setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       return;
     }
 
-    // Get countdown from current praise night with fallback
-    const initialCountdown = currentPraiseNight.countdown || {
-      days: 0,
-      hours: 0,
-      minutes: 0,
-      seconds: 0
+    // Create a unique key for this praise night's countdown
+    const countdownKey = `countdown_${currentPraiseNight.id}`;
+    const targetDateKey = `target_date_${currentPraiseNight.id}`;
+
+    // Get or create target date
+    let targetDate: Date;
+    const storedTargetDate = localStorage.getItem(targetDateKey);
+    
+    if (storedTargetDate) {
+      // Use existing target date
+      targetDate = new Date(storedTargetDate);
+    } else {
+      // Create new target date based on current countdown
+      const now = new Date();
+      const countdown = currentPraiseNight.countdown || { days: 0, hours: 0, minutes: 0, seconds: 0 };
+      
+      // Calculate target date by adding countdown to current time
+      targetDate = new Date(now.getTime() + 
+        (countdown.days * 24 * 60 * 60 * 1000) +
+        (countdown.hours * 60 * 60 * 1000) +
+        (countdown.minutes * 60 * 1000) +
+        (countdown.seconds * 1000)
+      );
+      
+      // Store the target date for persistence
+      localStorage.setItem(targetDateKey, targetDate.toISOString());
+    }
+
+    // Calculate time remaining function
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const difference = targetDate.getTime() - now.getTime();
+      
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((difference / (1000 * 60)) % 60);
+        const seconds = Math.floor((difference / 1000) % 60);
+        
+        setTimeLeft({ days, hours, minutes, seconds });
+      } else {
+        // Countdown finished
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        // Clean up stored data
+        localStorage.removeItem(countdownKey);
+        localStorage.removeItem(targetDateKey);
+      }
     };
 
-    // Create a copy to work with
-    let currentTime = { ...initialCountdown };
+    // Calculate immediately
+    calculateTimeLeft();
+    
+    // Update every second
+    const timer = setInterval(calculateTimeLeft, 1000);
 
-    // Set initial time
-    setTimeLeft(currentTime);
-
-    // Update countdown every second
-    const timer = setInterval(() => {
-      // Decrease seconds
-      currentTime.seconds--;
-
-      // Handle time rollover
-      if (currentTime.seconds < 0) {
-        currentTime.seconds = 59;
-        currentTime.minutes--;
-
-        if (currentTime.minutes < 0) {
-          currentTime.minutes = 59;
-          currentTime.hours--;
-
-          if (currentTime.hours < 0) {
-            currentTime.hours = 23;
-            currentTime.days--;
-
-            // Stop countdown when it reaches zero
-            if (currentTime.days < 0) {
-              currentTime = { days: 0, hours: 0, minutes: 0, seconds: 0 };
-              clearInterval(timer);
-            }
-          }
-        }
-      }
-
-      setTimeLeft({ ...currentTime });
-    }, 1000);
-
-    // Cleanup interval on unmount or when page changes
-    return () => clearInterval(timer);
-  }, [currentPraiseNight?.id, currentPraiseNight?.countdown])
+    // Cleanup
+    return () => {
+      clearInterval(timer);
+    };
+  }, [currentPraiseNight?.id])
 
   // Handle category selection and close drawer
   const handleCategorySelect = (category: string) => {
@@ -558,9 +571,11 @@ function PraiseNightPageContent() {
               {/* Center - Title and Timer */}
               <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center">
                 <h1 className="text-base sm:text-lg font-outfit-semibold text-gray-800">
-                  {categoryFilter === 'archive' ? 'Archives' : (currentPraiseNight?.name || '')}
+                  {categoryFilter === 'archive' ? 'Archives' : 
+                   categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0 ? 'Pre-Rehearsal' :
+                   (currentPraiseNight?.name || '')}
                 </h1>
-                {categoryFilter !== 'archive' && (
+                {categoryFilter !== 'archive' && currentPraiseNight && !(categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0) && (
                   <div className="flex items-center gap-0.5 text-xs mt-0.5">
                     <span className="font-bold text-gray-700">{formatNumber(timeLeft.days)}d</span>
                     <span className="text-gray-500 font-bold">:</span>
@@ -780,19 +795,29 @@ function PraiseNightPageContent() {
             ) : (
               <div className="px-3 sm:px-4 py-12 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  {categoryFilter === 'pre-rehearsal' ? (
+                    <Clock className="w-8 h-8 text-slate-400" />
+                  ) : categoryFilter === 'archive' ? (
+                    <Archive className="w-8 h-8 text-slate-400" />
+                  ) : (
+                    <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  )}
                 </div>
                 <div className="text-slate-500 text-sm mb-2 font-medium">
-                  {categoryFilter === 'pre-rehearsal' && 'No Pre-Rehearsal pages yet'}
-                  {categoryFilter === 'ongoing' && 'No Ongoing pages yet'}
-                  {categoryFilter === 'archive' && 'No Archived pages yet'}
-                  {categoryFilter === 'unassigned' && 'No Unassigned pages yet'}
-                  {!categoryFilter && 'No pages available'}
+                  {categoryFilter === 'pre-rehearsal' && 'No Pre-Rehearsal sessions yet'}
+                  {categoryFilter === 'ongoing' && 'No Ongoing sessions yet'}
+                  {categoryFilter === 'archive' && 'No Archived sessions yet'}
+                  {categoryFilter === 'unassigned' && 'No Unassigned sessions yet'}
+                  {!categoryFilter && 'No sessions available'}
                 </div>
                 <div className="text-slate-400 text-xs">
-                  {categoryFilter ? 'Pages will appear here when added to this category' : 'Create your first page to get started'}
+                  {categoryFilter === 'pre-rehearsal' && 'Pre-rehearsal sessions will appear here when scheduled'}
+                  {categoryFilter === 'ongoing' && 'Ongoing sessions will appear here when active'}
+                  {categoryFilter === 'archive' && 'Archived sessions will appear here when completed'}
+                  {categoryFilter === 'unassigned' && 'Unassigned sessions will appear here when created'}
+                  {!categoryFilter && 'Create your first session to get started'}
                 </div>
               </div>
             )}
@@ -833,8 +858,12 @@ function PraiseNightPageContent() {
                           alt={praiseNight.name}
                           className="w-full h-full object-cover"
                           onError={(e) => {
+                            console.error('❌ Banner image failed to load:', praiseNight.bannerImage);
                             // Fallback to gradient if image fails to load
                             e.currentTarget.style.display = 'none';
+                          }}
+                          onLoad={() => {
+                            console.log('✅ Banner image loaded successfully:', praiseNight.bannerImage);
                           }}
                         />
                       ) : (
@@ -880,14 +909,22 @@ function PraiseNightPageContent() {
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
                 className="object-cover object-center"
                 priority={false}
+                onError={(e) => {
+                  console.error('❌ Image failed to load:', ecardSrc);
+                  // Fallback to default image
+                  e.currentTarget.src = "/Ecards/1000876785.png";
+                }}
+                onLoad={() => {
+                  console.log('✅ Image loaded successfully:', ecardSrc);
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
             </div>
           </div>
         )}
 
-        {/* Pills under timer - Hide for archive */}
-        {categoryFilter !== 'archive' && currentPraiseNight && (
+        {/* Pills under timer - Hide for archive, pre-rehearsal when empty, and when no content */}
+        {categoryFilter !== 'archive' && currentPraiseNight && filteredPraiseNights.length > 0 && !(categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0) && (
           <div className="mb-4 sm:mb-6">
             <div
               className="-mx-3 px-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
@@ -1078,8 +1115,8 @@ function PraiseNightPageContent() {
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category or when viewing from archive */}
-      {filteredPraiseNights.length > 0 && !pageParam && (
+      {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category, when viewing from archive, or when categoryFilter is archive */}
+      {filteredPraiseNights.length > 0 && !pageParam && categoryFilter !== 'archive' && (
         <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
             <div className="w-full flex items-center px-4 sm:px-6 py-4 gap-2">
               {/* Category buttons with text - Take up most of the space */}

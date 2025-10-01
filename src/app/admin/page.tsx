@@ -829,8 +829,9 @@ export default function AdminPage() {
             message: 'Uploading banner image...'
           });
 
-          // WAIT for upload to complete
-          const uploadResult = await uploadBannerImage(newPageBannerFile, 0); // 0 is temporary
+          // WAIT for upload to complete - use timestamp as temporary ID
+          const tempPageId = Date.now(); // Use timestamp as temporary ID
+          const uploadResult = await uploadBannerImage(newPageBannerFile, tempPageId);
 
           if (uploadResult.success && uploadResult.url) {
             console.log('✅ Banner image uploaded successfully:', uploadResult.url);

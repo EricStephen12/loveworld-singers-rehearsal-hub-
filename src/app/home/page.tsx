@@ -38,10 +38,16 @@ function HomePageContent() {
     '/images/DSC_6676_scaled.jpg'
   ]
 
+  // ✅ Preload first carousel image for instant display
+  useEffect(() => {
+    const img = new Image();
+    img.src = carouselImages[0];
+  }, []);
+
   // Auto-slide carousel every 2 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentImageIndex((prevIndex) => 
+      setCurrentImageIndex((prevIndex) =>
         prevIndex === carouselImages.length - 1 ? 0 : prevIndex + 1
       )
     }, 2000)

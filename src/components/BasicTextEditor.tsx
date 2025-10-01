@@ -41,11 +41,13 @@ export default function BasicTextEditor({
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     
-    // Get plain text from clipboard
     const clipboardData = e.clipboardData || (window as any).clipboardData;
-    const pastedText = clipboardData.getData('text/plain');
     
-    if (pastedText && editorRef.current) {
+    // Try to get HTML content first (preserves formatting)
+    let htmlContent = clipboardData.getData('text/html');
+    const plainText = clipboardData.getData('text/plain');
+    
+    if (htmlContent && editorRef.current) {
       // Get current selection
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
@@ -54,13 +56,43 @@ export default function BasicTextEditor({
         // Delete selected content
         range.deleteContents();
         
-        // Insert plain text
-        const textNode = document.createTextNode(pastedText);
-        range.insertNode(textNode);
+        // Create a temporary div to parse and clean the HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        
+        // Clean up the HTML (remove unwanted attributes but keep formatting)
+        const cleanHtml = cleanPastedHtml(tempDiv.innerHTML);
+        
+        // Insert the formatted content
+        const fragment = range.createContextualFragment(cleanHtml);
+        range.insertNode(fragment);
+        
+        // Move cursor to end of inserted content
+        range.setStartAfter(fragment);
+        range.setEndAfter(fragment);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // Trigger input event to update state
+        setTimeout(handleInput, 10);
+      }
+    } else if (plainText && editorRef.current) {
+      // Fallback to plain text if no HTML available
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        
+        // Delete selected content
+        range.deleteContents();
+        
+        // Insert plain text with line breaks preserved
+        const textWithBreaks = plainText.replace(/\n/g, '<br>');
+        const fragment = range.createContextualFragment(textWithBreaks);
+        range.insertNode(fragment);
         
         // Move cursor to end of inserted text
-        range.setStartAfter(textNode);
-        range.setEndAfter(textNode);
+        range.setStartAfter(fragment);
+        range.setEndAfter(fragment);
         selection.removeAllRanges();
         selection.addRange(range);
         
@@ -68,6 +100,73 @@ export default function BasicTextEditor({
         setTimeout(handleInput, 10);
       }
     }
+  };
+
+  // Helper function to clean pasted HTML while preserving formatting
+  const cleanPastedHtml = (html: string): string => {
+    // Create a temporary div to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Remove unwanted attributes but keep formatting tags
+    const allowedTags = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+    const allowedAttributes = ['style'];
+    
+    const cleanNode = (node: Node): Node | null => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.cloneNode(true);
+      }
+      
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as Element;
+        const tagName = element.tagName.toLowerCase();
+        
+        if (allowedTags.includes(tagName)) {
+          const newElement = document.createElement(tagName);
+          
+          // Copy allowed attributes
+          allowedAttributes.forEach(attr => {
+            if (element.hasAttribute(attr)) {
+              newElement.setAttribute(attr, element.getAttribute(attr) || '');
+            }
+          });
+          
+          // Copy style attribute but clean it
+          if (element.hasAttribute('style')) {
+            const style = element.getAttribute('style') || '';
+            // Keep only safe CSS properties
+            const safeStyle = style
+              .split(';')
+              .filter(prop => {
+                const [property] = prop.split(':');
+                return ['font-weight', 'font-style', 'text-decoration', 'color', 'background-color'].includes(property.trim());
+              })
+              .join(';');
+            if (safeStyle) {
+              newElement.setAttribute('style', safeStyle);
+            }
+          }
+          
+          // Process child nodes
+          Array.from(element.childNodes).forEach(child => {
+            const cleanedChild = cleanNode(child);
+            if (cleanedChild) {
+              newElement.appendChild(cleanedChild);
+            }
+          });
+          
+          return newElement;
+        } else {
+          // For disallowed tags, just return the text content
+          return document.createTextNode(element.textContent || '');
+        }
+      }
+      
+      return null;
+    };
+    
+    const cleanedNode = cleanNode(tempDiv);
+    return cleanedNode && 'innerHTML' in cleanedNode ? (cleanedNode as Element).innerHTML : html;
   };
 
   const formatText = (command: string, value?: string) => {

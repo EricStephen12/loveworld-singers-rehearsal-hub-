@@ -26,7 +26,7 @@ const outfit = {
 };
 
 // Static version for PWA stability (only change when manifest actually changes)
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '3.0.0'; // ✅ Updated for instant loading optimizations
 
 export const metadata: Metadata = {
   title: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL - LoveWorld Singers Rehearsal Hub',
@@ -81,6 +81,13 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="152x152" href="/logo.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
         <link rel="apple-touch-icon" sizes="167x167" href="/logo.png" />
+
+        {/* ✅ INSTANT LOADING - Resource Hints */}
+        <link rel="preconnect" href="https://supabase.co" />
+        <link rel="dns-prefetch" href="https://supabase.co" />
+        <link rel="preload" href="/logo.png" as="image" />
+        <link rel="preload" href="/images/home.jpg" as="image" />
+
         <meta name="theme-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Mobile App-like Behavior */
+/* ✅ INSTANT RENDERING - Critical CSS First */
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -11,6 +11,9 @@ html {
   user-select: none;
   touch-action: manipulation;
   -webkit-overflow-scrolling: touch;
+  /* ✅ Instant paint */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
 }
 
 body {
@@ -20,6 +23,9 @@ body {
   -webkit-overflow-scrolling: touch;
   min-height: max(884px, 100dvh);
   background: linear-gradient(180deg, #F0F4F3 0%, #D8E0DE 100%);
+  /* ✅ Instant rendering */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 /* iOS Blur Effect */
