@@ -98,12 +98,12 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
         .from('user_groups')
         .select('group_name')
         .eq('user_id', user.id)
-      
+
       if (error) {
         console.error('❌ Error loading user groups:', error)
         return
       }
-      
+
       const userGroupNames = data?.map(item => item.group_name) || []
       console.log('📋 User group names:', userGroupNames)
 
@@ -144,25 +144,25 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
       // Create groups for each group the user belongs to
       const userJoinedGroups = userGroupNames
         .filter(groupName => allGroups[groupName])
-        .map(groupName => ({
-          ...allGroups[groupName],
-          members: [
-            {
-              id: user.id,
-              user_id: user.id,
-              first_name: profile?.first_name || 'User',
-              last_name: profile?.last_name || '',
-              profile_image_url: profile?.profile_image_url || '',
-              designation: allGroups[groupName].name,
-              administration: profile?.administration || 'Member',
-              is_admin: false
-            }
-          ],
-          unread_count: 0,
-          created_at: new Date().toISOString()
-        }))
+          .map(groupName => ({
+            ...allGroups[groupName],
+            members: [
+              {
+                id: user.id,
+                user_id: user.id,
+                first_name: profile?.first_name || 'User',
+                last_name: profile?.last_name || '',
+                profile_image_url: profile?.profile_image_url || '',
+                designation: allGroups[groupName].name,
+                administration: profile?.administration || 'Member',
+                is_admin: false
+              }
+            ],
+            unread_count: 0,
+            created_at: new Date().toISOString()
+          }))
 
-      console.log(`✅ Created ${userJoinedGroups.length} groups for user:`, userJoinedGroups.map(g => g.name))
+        console.log(`✅ Created ${userJoinedGroups.length} groups for user:`, userJoinedGroups.map(g => g.name))
       setGroups(userJoinedGroups)
       groupsLoadedRef.current = true
 
@@ -344,11 +344,11 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
   // Load data on mount
   useEffect(() => {
     const loadData = async () => {
-      if (isOpen && user) {
-        groupsLoadedRef.current = false
+    if (isOpen && user) {
+      groupsLoadedRef.current = false
         await loadUserGroups()
-        loadFriends()
-      }
+      loadFriends()
+    }
     }
     
     loadData()
@@ -461,16 +461,16 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                       <h3 className="font-medium text-gray-900">{group.name}</h3>
                       <p className="text-sm text-gray-500">{group.description}</p>
                       <p className="text-xs text-gray-400">{group.members.length} members</p>
-                    </div>
+                          </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-400">
                         {new Date(group.created_at).toLocaleDateString()}
                       </p>
-                      {group.unread_count > 0 && (
+                          {group.unread_count > 0 && (
                         <div className="w-5 h-5 bg-purple-500 text-white text-xs rounded-full flex items-center justify-center mt-1">
-                          {group.unread_count}
-                        </div>
-                      )}
+                              {group.unread_count}
+                            </div>
+                          )}
                     </div>
                   </div>
                 ))}
@@ -489,40 +489,40 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
               </div>
             ) : (
               <div className="space-y-0">
-                {friends.map((friend) => (
-                  <div
-                    key={friend.id}
+              {friends.map((friend) => (
+                <div
+                  key={friend.id}
                     onClick={() => setSelectedFriend(friend)}
                     className="flex items-center p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                  >
+                >
                     <div className="relative">
                       <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                        {friend.profile_image_url ? (
-                          <img
-                            src={friend.profile_image_url}
-                            alt={friend.first_name}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        ) : (
+                    {friend.profile_image_url ? (
+                      <img 
+                        src={friend.profile_image_url} 
+                        alt={friend.first_name}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
                           <Users className="w-6 h-6 text-gray-400" />
-                        )}
-                      </div>
+                    )}
+                  </div>
                       {friend.is_online && (
                         <div className="absolute bottom-0 right-3 w-3 h-3 bg-purple-500 border-2 border-white rounded-full"></div>
                       )}
                     </div>
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-900">
-                        {friend.first_name} {friend.last_name}
-                      </h3>
+                      {friend.first_name} {friend.last_name}
+                    </h3>
                       <p className="text-sm text-gray-500">{friend.designation}</p>
                       <p className="text-xs text-gray-400">
                         {friend.is_online ? 'Online' : `Last seen ${new Date(friend.last_seen || '').toLocaleTimeString()}`}
                       </p>
-                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+            </div>
             )}
           </div>
         )}
@@ -531,43 +531,43 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
       {/* Chat Interface */}
       {(selectedGroup || selectedFriend) && (
         <div className="absolute inset-0 bg-white z-10 flex flex-col">
-          {/* Chat Header */}
+            {/* Chat Header */}
           <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button onClick={() => { setSelectedGroup(null); setSelectedFriend(null) }} className="p-2 hover:bg-purple-700 rounded-full">
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
                 <h2 className="text-lg font-semibold">
                   {selectedGroup?.name || `${selectedFriend?.first_name} ${selectedFriend?.last_name}`}
                 </h2>
                 <p className="text-sm text-purple-100">
                   {selectedGroup ? `${selectedGroup.members.length} members` : selectedFriend?.designation}
                 </p>
+                </div>
               </div>
-            </div>
             <div className="flex items-center gap-2">
-              <button 
+                <button 
                 onClick={() => setShowGroupInfo(true)}
                 className="p-2 hover:bg-purple-700 rounded-full"
                 title="Group Info"
-              >
-                <Users className="w-5 h-5" />
-              </button>
+                >
+                  <Users className="w-5 h-5" />
+                </button>
               <button 
                 onClick={handleCall}
                 className="p-2 hover:bg-purple-700 rounded-full"
                 title="Call"
               >
-                <Phone className="w-5 h-5" />
-              </button>
+                  <Phone className="w-5 h-5" />
+                </button>
               <button 
                 onClick={handleVideoCall}
                 className="p-2 hover:bg-purple-700 rounded-full"
                 title="Video Call"
               >
-                <Video className="w-5 h-5" />
-              </button>
+                  <Video className="w-5 h-5" />
+                </button>
               <button 
                 onClick={() => {
                   console.log('📋 Menu button clicked!')
@@ -576,16 +576,16 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                 className="p-2 hover:bg-purple-700 rounded-full"
                 title="Menu"
               >
-                <MoreVertical className="w-5 h-5" />
-              </button>
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-          </div>
 
           {/* Menu Dropdown */}
           {showMenu && (
             <div className="absolute top-16 right-4 bg-white rounded-lg shadow-lg border border-gray-200 z-10 min-w-48">
               <div className="py-2">
-                <button 
+                      <button
                   onClick={() => {
                     setIsMuted(!isMuted)
                     setShowMenu(false)
@@ -634,36 +634,36 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                 >
                   <Trash2 className="w-4 h-4" />
                   Clear Chat
-                </button>
+                      </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Messages */}
+            {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
-              >
+              {messages.map((message) => (
                 <div
+                  key={message.id}
+                  className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
                   className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    message.sender_id === user?.id
+                      message.sender_id === user?.id
                       ? 'bg-purple-500 text-white'
                       : 'bg-gray-200 text-gray-900'
-                  }`}
-                >
-                  <p className="text-sm">{message.content}</p>
+                    }`}
+                  >
+                    <p className="text-sm">{message.content}</p>
                   <p className="text-xs mt-1 opacity-70">
                     {new Date(message.timestamp).toLocaleTimeString()}
                   </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
 
-          {/* Message Input */}
+            {/* Message Input */}
           <div className="border-t border-gray-200 p-4">
             <div className="flex items-center gap-2">
               <button 
@@ -682,24 +682,24 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                 }}
                 className="p-2 text-gray-500 hover:text-gray-700"
               >
-                <Paperclip className="w-5 h-5" />
-              </button>
+                  <Paperclip className="w-5 h-5" />
+                </button>
               <div className="flex-1">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendGroupMessage()}
-                  placeholder="Type a message..."
+                    placeholder="Type a message..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
+                  />
+                </div>
               {newMessage.trim() ? (
                 <button
                   onClick={sendGroupMessage}
                   className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600"
                 >
-                  <Send className="w-5 h-5" />
+                    <Send className="w-5 h-5" />
                 </button>
               ) : (
                 <button
@@ -732,13 +732,13 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                     className="ml-auto text-red-600 hover:text-red-700"
                   >
                     <X className="w-4 h-4" />
-                  </button>
-                </div>
+                </button>
+              </div>
               </div>
             )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Group Info Modal */}
       {showGroupInfo && selectedGroup && (
@@ -752,7 +752,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
               >
                 <X className="w-5 h-5" />
               </button>
-            </div>
+      </div>
             <div className="p-4 max-h-96 overflow-y-auto">
               <div className="space-y-3">
                 {selectedGroup.members.map((member) => (
@@ -802,7 +802,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
               >
                 <X className="w-5 h-5" />
               </button>
-            </div>
+              </div>
             <div className="p-4">
               <div className="flex items-center mb-4">
                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-3">
@@ -815,7 +815,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                   ) : (
                     <Users className="w-6 h-6 text-purple-600" />
                   )}
-                </div>
+            </div>
                 <div>
                   <h4 className="font-medium text-gray-900">
                     {selectedMember.first_name} {selectedMember.last_name}
@@ -832,7 +832,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                   className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
                 >
                   Add Friend
-                </button>
+          </button>
                 <button
                   onClick={() => {
                     setSelectedFriend({
@@ -852,7 +852,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                   className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Chat Now
-                </button>
+          </button>
               </div>
             </div>
           </div>
@@ -870,7 +870,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                 className="p-2 hover:bg-purple-700 rounded-full"
               >
                 <X className="w-5 h-5" />
-              </button>
+          </button>
             </div>
             <div className="p-4">
               <div className="text-center mb-4">
@@ -899,9 +899,9 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                   className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Cancel
-                </button>
-              </div>
-            </div>
+          </button>
+        </div>
+      </div>
           </div>
         </div>
       )}

@@ -187,16 +187,11 @@ function HomePageContent() {
     }
   ]
 
-
-
-
-
   return (
-    <div className="min-h-screen">
-      {/* Main Content Container with Responsive Max Width */}
-      <div className="mx-auto max-w-2xl">
-        {/* Enhanced iOS Style Header */}
-        <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
+    <div className="h-screen w-screen overflow-hidden flex flex-col">
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
+        <div className="max-w-2xl mx-auto">
           <div className="relative">
             {/* Normal Header Content */}
             <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
@@ -290,6 +285,7 @@ function HomePageContent() {
             </div>
           </div>
         </div>
+        </div>
       </div>
 
       {/* Search Results Overlay */}
@@ -357,143 +353,146 @@ function HomePageContent() {
         </div>
       )}
 
-      {/* Hero Banner - Carousel */}
-      <div className="px-4 py-6">
-        <div className="relative h-[30vh] rounded-3xl overflow-hidden shadow-lg">
-          {/* Carousel Images */}
-          <div className="relative w-full h-full">
-            {carouselImages.map((image, index) => (
-              <img 
-                key={index}
-                src={image} 
-                alt={`LoveWorld Singers Rehearsal Hub ${index + 1}`} 
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-                  index === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                }`}
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            ))}
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="w-full max-w-2xl mx-auto">
+          {/* Hero Banner - Carousel */}
+          <div className="px-4 py-6 pt-20">
+            <div className="relative h-[30vh] rounded-3xl overflow-hidden shadow-lg">
+              {/* Carousel Images */}
+              <div className="relative w-full h-full">
+                {carouselImages.map((image, index) => (
+                  <img 
+                    key={index}
+                    src={image} 
+                    alt={`LoveWorld Singers Rehearsal Hub ${index + 1}`} 
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                      index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ))}
+              </div>
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+            </div>
           </div>
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-        
-        </div>
-      </div>
 
-        {/* Main Title */}
-        <div className="text-center py-6">
-          <h1 className="text-1xl font-bold text-gray-800">LoveWorld Singers Rehearsal Hub Portal</h1>
-        </div>
+          {/* Main Title */}
+          <div className="text-center py-6">
+            <h1 className="text-1xl font-bold text-gray-800">LoveWorld Singers Rehearsal Hub Portal</h1>
+          </div>
 
-        {/* Features Grid */}
-        <div className="px-3 pb-4">
-        <div className="grid grid-cols-3 gap-2">
-          {features.map((feature, index) => (
-            <Link
-              key={index}
-              href={feature.href}
-              className="group flex flex-col items-center p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 active:bg-gray-50 border border-gray-100/50 hover:border-purple-200/50"
-              style={{
-                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
-              }}
-            >
-              <div className="relative mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-sm">
-                  <feature.icon className="w-4 h-4 text-purple-600 group-hover:text-purple-700 transition-colors duration-300" />
-                </div>
-                {feature.badge && (
-                  <div className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 via-red-500 to-red-600 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center font-bold shadow-xl border-2 border-white animate-pulse">
-                    <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-75"></div>
+          {/* Features Grid */}
+          <div className="px-3 pb-4">
+            <div className="grid grid-cols-3 gap-2">
+              {features.map((feature, index) => (
+                <Link
+                  key={index}
+                  href={feature.href}
+                  className="group flex flex-col items-center p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 active:bg-gray-50 border border-gray-100/50 hover:border-purple-200/50"
+                  style={{
+                    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+                  }}
+                >
+                  <div className="relative mb-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-sm">
+                      <feature.icon className="w-4 h-4 text-purple-600 group-hover:text-purple-700 transition-colors duration-300" />
+                    </div>
+                    {feature.badge && (
+                      <div className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 via-red-500 to-red-600 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center font-bold shadow-xl border-2 border-white animate-pulse">
+                        <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-75"></div>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium text-gray-800 text-center leading-tight group-hover:text-purple-700 transition-colors duration-300">{feature.title}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* About Section */}
+          <div className="px-4 pb-6">
+            <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
+            <div className="space-y-2">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <button 
+                  onClick={() => toggleAbout(0)}
+                  className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+                >
+                  <h4 className="text-sm font-medium text-gray-800 pr-2">What is LoveWorld Singers Rehearsal Hub?</h4>
+                  <div className="flex-shrink-0">
+                    {openAbout === 0 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                  </div>
+                </button>
+                {openAbout === 0 && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-600 leading-relaxed pt-3">A comprehensive platform for managing rehearsal schedules, song collections, and ministry activities. Connect with fellow singers, access audio resources, and stay updated with the latest ministry news.</p>
                   </div>
                 )}
               </div>
-              <span className="text-xs font-medium text-gray-800 text-center leading-tight group-hover:text-purple-700 transition-colors duration-300">{feature.title}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
+            </div>
+          </div>
 
-        {/* About Section */}
-        <div className="px-4 pb-6">
-        <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
-        <div className="space-y-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => toggleAbout(0)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-            >
-              <h4 className="text-sm font-medium text-gray-800 pr-2">What is LoveWorld Singers Rehearsal Hub?</h4>
-              <div className="flex-shrink-0">
-                {openAbout === 0 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+          {/* FAQ Section */}
+          <div className="px-4 pb-6">
+            <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">FAQ</h2>
+            <div className="space-y-2">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <button 
+                  onClick={() => toggleFAQ(0)}
+                  className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+                >
+                  <h4 className="text-sm font-medium text-gray-800 pr-2">How do I join a rehearsal?</h4>
+                  <div className="flex-shrink-0">
+                    {openFAQ === 0 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                  </div>
+                </button>
+                {openFAQ === 0 && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-600 leading-relaxed pt-3">Check the Rehearsals section for upcoming sessions and register through the calendar.</p>
+                  </div>
+                )}
               </div>
-            </button>
-            {openAbout === 0 && (
-              <div className="px-4 pb-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600 leading-relaxed pt-3">A comprehensive platform for managing rehearsal schedules, song collections, and ministry activities. Connect with fellow singers, access audio resources, and stay updated with the latest ministry news.</p>
+              
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <button 
+                  onClick={() => toggleFAQ(1)}
+                  className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+                >
+                  <h4 className="text-sm font-medium text-gray-800 pr-2">Where can I find song lyrics?</h4>
+                  <div className="flex-shrink-0">
+                    {openFAQ === 1 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                  </div>
+                </button>
+                {openFAQ === 1 && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-600 leading-relaxed pt-3">Access song lyrics and audio resources in the AudioLabs section.</p>
+                  </div>
+                )}
               </div>
-            )}
+              
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <button 
+                  onClick={() => toggleFAQ(2)}
+                  className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
+                >
+                  <h4 className="text-sm font-medium text-gray-800 pr-2">How do I get support?</h4>
+                  <div className="flex-shrink-0">
+                    {openFAQ === 2 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                  </div>
+                </button>
+                {openFAQ === 2 && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-600 leading-relaxed pt-3">Use the Support section or contact your ministry coordinator for assistance.</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* FAQ Section */}
-      <div className="px-4 pb-6">
-        <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">FAQ</h2>
-        <div className="space-y-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => toggleFAQ(0)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-            >
-              <h4 className="text-sm font-medium text-gray-800 pr-2">How do I join a rehearsal?</h4>
-              <div className="flex-shrink-0">
-                {openFAQ === 0 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-              </div>
-            </button>
-            {openFAQ === 0 && (
-              <div className="px-4 pb-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600 leading-relaxed pt-3">Check the Rehearsals section for upcoming sessions and register through the calendar.</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => toggleFAQ(1)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-            >
-              <h4 className="text-sm font-medium text-gray-800 pr-2">Where can I find song lyrics?</h4>
-              <div className="flex-shrink-0">
-                {openFAQ === 1 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-              </div>
-            </button>
-            {openFAQ === 1 && (
-              <div className="px-4 pb-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600 leading-relaxed pt-3">Access song lyrics and audio resources in the AudioLabs section.</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => toggleFAQ(2)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
-            >
-              <h4 className="text-sm font-medium text-gray-800 pr-2">How do I get support?</h4>
-              <div className="flex-shrink-0">
-                {openFAQ === 2 ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-              </div>
-            </button>
-            {openFAQ === 2 && (
-              <div className="px-4 pb-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600 leading-relaxed pt-3">Use the Support section or contact your ministry coordinator for assistance.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
       </div>
 
       {/* Sliding Drawer */}
@@ -518,8 +517,6 @@ function HomePageContent() {
               <X className="w-5 h-5" />
             </button>
           </div>
-
-          
         </div>
       </div>
     </div>

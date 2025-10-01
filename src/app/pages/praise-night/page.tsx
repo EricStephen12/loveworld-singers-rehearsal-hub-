@@ -461,7 +461,7 @@ function PraiseNightPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50">
+    <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-purple-50">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         
@@ -548,10 +548,9 @@ function PraiseNightPageContent() {
         }
       `}</style>
 
-      {/* Shared Screen Header with Search Button and Timer */}
-      {/* Enhanced Header with Integrated Search */}
-      <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl">
-        <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
+      {/* ✅ Fixed Header */}
+      <div className="flex-shrink-0 mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl">
+        <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
           <div className="relative">
             {/* Normal Header Content */}
             <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${isSearchOpen ? 'opacity-0' : 'opacity-100'
@@ -836,8 +835,9 @@ function PraiseNightPageContent() {
 
 
 
-      {/* Content Container with Responsive Max Width */}
-      <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative">
+      {/* ✅ Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative pb-24">
         {/* Offline Banner */}
         <OfflineBanner />
 
@@ -1120,13 +1120,15 @@ function PraiseNightPageContent() {
         )}
 
         {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
+        </div>
       </div>
+      {/* ✅ End of Scrollable Content */}
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* Bottom Bar with Categories and FAB - Same Row - Hide when no pages in category, when viewing from archive, or when categoryFilter is archive */}
+      {/* ✅ Fixed Bottom Bar with Categories and FAB */}
       {filteredPraiseNights.length > 0 && !pageParam && categoryFilter !== 'archive' && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm">
+        <div className="flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50">
             <div className="w-full flex items-center px-4 sm:px-6 py-4 gap-2">
               {/* Category buttons with text - Take up most of the space */}
               <div className="flex-1 flex gap-2">
