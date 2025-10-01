@@ -21,7 +21,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
-  min-height: 100dvh;
+  min-height: 100vh;
   background: linear-gradient(180deg, #F0F4F3 0%, #D8E0DE 100%);
   /* ✅ Instant rendering */
   will-change: transform;

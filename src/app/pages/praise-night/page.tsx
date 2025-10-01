@@ -548,12 +548,12 @@ function PraiseNightPageContent() {
         }
       `}</style>
 
-      {/* ✅ Fixed Header */}
-      <div className="flex-shrink-0 mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl">
-        <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
+       {/* ✅ Fixed Header - Full Width */}
+       <div className="flex-shrink-0 w-full">
+         <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100/50 min-h-[60px] sm:min-h-[70px] w-full">
           <div className="relative">
             {/* Normal Header Content */}
-            <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${isSearchOpen ? 'opacity-0' : 'opacity-100'
+            <div className={`flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 transition-all duration-300 ease-out ${isSearchOpen ? 'opacity-0' : 'opacity-100'
               }`}>
               {/* Left Section - Menu and Left Buttons */}
               <div className="flex items-center space-x-2">
@@ -623,9 +623,9 @@ function PraiseNightPageContent() {
             </div>
 
             {/* Header Search Overlay */}
-            <div className={`absolute inset-0 bg-white/95 backdrop-blur-xl transition-all duration-300 ease-out ${isSearchOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
-              }`}>
-              <div className="flex items-center justify-between px-4 py-3 h-full">
+             <div className={`absolute inset-0 bg-white/95 backdrop-blur-xl transition-all duration-300 ease-out ${isSearchOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
+               }`}>
+               <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 h-full">
                 <div className="flex-1 relative">
                   <input
                     ref={searchInputRef}
@@ -835,9 +835,9 @@ function PraiseNightPageContent() {
 
 
 
-      {/* ✅ Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative pb-24">
+       {/* ✅ Scrollable Content Container */}
+       <div className="flex-1 overflow-y-auto">
+         <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative pb-24">
         {/* Offline Banner */}
         <OfflineBanner />
 
@@ -1126,10 +1126,10 @@ function PraiseNightPageContent() {
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* ✅ Fixed Bottom Bar with Categories and FAB */}
-      {filteredPraiseNights.length > 0 && !pageParam && categoryFilter !== 'archive' && (
-        <div className="flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50">
-            <div className="w-full flex items-center px-4 sm:px-6 py-4 gap-2">
+       {/* ✅ Fixed Bottom Bar with Categories and FAB */}
+       {filteredPraiseNights.length > 0 && !pageParam && categoryFilter !== 'archive' && (
+         <div className="flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+             <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
               {/* Category buttons with text - Take up most of the space */}
               <div className="flex-1 flex gap-2">
             {mainCategories.map((category, index) => (

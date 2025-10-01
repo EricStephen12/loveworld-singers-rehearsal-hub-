@@ -39,7 +39,7 @@ export function ScreenHeader({ title, subtitle, onMenuClick, rightImageSrc = '/l
 
   return (
     <div className={`sticky top-0 z-50 bg-white/80 backdrop-blur-xl ${showDivider ? 'border-b border-gray-100/50' : ''}`}>
-      <div className="flex items-center justify-between p-3 relative">
+      <div className="flex items-center justify-between p-2 sm:p-3 relative min-h-[60px] sm:min-h-[70px]">
         {/* Left side - Menu button and left buttons */}
         <div className="flex items-center space-x-2">
           {showMenuButton && (
