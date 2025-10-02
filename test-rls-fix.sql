@@ -43,3 +43,6 @@ EXCEPTION
         RAISE NOTICE '❌ RLS policy error: %', SQLERRM;
 END $$;
 
+
+
+
