@@ -428,9 +428,9 @@ export default function ProfileCompletionPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
+    <div className="h-screen flex flex-col bg-white overflow-hidden">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between">
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between">
         <button
           onClick={handleBack}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -452,7 +452,7 @@ export default function ProfileCompletionPage() {
       </div>
 
       {/* Progress Bar */}
-      <div className="px-4 py-4">
+      <div className="flex-shrink-0 px-4 py-4">
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
             className="bg-purple-600 h-2 rounded-full transition-all duration-300"
@@ -461,8 +461,8 @@ export default function ProfileCompletionPage() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 py-6 min-h-[calc(100vh-200px)]">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto px-4 py-6">
         {/* Error Message */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -474,7 +474,7 @@ export default function ProfileCompletionPage() {
       </div>
 
       {/* Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4">
+      <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-4">
         <div className="flex gap-3">
           {currentStep > 1 && (
             <button
