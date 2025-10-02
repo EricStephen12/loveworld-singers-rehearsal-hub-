@@ -7,7 +7,7 @@ import RealtimeNotifications from '@/components/RealtimeNotifications'
 import VersionChecker from '@/components/VersionChecker'
 import ScreenshotPrevention from '@/components/ScreenshotPrevention'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
-import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
+// import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
 // Use system fonts as fallback to avoid Google Fonts network issues
 const inter = { 
@@ -109,7 +109,7 @@ export default function RootLayout({
             </main>
             <PWAInstall />
             <RealtimeNotifications />
-            <GlobalMiniPlayer />
+            {/* <GlobalMiniPlayer /> */}
           </AudioProvider>
         </AuthProvider>
       </body>
