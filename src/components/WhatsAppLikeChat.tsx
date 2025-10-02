@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import { ArrowLeft, Users, MessageCircle, Phone, Video, MoreVertical, Search, Send, Smile, Paperclip, Camera, Mic, X, Check, CheckCheck, Clock, UserPlus, Settings, Archive, Trash2, Star, Pin, Volume2, VolumeX, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase-client'
+import { groupsCache, messagesCache, withCache } from '@/lib/smart-cache'
 
 interface Member {
   id: string
@@ -85,14 +86,24 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const groupsLoadedRef = useRef(false)
 
-  // Load user groups from user_groups table (like profile page)
-  const loadUserGroups = async () => {
+  // Load user groups with smart caching
+  const loadUserGroups = useCallback(async () => {
     if (!user?.id) {
       console.log('❌ No user ID available')
       return
     }
 
-    console.log('🔄 Loading user groups from user_groups table...')
+    const cacheKey = `groups_${user.id}`
+    const cachedGroups = groupsCache.get(cacheKey)
+    
+    if (cachedGroups) {
+      console.log('🚀 Using cached groups')
+      setGroups(cachedGroups)
+      groupsLoadedRef.current = true
+      return
+    }
+
+    console.log('💾 Fetching fresh groups...')
 
     try {
       // First, load from user_groups table (same as profile page)
@@ -168,11 +179,14 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
       console.log(`✅ Created ${userGroups.length} groups for user:`, userGroups.map(g => g.name))
       setGroups(userGroups)
       groupsLoadedRef.current = true
+      
+      // Cache the groups
+      groupsCache.set(cacheKey, userGroups)
 
     } catch (error) {
       console.error('❌ Error loading user groups:', error)
     }
-  }
+  }, [user?.id, profile])
 
   // Load friends from database
   const loadFriends = async () => {

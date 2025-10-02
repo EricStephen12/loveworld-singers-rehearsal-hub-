@@ -24,40 +24,8 @@ export default function AuthPage() {
     confirmPassword: ''
   })
 
-  // Check if already logged in - redirect immediately
-  useEffect(() => {
-    const checkAuth = async () => {
-      // Check if this is a logout redirect - if so, don't check for existing session
-      const urlParams = new URLSearchParams(window.location.search)
-      const isLogout = urlParams.get('logout')
-      
-      if (isLogout) {
-        console.log('🚪 Auth page: Logout redirect detected, staying on auth page')
-        return
-      }
-      
-      // Only check once to prevent double redirects
-      const cachedSession = AuthService.getCachedSession()
-      if (cachedSession) {
-        console.log('✅ Auth page: Found cached session, redirecting to home')
-        router.replace('/home')
-        return
-      }
-
-      // Then verify with Supabase
-      const session = await AuthService.getCurrentSession()
-      if (session) {
-        console.log('✅ Auth page: Found active session, redirecting to home')
-        router.replace('/home')
-      } else {
-        console.log('ℹ️ Auth page: No session found, staying on auth page')
-      }
-    }
-    
-    // Add small delay to prevent race conditions
-    const timeoutId = setTimeout(checkAuth, 100)
-    return () => clearTimeout(timeoutId)
-  }, [router])
+  // NO AUTH CHECK - Let AuthContext handle redirects
+  // This prevents loops completely
 
   // Check for URL error parameters on mount
   useEffect(() => {

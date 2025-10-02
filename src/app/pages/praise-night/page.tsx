@@ -12,7 +12,7 @@ import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer,
 import SongDetailModal from "@/components/SongDetailModal";
 import { PraiseNightSong, PraiseNight } from "@/types/supabase";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
-import { OfflineBanner } from "@/components/OfflineIndicator";
+import OfflineIndicator from "@/components/OfflineIndicator";
 import ScreenHeader from "@/components/ScreenHeader";
 import SharedDrawer from "@/components/SharedDrawer";
 import { getMenuItems } from "@/config/menuItems";
@@ -865,7 +865,7 @@ function PraiseNightPageContent() {
        <div className="flex-1 overflow-y-auto">
          <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative pb-24">
         {/* Offline Banner */}
-        <OfflineBanner />
+        <OfflineIndicator />
 
         {/* Archive Cards Grid - Special layout for archive category */}
         {categoryFilter === 'archive' && (

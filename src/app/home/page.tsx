@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import { getMenuItems } from '@/config/menuItems'
+import SharedDrawer from '@/components/SharedDrawer'
 import { useHomeGlobalSearch, HomeSearchResult } from '@/hooks/useHomeGlobalSearch'
 import { useAuth } from '@/contexts/AuthContext'
 import AuthGuard from '@/components/AuthGuard'
@@ -81,13 +82,7 @@ function HomePageContent() {
   const handleLogout = async () => {
     try {
       await signOut()
-      // Clear localStorage
-      localStorage.removeItem('isAuthenticated')
-      localStorage.removeItem('hasCompletedProfile')
-      localStorage.removeItem('hasSubscribed')
-
-      // Redirect to auth screen
-      router.push('/auth')
+      // Don't use router.push - signOut already handles redirect
     } catch (error) {
       console.error('Logout error:', error)
     }
@@ -497,30 +492,13 @@ function HomePageContent() {
         </div>
       </div>
 
-      {/* Sliding Drawer */}
-      <div className={`fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out ${
-        isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        {/* Backdrop */}
-        <div 
-          className="absolute inset-0 bg-black bg-opacity-50"
-          onClick={toggleDrawer}
-        />
-        
-        {/* Drawer Content */}
-        <div className="relative w-80 max-w-sm h-full bg-white shadow-xl border-r border-gray-200">
-          {/* Drawer Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
-            <button 
-              onClick={toggleDrawer}
-              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Shared Drawer with Logout */}
+      <SharedDrawer
+        open={isDrawerOpen}
+        onClose={toggleDrawer}
+        title="Menu"
+        items={getMenuItems(handleLogout)}
+      />
       </div> {/* End Desktop Container */}
     </div>
   )

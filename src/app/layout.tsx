@@ -7,7 +7,8 @@ import RealtimeNotifications from '@/components/RealtimeNotifications'
 import VersionChecker from '@/components/VersionChecker'
 // import ScreenshotPrevention from '@/components/ScreenshotPrevention'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
-import ErrorBoundary from '@/components/ErrorBoundary'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import OfflineIndicator from '@/components/OfflineIndicator'
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
 // Use system fonts as fallback to avoid Google Fonts network issues
@@ -30,34 +31,44 @@ const outfit = {
 const APP_VERSION = '3.0.0'; // ✅ Updated for instant loading optimizations
 
 export const metadata: Metadata = {
-  title: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL - LoveWorld Singers Rehearsal Hub',
-  description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
+  title: 'LoveWorld Singers Rehearsal Hub - Praise & Worship App',
+  description: 'Join the LoveWorld Singers community! Access rehearsals, chat with fellow singers, and grow in praise and worship. Install our app for the best experience!',
   manifest: `/manifest.json`,
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL',
+    title: 'LoveWorld Singers',
   },
   formatDetection: {
     telephone: false,
   },
-  applicationName: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL',
+  applicationName: 'LoveWorld Singers',
   generator: 'Next.js',
-  keywords: ['praise', 'worship', 'rehearsal', 'music', 'loveworld', 'singers'],
+  keywords: ['praise', 'worship', 'rehearsal', 'music', 'loveworld', 'singers', 'choir', 'church', 'christian'],
   authors: [{ name: 'LoveWorld Singers' }],
   creator: 'LoveWorld Singers',
   publisher: 'LoveWorld Singers',
   robots: 'index, follow',
   openGraph: {
     type: 'website',
-    siteName: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL',
-    title: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL - LoveWorld Singers Rehearsal Hub',
-    description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
+    siteName: 'LoveWorld Singers Rehearsal Hub',
+    title: 'LoveWorld Singers Rehearsal Hub - Join Our Community!',
+    description: 'Join the LoveWorld Singers community! Access rehearsals, chat with fellow singers, and grow in praise and worship. Install our app for the best experience!',
+    url: 'https://loveworldsingers.com',
+    images: [
+      {
+        url: '/APP ICON/pwa_512_filled.png',
+        width: 512,
+        height: 512,
+        alt: 'LoveWorld Singers Rehearsal Hub',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL - LoveWorld Singers Rehearsal Hub',
-    description: 'LoveWorld Singers Rehearsal Hub - Comprehensive praise and worship management app',
+    title: 'LoveWorld Singers Rehearsal Hub - Join Our Community!',
+    description: 'Join the LoveWorld Singers community! Access rehearsals, chat with fellow singers, and grow in praise and worship.',
+    images: ['/APP ICON/pwa_512_filled.png'],
   },
 }
 
@@ -87,7 +98,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://supabase.co" />
         <link rel="dns-prefetch" href="https://supabase.co" />
         <link rel="preload" href="/logo.png" as="image" />
-        <link rel="preload" href="/images/home.jpg" as="image" />
+        <link rel="preload" href="/lmm.png" as="image" />
+        <link rel="preload" href="/APP ICON/pwa_192_filled.png" as="image" />
+        
+        {/* Critical CSS and JS preloading */}
+        <link rel="preload" href="/_next/static/css/app/layout.css" as="style" />
+        <link rel="preload" href="/_next/static/chunks/webpack.js" as="script" />
+        
+        {/* Preload critical fonts */}
+        <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/poppins.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
 
         <meta name="theme-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -110,6 +130,7 @@ export default function RootLayout({
               </main>
               <PWAInstall />
               <RealtimeNotifications />
+              <OfflineIndicator />
             </AudioProvider>
           </AuthProvider>
         </ErrorBoundary>

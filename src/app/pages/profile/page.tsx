@@ -477,7 +477,7 @@ export default function ProfilePage() {
 
   const handleLogout = async () => {
     await signOut()
-    router.push('/auth')
+    // Don't use router.push - signOut already handles redirect
   }
 
   // Only redirect if authentication is complete and no user is found

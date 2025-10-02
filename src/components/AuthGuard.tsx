@@ -22,8 +22,18 @@ export default function AuthGuard({
   const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
+    console.log('AuthGuard: Checking auth state...', { 
+      isLoading, 
+      user: !!user, 
+      profile: !!profile, 
+      isProfileComplete,
+      requireAuth,
+      requireCompleteProfile 
+    });
+
     // Don't do anything while loading
     if (isLoading) {
+      console.log('AuthGuard: Still loading...');
       return;
     }
 
@@ -34,10 +44,17 @@ export default function AuthGuard({
       return;
     }
 
-    // If user exists but profile hasn't loaded yet, wait
+    // If user exists but profile hasn't loaded yet, wait a bit longer
     if (user && !profile) {
-      console.log('AuthGuard: Waiting for profile to load...');
-      return;
+      console.log('AuthGuard: User exists but profile not loaded yet, waiting...');
+      // Give profile more time to load
+      const timer = setTimeout(() => {
+        if (!profile) {
+          console.log('AuthGuard: Profile still not loaded, allowing access anyway');
+          setShouldRender(true);
+        }
+      }, 2000);
+      return () => clearTimeout(timer);
     }
 
     // If complete profile is required but profile is not complete
@@ -48,6 +65,7 @@ export default function AuthGuard({
     }
 
     // If we get here, all requirements are met
+    console.log('AuthGuard: All requirements met, rendering children');
     setShouldRender(true);
   }, [user, profile, isLoading, isProfileComplete, requireAuth, requireCompleteProfile, redirectTo, router]);
 

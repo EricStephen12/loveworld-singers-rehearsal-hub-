@@ -1,9 +1,11 @@
 'use client'
 
 import React, { Component, ReactNode } from 'react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 
 interface Props {
   children: ReactNode
+  fallback?: ReactNode
 }
 
 interface State {
@@ -11,7 +13,7 @@ interface State {
   error?: Error
 }
 
-export default class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
     this.state = { hasError: false }
@@ -22,52 +24,76 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('🚨 App Error:', error, errorInfo)
+    console.error('ErrorBoundary caught an error:', error, errorInfo)
+  }
+
+  handleReload = () => {
+    // Clear all caches and reload
+    if ('caches' in window) {
+      caches.keys().then(names => {
+      names.forEach(name => {
+        caches.delete(name)
+      })
+    })
+    }
+    
+    // Clear localStorage
+    localStorage.clear()
+    sessionStorage.clear()
+    
+    // Reload the page
+    window.location.reload()
   }
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback
+      }
+
       return (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6366F1 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          color: 'white',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          textAlign: 'center',
-          padding: '20px',
-          zIndex: 9999
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎵</div>
-          <h1 style={{ margin: '0 0 10px 0', fontSize: '24px', fontWeight: '600' }}>LWSRHP</h1>
-          <p style={{ margin: '0 0 20px 0', opacity: 0.9, maxWidth: '300px' }}>
-            Something went wrong. Please try refreshing the page.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              background: 'white',
-              color: '#8B5CF6',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'transform 0.2s'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            Refresh Page
-          </button>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+            
+            <h1 className="text-xl font-semibold text-gray-900 mb-2">
+              Something went wrong
+            </h1>
+            
+            <p className="text-gray-600 mb-6">
+              The app encountered an error. This might be due to cache issues.
+            </p>
+            
+            <div className="space-y-3">
+              <button
+                onClick={this.handleReload}
+                className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Clear Cache & Reload
+              </button>
+              
+              <button
+                onClick={() => window.location.href = '/'}
+                className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Go to Home
+              </button>
+            </div>
+            
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <details className="mt-4 text-left">
+                <summary className="cursor-pointer text-sm text-gray-500">
+                  Error Details
+                </summary>
+                <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded overflow-auto">
+                  {this.state.error.toString()}
+                </pre>
+              </details>
+            )}
+          </div>
         </div>
       )
     }
@@ -75,3 +101,5 @@ export default class ErrorBoundary extends Component<Props, State> {
     return this.props.children
   }
 }
+
+export { ErrorBoundary }

@@ -5,9 +5,9 @@
   "version": "2.2.0",
   "theme_color": "#ffffff",
   "background_color": "#ffffff",
-  "display": "standalone",
+  "display": "minimal-ui",
   "orientation": "portrait",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": ["minimal-ui", "standalone"],
   "scope": "/",
   "start_url": "/",
   "icons": [
