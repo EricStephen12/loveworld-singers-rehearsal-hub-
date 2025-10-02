@@ -197,15 +197,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
             }
           }
 
-          // Only start playing if the audio is ready and user was playing
-          setTimeout(() => {
-            if (audioRef.current && audioRef.current.readyState >= 2 && savedState === 'true') {
-              audioRef.current.play().catch((error) => {
-                console.log('🎵 Could not auto-play restored session:', error.message);
-                // Don't show error to user, just don't auto-play
-              });
-            }
-          }, 2000); // Wait longer for audio to be ready
+          // Don't auto-play on app startup - this is not typical music player behavior
+          // Users should manually start playback
+          console.log('🎵 Audio state restored but not auto-playing (user must manually start)');
         }
       }
     } catch (error) {
