@@ -29,20 +29,20 @@ export default function ServiceWorkerRegistration() {
         
         let registration
         try {
-          // Try ultra-fast service worker first
-          registration = await navigator.serviceWorker.register('/sw-ultra-fast.js', {
+          // Use simple, reliable service worker for better compatibility
+          registration = await navigator.serviceWorker.register('/sw-simple.js', {
             scope: '/',
             updateViaCache: 'none'
           })
-          console.log('🚀 Ultra Fast Service Worker registered successfully:', registration.scope)
-        } catch (ultraFastError) {
-          console.log('⚠️ Ultra-fast SW failed, trying fallback...')
+          console.log('📱 Simple Service Worker registered successfully:', registration.scope)
+        } catch (simpleError) {
+          console.log('⚠️ Simple SW failed, trying fallback...')
           // Fallback to basic service worker
           registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/',
             updateViaCache: 'none'
           })
-          console.log('🚀 Fallback Service Worker registered successfully:', registration.scope)
+          console.log('📱 Fallback Service Worker registered successfully:', registration.scope)
         }
 
         // Check for updates immediately

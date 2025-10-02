@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   })
 
   const [isLoading, setIsLoading] = useState(false) // ✅ Always false - instant load with cache
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const refreshProfile = async () => {
     console.log('Refreshing profile...')
@@ -63,23 +64,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await AuthService.signOut()
-      setUser(null)
-      setSession(null)
-      setProfile(null)
-
-      // Clear all cached data
+      console.log('🚪 Starting logout process...')
+      setIsLoggingOut(true)
+      
+      // Clear all cached data FIRST
       localStorage.removeItem('cached_user_profile')
       localStorage.removeItem('cached_session')
       localStorage.removeItem('cached_pages_data')
       localStorage.removeItem('cached_pages_timestamp')
+      localStorage.removeItem('loveworld_audio_state')
+      localStorage.removeItem('loveworld_audio_time')
+      localStorage.removeItem('loveworld_audio_song')
+      localStorage.removeItem('audio_timestamp')
 
+      // Clear state immediately
+      setUser(null)
+      setSession(null)
+      setProfile(null)
+
+      // Sign out from Supabase
+      await AuthService.signOut()
+
+      console.log('✅ Logout completed, redirecting...')
       // Force redirect to auth page
       if (typeof window !== 'undefined') {
         window.location.href = '/auth'
       }
     } catch (error) {
       console.error('Logout error:', error)
+      // Clear state even if there's an error
+      setUser(null)
+      setSession(null)
+      setProfile(null)
+      
       // Force redirect even if there's an error
       if (typeof window !== 'undefined') {
         window.location.href = '/auth'
@@ -93,6 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Verify cached session is still valid
     const verifyCachedSession = async () => {
       try {
+        // Don't verify session if we're logging out
+        if (isLoggingOut) return
+        
         const cachedSession = AuthService.getCachedSession()
 
         // If we have cached session, verify it's still valid
@@ -165,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes (login/logout events)
     const { data: { subscription } } = AuthService.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted) return
+        if (!isMounted || isLoggingOut) return
 
         console.log('Auth state changed:', event)
 

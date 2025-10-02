@@ -7,6 +7,7 @@ import RealtimeNotifications from '@/components/RealtimeNotifications'
 import VersionChecker from '@/components/VersionChecker'
 import ScreenshotPrevention from '@/components/ScreenshotPrevention'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
+import ErrorBoundary from '@/components/ErrorBoundary'
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
 // Use system fonts as fallback to avoid Google Fonts network issues
@@ -100,18 +101,20 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${poppins.variable} ${outfit.variable} font-sans`}>
         <ServiceWorkerRegistration />
-        <AuthProvider>
-          <AudioProvider>
-            <ScreenshotPrevention />
-            <VersionChecker />
-            <main className="h-full w-full bg-gray-50">
-              {children}
-            </main>
-            <PWAInstall />
-            <RealtimeNotifications />
-            {/* <GlobalMiniPlayer /> */}
-          </AudioProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <AudioProvider>
+              <ScreenshotPrevention />
+              <VersionChecker />
+              <main className="h-full w-full bg-gray-50">
+                {children}
+              </main>
+              <PWAInstall />
+              <RealtimeNotifications />
+              {/* <GlobalMiniPlayer /> */}
+            </AudioProvider>
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )
