@@ -389,8 +389,8 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
-      {/* Header */}
-      <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
+      {/* Header - Full Width */}
+      <div className="bg-purple-600 text-white p-3 sm:p-4 flex items-center justify-between w-full">
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="p-2 hover:bg-purple-700 rounded-full">
             <ArrowLeft className="w-5 h-5" />
@@ -531,8 +531,8 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
       {/* Chat Interface */}
       {(selectedGroup || selectedFriend) && (
         <div className="absolute inset-0 bg-white z-10 flex flex-col">
-            {/* Chat Header */}
-          <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
+            {/* Chat Header - Full Width */}
+          <div className="bg-purple-600 text-white p-3 sm:p-4 flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
               <button onClick={() => { setSelectedGroup(null); setSelectedFriend(null) }} className="p-2 hover:bg-purple-700 rounded-full">
                   <ArrowLeft className="w-5 h-5" />

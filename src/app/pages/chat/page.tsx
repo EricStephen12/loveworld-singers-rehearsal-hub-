@@ -67,9 +67,9 @@ export default function ChatPage() {
 
   return (
     <div className="min-h-screen bg-[#E5DDD5] flex flex-col">
-      {/* WhatsApp-style header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-400 to-purple-500 shadow-md">
-        <div className="px-4 py-3 flex items-center justify-between max-w-4xl mx-auto">
+      {/* WhatsApp-style header - Full Width */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-400 to-purple-500 shadow-md w-full">
+        <div className="px-3 sm:px-4 py-3 flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
@@ -129,7 +129,7 @@ export default function ChatPage() {
       )}
 
       {/* WhatsApp-style messages area with pattern background */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 pt-20 pb-28 max-w-4xl mx-auto w-full" style={{
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 pt-20 pb-28 w-full" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4c5b9' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
       }}>
         <div className="space-y-3">
@@ -210,8 +210,8 @@ export default function ChatPage() {
       </div>
 
       {/* WhatsApp-style input area */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#F0F0F0] border-t border-gray-300 shadow-lg">
-        <div className="px-3 py-2 max-w-4xl mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#F0F0F0] border-t border-gray-300 shadow-lg w-full">
+        <div className="px-3 py-2 w-full">
           <div className="flex items-end gap-2">
             {/* Emoji button */}
             <button

@@ -189,12 +189,12 @@ function HomePageContent() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
-      {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
-        <div className="max-w-2xl mx-auto">
+      {/* Fixed Header - Full Width */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50 w-full">
+        <div className="w-full">
           <div className="relative">
             {/* Normal Header Content */}
-            <div className={`flex items-center justify-between px-4 py-3 transition-all duration-300 ease-out ${
+            <div className={`flex items-center justify-between px-3 sm:px-4 py-3 transition-all duration-300 ease-out ${
               isSearchOpen ? 'opacity-0' : 'opacity-100'
             }`}>
             {/* Left Section - Profile Picture */}
@@ -291,7 +291,7 @@ function HomePageContent() {
       {/* Search Results Overlay */}
       {isSearchOpen && (
         <div className="fixed inset-0 z-30 bg-white/95 backdrop-blur-xl pt-20 overflow-y-auto">
-          <div className="px-4 py-4 pb-8">
+          <div className="px-3 sm:px-4 py-4 pb-8">
             <div className="text-sm text-gray-500 mb-4">
               {globalSearchQuery ? (
                 `${typedSearchResults.length} result${typedSearchResults.length !== 1 ? 's' : ''} for "${globalSearchQuery}"`
@@ -355,9 +355,9 @@ function HomePageContent() {
 
       {/* Scrollable Content Container */}
       <div className="flex-1 overflow-y-auto">
-        <div className="w-full max-w-2xl mx-auto">
+        <div className="w-full">
           {/* Hero Banner - Carousel */}
-          <div className="px-4 py-6 pt-20">
+          <div className="px-3 sm:px-4 py-6 pt-20">
             <div className="relative h-[30vh] rounded-3xl overflow-hidden shadow-lg">
               {/* Carousel Images */}
               <div className="relative w-full h-full">
