@@ -189,7 +189,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log('Auth state changed:', event)
 
-        setSession(session)
+        // Only update if the session actually changed to prevent unnecessary re-renders
+        setSession(prevSession => {
+          if (prevSession?.access_token !== session?.access_token) {
+            return session
+          }
+          return prevSession
+        })
+        
         setUser(session?.user || null)
 
         if (session?.user) {

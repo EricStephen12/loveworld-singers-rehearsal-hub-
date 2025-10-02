@@ -27,7 +27,7 @@ export default function AuthPage() {
   // Check if already logged in - redirect immediately
   useEffect(() => {
     const checkAuth = async () => {
-      // First check cached session (instant)
+      // Only check once to prevent double redirects
       const cachedSession = AuthService.getCachedSession()
       if (cachedSession) {
         console.log('✅ Auth page: Found cached session, redirecting to home')
@@ -44,7 +44,10 @@ export default function AuthPage() {
         console.log('ℹ️ Auth page: No session found, staying on auth page')
       }
     }
-    checkAuth()
+    
+    // Add small delay to prevent race conditions
+    const timeoutId = setTimeout(checkAuth, 100)
+    return () => clearTimeout(timeoutId)
   }, [router])
 
   // Check for URL error parameters on mount

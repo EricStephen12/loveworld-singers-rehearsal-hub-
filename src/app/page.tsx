@@ -6,13 +6,16 @@ import { useAuth } from '@/contexts/AuthContext'
 
 export default function SplashPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
   const [hasRedirected, setHasRedirected] = useState(false)
 
   // ✅ INSTANT REDIRECT - No splash delay
   useEffect(() => {
     // Prevent multiple redirects
     if (hasRedirected) return
+    
+    // Wait for auth to finish loading
+    if (isLoading) return
 
     // Redirect INSTANTLY - no waiting
     setHasRedirected(true)
@@ -26,7 +29,7 @@ export default function SplashPage() {
       console.log('✅ Splash: User authenticated, redirecting to home')
       router.replace('/home')
     }
-  }, [user, hasRedirected, router])
+  }, [user, isLoading, hasRedirected, router])
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center">
