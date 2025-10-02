@@ -1276,8 +1276,8 @@ function PraiseNightPageContent() {
         />
       )}
       
-      {/* Mini Player - Only shows on praise night page */}
-      <GlobalMiniPlayer />
+      {/* Mini Player - DISABLED for now */}
+      {/* <GlobalMiniPlayer /> */}
     </div>
   );
 }
