@@ -101,7 +101,7 @@ export default function RootLayout({
         <ServiceWorkerRegistration />
         <AuthProvider>
           <AudioProvider>
-            {/* <ScreenshotPrevention /> DISABLED for development */}
+            <ScreenshotPrevention />
             <VersionChecker />
             <main className="h-full w-full bg-gray-50">
               {children}

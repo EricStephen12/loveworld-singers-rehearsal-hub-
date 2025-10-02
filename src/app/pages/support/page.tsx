@@ -90,13 +90,15 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-pink-50 overflow-hidden">
       <ScreenHeader
         title="Admin Support"
         onMenuClick={() => setIsMenuOpen(true)}
       />
 
-      <div className="px-4 py-6 max-w-2xl mx-auto">
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 py-6 w-full">
         {/* Header Section */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-full mb-4">
@@ -160,6 +162,7 @@ export default function SupportPage() {
             <MessageCircle className="w-5 h-5" />
             Chat with Admin
           </button>
+        </div>
         </div>
       </div>
 

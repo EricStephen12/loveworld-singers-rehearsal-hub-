@@ -551,7 +551,7 @@ export default function ProfilePage() {
   const rightButtons = null
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="h-screen flex flex-col bg-white overflow-hidden">
       {/* Animated Header */}
       <ScreenHeader 
         title="Profile" 
@@ -562,8 +562,10 @@ export default function ProfilePage() {
 
 
 
-      {/* Profile Header */}
-      <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Profile Header */}
+        <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="text-center">
           <div className="relative inline-block mb-4">
             <div className="relative w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mx-auto overflow-hidden">
@@ -1180,6 +1182,7 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+      </div>
       </div>
 
       <SharedDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Menu" items={menuItems} />

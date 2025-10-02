@@ -531,8 +531,8 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
       {/* Chat Interface */}
       {(selectedGroup || selectedFriend) && (
         <div className="absolute inset-0 bg-white z-10 flex flex-col">
-            {/* Chat Header - Full Width */}
-          <div className="bg-purple-600 text-white p-3 sm:p-4 flex items-center justify-between w-full">
+            {/* Chat Header - Simplified */}
+          <div className="bg-purple-600 text-white p-3 sm:p-4 flex items-center justify-between w-full flex-shrink-0">
             <div className="flex items-center gap-3">
               <button onClick={() => { setSelectedGroup(null); setSelectedFriend(null) }} className="p-2 hover:bg-purple-700 rounded-full">
                   <ArrowLeft className="w-5 h-5" />
@@ -546,27 +546,13 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                 </p>
                 </div>
               </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
                 <button 
                 onClick={() => setShowGroupInfo(true)}
                 className="p-2 hover:bg-purple-700 rounded-full"
                 title="Group Info"
                 >
                   <Users className="w-5 h-5" />
-                </button>
-              <button 
-                onClick={handleCall}
-                className="p-2 hover:bg-purple-700 rounded-full"
-                title="Call"
-              >
-                  <Phone className="w-5 h-5" />
-                </button>
-              <button 
-                onClick={handleVideoCall}
-                className="p-2 hover:bg-purple-700 rounded-full"
-                title="Video Call"
-              >
-                  <Video className="w-5 h-5" />
                 </button>
               <button 
                 onClick={() => {
@@ -639,7 +625,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
               </div>
             )}
 
-            {/* Messages */}
+            {/* Messages - Scrollable */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.map((message) => (
                 <div
@@ -663,8 +649,8 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
-          <div className="border-t border-gray-200 p-4">
+            {/* Message Input - Fixed */}
+          <div className="border-t border-gray-200 p-4 flex-shrink-0">
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => {

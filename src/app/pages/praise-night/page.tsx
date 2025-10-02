@@ -1015,8 +1015,8 @@ function PraiseNightPageContent() {
           </div>
         )}
 
-        {/* Status Filter buttons/pills with category-specific count - Hide for archive */}
-        {categoryFilter !== 'archive' && currentPraiseNight && (
+        {/* Status Filter buttons/pills with category-specific count - Show for archive individual pages */}
+        {currentPraiseNight && (categoryFilter !== 'archive' || pageParam) && (
           <div className="mb-4 sm:mb-6 flex items-center justify-between px-4">
             <button
               onClick={() => setActiveFilter('heard')}
@@ -1046,8 +1046,8 @@ function PraiseNightPageContent() {
           </div>
         )}
 
-        {/* Song Title Cards - Scrollable - Hide for archive */}
-        {categoryFilter !== 'archive' && currentPraiseNight && (
+        {/* Song Title Cards - Scrollable - Show for archive individual pages */}
+        {currentPraiseNight && (categoryFilter !== 'archive' || pageParam) && (
           <div className="px-1 py-4 max-h-96 lg:max-h-none overflow-y-auto">
             {filteredSongs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -1125,6 +1125,29 @@ function PraiseNightPageContent() {
       {/* ✅ End of Scrollable Content */}
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
+
+      {/* ✅ Category Bar for Individual Archive Pages */}
+      {categoryFilter === 'archive' && pageParam && (
+        <div className="flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+          <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
+            {/* Category buttons with text - Take up most of the space */}
+            <div className="flex-1 flex gap-2">
+              {mainCategories.map((category, index) => (
+                <button
+                  key={category}
+                  onClick={() => handleCategorySelect(category)}
+                  className={`flex-1 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center ${activeCategory === category
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                    }`}
+                >
+                  <span className="block leading-tight break-words">{category}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
        {/* ✅ Fixed Bottom Bar with Categories and FAB */}
        {filteredPraiseNights.length > 0 && !pageParam && categoryFilter !== 'archive' && (
