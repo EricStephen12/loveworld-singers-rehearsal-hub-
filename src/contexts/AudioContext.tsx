@@ -34,6 +34,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   const [isToggling, setIsToggling] = useState(false);
 
+  // Audio persistence keys
+  const AUDIO_STATE_KEY = 'loveworld_audio_state';
+  const AUDIO_TIME_KEY = 'loveworld_audio_time';
+  const AUDIO_SONG_KEY = 'loveworld_audio_song';
+
   const togglePlayPause = () => {
     // Prevent rapid clicking
     if (isToggling) {
@@ -130,7 +135,92 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
+      // Save current time for persistence
+      localStorage.setItem(AUDIO_TIME_KEY, audioRef.current.currentTime.toString());
     }
+  };
+
+  // Save audio state to localStorage (only when playing for a while)
+  const saveAudioState = () => {
+    if (currentSong && isPlaying && currentTime > 5) { // Only save if playing for more than 5 seconds
+      localStorage.setItem(AUDIO_STATE_KEY, isPlaying.toString());
+      localStorage.setItem(AUDIO_SONG_KEY, JSON.stringify({
+        id: currentSong.id,
+        title: currentSong.title,
+        audioFile: currentSong.audioFile,
+        mediaId: currentSong.mediaId,
+        duration: duration // Save duration for validation
+      }));
+      localStorage.setItem('audio_timestamp', Date.now().toString());
+    }
+  };
+
+  // Restore audio state from localStorage (only if song was playing and very recent)
+  const restoreAudioState = () => {
+    try {
+      const savedSong = localStorage.getItem(AUDIO_SONG_KEY);
+      const savedState = localStorage.getItem(AUDIO_STATE_KEY);
+      const savedTime = localStorage.getItem(AUDIO_TIME_KEY);
+      const savedTimestamp = localStorage.getItem('audio_timestamp');
+
+      if (savedSong && savedState === 'true') { // Only restore if song was actually playing
+        const songData = JSON.parse(savedSong);
+
+        // Check if saved within the last 30 minutes (much more conservative)
+        const savedTimeNum = savedTimestamp ? parseInt(savedTimestamp) : 0;
+        const now = Date.now();
+        const thirtyMinutesAgo = now - (30 * 60 * 1000);
+
+        if (savedTimeNum < thirtyMinutesAgo) {
+          console.log('🎵 Audio session too old, clearing saved state');
+          clearAudioState();
+          return;
+        }
+
+        // Only restore if the song has an audio file AND user was actively playing
+        if (songData.audioFile && songData.audioFile.trim() !== '' && savedState === 'true') {
+          console.log('🎵 Restoring recent audio session for:', songData.title);
+
+          // Set the song but don't auto-play initially
+          setCurrentSong(songData);
+
+          // Restore time if available
+          if (savedTime) {
+            const time = parseFloat(savedTime);
+            if (!isNaN(time) && time > 0 && time < songData.duration) {
+              setTimeout(() => {
+                if (audioRef.current) {
+                  audioRef.current.currentTime = time;
+                  setCurrentTime(time);
+                }
+              }, 1000); // Wait for audio to load
+            }
+          }
+
+          // Only start playing if the audio is ready and user was playing
+          setTimeout(() => {
+            if (audioRef.current && audioRef.current.readyState >= 2 && savedState === 'true') {
+              audioRef.current.play().catch((error) => {
+                console.log('🎵 Could not auto-play restored session:', error.message);
+                // Don't show error to user, just don't auto-play
+              });
+            }
+          }, 2000); // Wait longer for audio to be ready
+        }
+      }
+    } catch (error) {
+      console.error('Error restoring audio state:', error);
+      // Clear corrupted data
+      clearAudioState();
+    }
+  };
+
+  // Clear saved audio state
+  const clearAudioState = () => {
+    localStorage.removeItem(AUDIO_SONG_KEY);
+    localStorage.removeItem(AUDIO_STATE_KEY);
+    localStorage.removeItem(AUDIO_TIME_KEY);
+    localStorage.removeItem('audio_timestamp');
   };
 
   const handleLoadedMetadata = () => {
@@ -209,6 +299,16 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
     setHasError(true);
   };
+
+  // Save audio state when it changes
+  useEffect(() => {
+    saveAudioState();
+  }, [currentSong, isPlaying]);
+
+  // Restore audio state on mount
+  useEffect(() => {
+    restoreAudioState();
+  }, []);
 
   // Update audio source when song changes
   useEffect(() => {

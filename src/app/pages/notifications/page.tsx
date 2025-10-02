@@ -1,31 +1,24 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ArrowLeft, Bell, BellOff, Settings, Clock, CheckCircle, AlertCircle, Info, X, Filter, Search } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
-
-interface Notification {
-  id: string
-  title: string
-  message: string
-  type: 'info' | 'success' | 'warning' | 'error'
-  timestamp: Date
-  read: boolean
-  category: 'rehearsal' | 'announcement' | 'reminder' | 'system'
-  priority: 'low' | 'medium' | 'high'
-  actionUrl?: string
-}
+import { useRealtimeNotifications, NotificationData, useNotificationActions } from '@/hooks/useRealtimeNotifications'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all')
-  const [filterCategory, setFilterCategory] = useState<'all' | 'rehearsal' | 'announcement' | 'reminder' | 'system'>('all')
+  const [filterCategory, setFilterCategory] = useState<'all' | 'rehearsal' | 'announcement' | 'reminder' | 'system' | 'admin'>('all')
+
+  // Use real-time notifications hook
+  const { notifications, loading, error, markAsRead, markAllAsRead, deleteNotification } = useRealtimeNotifications()
+  const { user } = useAuth()
+  const { createNotificationForAll, createNotificationForGroup } = useNotificationActions()
   const [showSettings, setShowSettings] = useState(false)
   const [notificationSettings, setNotificationSettings] = useState({
     pushEnabled: true,
@@ -39,76 +32,15 @@ export default function NotificationsPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const router = useRouter()
 
-  // Sample notifications data
-  useEffect(() => {
-    const sampleNotifications: Notification[] = [
-      {
-        id: '1',
-        title: 'Rehearsal Reminder',
-        message: 'Praise Night rehearsal starts in 30 minutes at the main auditorium.',
-        type: 'info',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-        read: false,
-        category: 'rehearsal',
-        priority: 'high',
-        actionUrl: '/pages/praise-night'
-      },
-      {
-        id: '2',
-        title: 'New Song Added',
-        message: 'A new song "Amazing Grace" has been added to the repertoire.',
-        type: 'success',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        read: false,
-        category: 'announcement',
-        priority: 'medium'
-      },
-      {
-        id: '3',
-        title: 'Profile Update Required',
-        message: 'Please complete your profile information to access all features.',
-        type: 'warning',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-        read: true,
-        category: 'system',
-        priority: 'medium',
-        actionUrl: '/pages/profile'
-      },
-      {
-        id: '4',
-        title: 'Rehearsal Cancelled',
-        message: 'Tonight\'s rehearsal has been cancelled due to weather conditions.',
-        type: 'error',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-        read: true,
-        category: 'rehearsal',
-        priority: 'high'
-      },
-      {
-        id: '5',
-        title: 'Welcome to LoveWorld Singers!',
-        message: 'Welcome to the LoveWorld Singers Rehearsal Hub. Start exploring!',
-        type: 'success',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72), // 3 days ago
-        read: true,
-        category: 'system',
-        priority: 'low'
-      }
-    ]
-    
-    setNotifications(sampleNotifications)
-    setFilteredNotifications(sampleNotifications)
-  }, [])
-
-  // Filter notifications based on search and filter criteria
-  useEffect(() => {
+  // Filter notifications based on search and filter criteria (client-side filtering for real-time data)
+  const filteredNotifications = React.useMemo(() => {
     let filtered = notifications
 
     // Filter by read status
     if (filterType === 'unread') {
-      filtered = filtered.filter(n => !n.read)
+      filtered = filtered.filter(n => !n.is_read)
     } else if (filterType === 'read') {
-      filtered = filtered.filter(n => n.read)
+      filtered = filtered.filter(n => n.is_read)
     }
 
     // Filter by category
@@ -118,33 +50,15 @@ export default function NotificationsPage() {
 
     // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(n => 
+      filtered = filtered.filter(n =>
         n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         n.message.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
-    // Sort by timestamp (newest first)
-    filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-
-    setFilteredNotifications(filtered)
+    // Sort by created_at (newest first)
+    return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   }, [notifications, filterType, filterCategory, searchTerm])
-
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    )
-  }
-
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    )
-  }
-
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
-  }
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -170,9 +84,10 @@ export default function NotificationsPage() {
     }
   }
 
-  const formatTimestamp = (timestamp: Date) => {
+  const formatTimestamp = (timestamp: string) => {
     const now = new Date()
-    const diff = now.getTime() - timestamp.getTime()
+    const timestampDate = new Date(timestamp)
+    const diff = now.getTime() - timestampDate.getTime()
     const minutes = Math.floor(diff / (1000 * 60))
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
@@ -183,10 +98,10 @@ export default function NotificationsPage() {
     return `${days}d ago`
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const unreadCount = notifications.filter(n => !n.is_read).length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-pink-50 overflow-hidden">
       {/* Header */}
       <ScreenHeader
         title="Notifications"
@@ -208,71 +123,73 @@ export default function NotificationsPage() {
         }
       />
 
-      {/* Notification Settings Panel */}
-      {showSettings && (
-        <div className="bg-white border-b border-gray-200 p-4">
-          <div className="max-w-md mx-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Notification Settings</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Push Notifications</p>
-                  <p className="text-sm text-gray-500">Receive notifications on your device</p>
-                </div>
-                <button
-                  onClick={() => setNotificationSettings(prev => ({ ...prev, pushEnabled: !prev.pushEnabled }))}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    notificationSettings.pushEnabled ? 'bg-purple-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                    notificationSettings.pushEnabled ? 'translate-x-6' : 'translate-x-0.5'
-                  }`} />
-                </button>
-              </div>
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Notification Settings Panel */}
+        {showSettings && (
+          <div className="bg-white border-b border-gray-200 p-4">
+            <div className="max-w-2xl mx-auto px-3 sm:px-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Notification Settings</h3>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Rehearsal Reminders</p>
-                  <p className="text-sm text-gray-500">Get notified before rehearsals</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">Push Notifications</p>
+                    <p className="text-sm text-gray-500">Receive notifications on your device</p>
+                  </div>
+                  <button
+                    onClick={() => setNotificationSettings(prev => ({ ...prev, pushEnabled: !prev.pushEnabled }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      notificationSettings.pushEnabled ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      notificationSettings.pushEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setNotificationSettings(prev => ({ ...prev, rehearsalReminders: !prev.rehearsalReminders }))}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    notificationSettings.rehearsalReminders ? 'bg-purple-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                    notificationSettings.rehearsalReminders ? 'translate-x-6' : 'translate-x-0.5'
-                  }`} />
-                </button>
-              </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Sound</p>
-                  <p className="text-sm text-gray-500">Play sound for notifications</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">Rehearsal Reminders</p>
+                    <p className="text-sm text-gray-500">Get notified before rehearsals</p>
+                  </div>
+                  <button
+                    onClick={() => setNotificationSettings(prev => ({ ...prev, rehearsalReminders: !prev.rehearsalReminders }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      notificationSettings.rehearsalReminders ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      notificationSettings.rehearsalReminders ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setNotificationSettings(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }))}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    notificationSettings.soundEnabled ? 'bg-purple-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                    notificationSettings.soundEnabled ? 'translate-x-6' : 'translate-x-0.5'
-                  }`} />
-                </button>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">Sound</p>
+                    <p className="text-sm text-gray-500">Play sound for notifications</p>
+                  </div>
+                  <button
+                    onClick={() => setNotificationSettings(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      notificationSettings.soundEnabled ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      notificationSettings.soundEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Content */}
-      <div className="px-4 py-6">
-        <div className="max-w-2xl mx-auto">
+        {/* Main Content */}
+        <div className="px-3 sm:px-4 py-4 sm:py-6">
+          <div className="max-w-2xl mx-auto">
           {/* Search and Filters */}
           <div className="mb-6 space-y-4">
             {/* Search */}
@@ -309,6 +226,7 @@ export default function NotificationsPage() {
                 <option value="announcement">Announcement</option>
                 <option value="reminder">Reminder</option>
                 <option value="system">System</option>
+                <option value="admin">Admin</option>
               </select>
 
               {unreadCount > 0 && (
@@ -321,6 +239,63 @@ export default function NotificationsPage() {
               )}
             </div>
           </div>
+
+          {/* Admin Create Notification Section */}
+          {user?.role === 'admin' && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Send Notification</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={async () => {
+                    const title = prompt('Enter notification title:')
+                    const message = prompt('Enter notification message:')
+                    if (title && message) {
+                      const result = await createNotificationForAll({
+                        title,
+                        message,
+                        type: 'info',
+                        category: 'admin',
+                        priority: 'medium'
+                      })
+                      if (result.success) {
+                        alert('Notification sent to all users!')
+                      } else {
+                        alert('Failed to send notification: ' + result.error)
+                      }
+                    }
+                  }}
+                  className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  Send to All Users
+                </button>
+                <button
+                  onClick={async () => {
+                    const title = prompt('Enter notification title:')
+                    const message = prompt('Enter notification message:')
+                    const group = prompt('Enter group name:')
+                    if (title && message && group) {
+                      const result = await createNotificationForGroup({
+                        title,
+                        message,
+                        groupName: group,
+                        type: 'info',
+                        category: 'admin',
+                        priority: 'medium'
+                      })
+                      if (result.success) {
+                        alert(`Notification sent to ${group} group!`)
+                      } else {
+                        alert('Failed to send notification: ' + result.error)
+                      }
+                    }
+                  }}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Send to Specific Group
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Notifications List */}
           <div className="space-y-3">
@@ -339,7 +314,7 @@ export default function NotificationsPage() {
                 <div
                   key={notification.id}
                   className={`bg-white rounded-xl border-l-4 ${getPriorityColor(notification.priority)} shadow-sm hover:shadow-md transition-shadow ${
-                    !notification.read ? 'ring-2 ring-purple-100' : ''
+                    !notification.is_read ? 'ring-2 ring-purple-100' : ''
                   }`}
                 >
                   <div className="p-4">
@@ -351,7 +326,7 @@ export default function NotificationsPage() {
                             <h4 className="font-medium text-gray-900 truncate">
                               {notification.title}
                             </h4>
-                            {!notification.read && (
+                            {!notification.is_read && (
                               <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0" />
                             )}
                           </div>
@@ -361,7 +336,7 @@ export default function NotificationsPage() {
                           <div className="flex items-center space-x-4 text-xs text-gray-500">
                             <div className="flex items-center space-x-1">
                               <Clock className="w-3 h-3" />
-                              <span>{formatTimestamp(notification.timestamp)}</span>
+                              <span>{formatTimestamp(notification.created_at)}</span>
                             </div>
                             <span className="capitalize bg-gray-100 px-2 py-1 rounded">
                               {notification.category}
@@ -371,7 +346,7 @@ export default function NotificationsPage() {
                       </div>
                       
                       <div className="flex items-center space-x-2 ml-4">
-                        {!notification.read && (
+                        {!notification.is_read && (
                           <button
                             onClick={() => markAsRead(notification.id)}
                             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -394,6 +369,7 @@ export default function NotificationsPage() {
               ))
             )}
           </div>
+          </div> {/* End Scrollable Content */}
         </div>
       </div>
 
@@ -403,7 +379,6 @@ export default function NotificationsPage() {
         onClose={() => setIsMenuOpen(false)}
         items={(() => {
           const menuItems = getMenuItems()
-          console.log('Menu items:', menuItems)
           return menuItems || []
         })()}
       />

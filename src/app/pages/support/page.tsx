@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import ScreenHeader from '@/components/ScreenHeader';
 import SharedDrawer from '@/components/SharedDrawer';
 import { getMenuItems } from '@/config/menuItems';
@@ -10,56 +11,63 @@ import { supabase } from '@/lib/supabase-client';
 import {
   MessageCircle,
   Settings,
-  Search,
-  ChevronRight
+  ChevronRight,
+  Wrench,
+  User,
+  Lightbulb,
+  BookOpen
 } from 'lucide-react';
 
-interface FAQ {
-  id: string;
-  question: string;
-  answer: string;
-  category: string;
-}
 
-// Pre-made FAQ data
-const faqData: FAQ[] = [
+// Support options that lead to different areas
+const supportOptions = [
   {
-    id: '1',
-    question: 'How do I reset my password?',
-    answer: 'Go to the login page and click "Forgot Password". Enter your email address and check your inbox for reset instructions.',
-    category: 'account'
+    id: 'faq',
+    title: 'FAQ & Help Center',
+    description: 'Find answers to frequently asked questions',
+    icon: BookOpen,
+    href: '/pages/support/faq',
+    iconBg: 'bg-blue-100',
+    iconColor: 'text-blue-600'
   },
   {
-    id: '2',
-    question: 'Why can\'t I access the media player?',
-    answer: 'Make sure you have a stable internet connection and try refreshing the page. If the issue persists, clear your browser cache.',
-    category: 'technical'
+    id: 'chat',
+    title: 'Chat with Admin',
+    description: 'Get direct help from our support team',
+    icon: MessageCircle,
+    href: '/pages/chat',
+    iconBg: 'bg-green-100',
+    iconColor: 'text-green-600'
   },
   {
-    id: '3',
-    question: 'How do I update my profile information?',
-    answer: 'Go to your Profile page and tap the edit button next to any field you want to change. Don\'t forget to save your changes.',
-    category: 'account'
+    id: 'technical',
+    title: 'Technical Support',
+    description: 'Troubleshoot app issues and bugs',
+    icon: Wrench,
+    href: '/pages/support/technical',
+    iconBg: 'bg-orange-100',
+    iconColor: 'text-orange-600'
   },
   {
-    id: '4',
-    question: 'The app is running slowly, what should I do?',
-    answer: 'Try closing other apps on your device and restart the LoveWorld Singers app. Make sure you have a good internet connection.',
-    category: 'technical'
+    id: 'account',
+    title: 'Account Support',
+    description: 'Manage your profile and account settings',
+    icon: User,
+    href: '/pages/support/account',
+    iconBg: 'bg-purple-100',
+    iconColor: 'text-purple-600'
   },
   {
-    id: '5',
-    question: 'How do I join a rehearsal group?',
-    answer: 'Go to the Groups section and browse available groups. Tap "Join Group" on any group you\'re interested in.',
-    category: 'general'
-  },
-  {
-    id: '6',
-    question: 'Can I download songs for offline use?',
-    answer: 'Currently, songs are only available for streaming. Offline downloads will be available in a future update.',
-    category: 'feature'
+    id: 'features',
+    title: 'Feature Requests',
+    description: 'Suggest new features and improvements',
+    icon: Lightbulb,
+    href: '/pages/support/features',
+    iconBg: 'bg-yellow-100',
+    iconColor: 'text-yellow-600'
   }
 ];
+
 
 export default function SupportPage() {
   const router = useRouter();
@@ -67,19 +75,10 @@ export default function SupportPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  // FAQ state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
-
   // Set client flag to prevent hydration issues
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  const filteredFAQs = faqData.filter(faq => 
-    faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   if (!isClient) {
     return (
@@ -90,79 +89,42 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-pink-50 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-slate-50">
       <ScreenHeader
         title="Admin Support"
         onMenuClick={() => setIsMenuOpen(true)}
+        rightImageSrc="/logo.png"
       />
 
-      {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-4 py-6 w-full">
-        {/* Header Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-full mb-4">
-            <Settings className="w-8 h-8 text-white" />
+      <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
+        {/* Support Options */}
+        <div>
+          {supportOptions.map((option) => (
+            <Link key={option.id} href={option.href}>
+              <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group ring-1 ring-black/5 mb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 ${option.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
+                      <option.icon className={`w-4 h-4 ${option.iconColor}`} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Admin Support
-          </h1>
-          <p className="text-gray-600">
-            Find answers to common questions or chat with our admin team.
+                    <div className="flex-1">
+                      <h3 className="font-medium text-slate-900 text-sm group-hover:text-black leading-tight">
+                        {option.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-tight">
+                        {option.description}
           </p>
         </div>
-
-        {/* Search FAQ */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search FAQ..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
-            />
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                      <ChevronRight className="w-3 h-3 text-slate-500 group-hover:translate-x-0.5 transition-all duration-200" />
           </div>
         </div>
-
-        {/* FAQ Section */}
-        <div className="space-y-3 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Frequently Asked Questions</h2>
-          {filteredFAQs.map((faq) => (
-            <div key={faq.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <button
-                onClick={() => setExpandedFAQ(expandedFAQ === faq.id ? null : faq.id)}
-                className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
-              >
-                <h3 className="font-medium text-gray-900 pr-4">{faq.question}</h3>
-                <ChevronRight 
-                  className={`w-5 h-5 text-gray-400 transition-transform ${
-                    expandedFAQ === faq.id ? 'rotate-90' : ''
-                  }`} 
-                />
-              </button>
-              {expandedFAQ === faq.id && (
-                <div className="px-4 pb-4 border-t border-gray-100">
-                  <p className="text-gray-600 text-sm pt-3">{faq.answer}</p>
                 </div>
-              )}
             </div>
+            </Link>
           ))}
-        </div>
-
-        {/* Contact Options */}
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Still need help?</h2>
-
-          <button
-            onClick={() => router.push('/pages/chat')}
-            className="w-full bg-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2"
-          >
-            <MessageCircle className="w-5 h-5" />
-            Chat with Admin
-          </button>
-        </div>
         </div>
       </div>
 

@@ -33,7 +33,7 @@ export default function ProfilePage() {
   // ✅ UPDATED: Match database values exactly
   const [availableGroups] = useState([
     { value: 'yourloveworldsingers', label: 'Your LoveWorld Singers' },
-    { value: 'PMC', label: 'PMC (Pastor Chris Ministry Choir)' },
+    { value: 'PMC', label: 'PMC' },
     { value: 'Main Choir', label: 'Main Choir' },
     { value: '24 Worship', label: '24 Worship' },
     { value: 'Teens Voice', label: 'Teens Voice' },
@@ -158,7 +158,7 @@ export default function ProfilePage() {
     updated_at: new Date().toISOString()
   }
 
-  // Initialize edit form with profile data
+  // Initialize edit form with profile data (only once on mount)
   useEffect(() => {
     setEditForm({
       firstName: profileData.first_name || '',
@@ -173,12 +173,12 @@ export default function ProfilePage() {
       designation: profileData.designation || '',
       administration: profileData.administration || ''
     })
-    
+
     // Initialize profile image from profile data
     if (profileData.profile_image_url) {
       setProfileImage(profileData.profile_image_url)
     }
-  }, [profileData])
+  }, []) // Remove profileData dependency to prevent form reset
 
   // Handle form input changes
   const handleInputChange = (field: string, value: string) => {
@@ -508,10 +508,10 @@ export default function ProfilePage() {
     // Additional Profile Data (these would come from other tables in a real app)
     groups: selectedGroup ? [selectedGroup] : ["No group assigned"], // Use actual user group
     joinDate: profileData.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
-    totalRehearsals: 0, // TODO: Calculate from attendance records
-    attendanceRate: 0, // TODO: Calculate from attendance records
-    lastCheckIn: "Never", // TODO: Get from latest attendance record
-    achievements: ["Profile Completed"], // TODO: Fetch from achievements table
+    totalRehearsals: 0,
+    attendanceRate: 0,
+    lastCheckIn: "Never",
+    achievements: ["Profile Completed"],
     qrCode: profileData.id ? `LW-USER-${profileData.id.slice(0, 8).toUpperCase()}` : "LW-USER-00000000"
   }
 
@@ -753,7 +753,7 @@ export default function ProfilePage() {
                       type="text"
                       value={editForm.firstName}
                       onChange={(e) => handleInputChange('firstName', e.target.value)}
-                      className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                      className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Enter first name"
                     />
                   </div>
@@ -763,7 +763,7 @@ export default function ProfilePage() {
                           type="text"
                           value={editForm.middleName}
                           onChange={(e) => handleInputChange('middleName', e.target.value)}
-                          className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                          className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           placeholder="Enter middle name"
                         />
                       </div>
@@ -775,7 +775,7 @@ export default function ProfilePage() {
                         type="text"
                         value={editForm.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                        className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="Enter last name"
                       />
                     </div>
@@ -786,7 +786,7 @@ export default function ProfilePage() {
                         <select
                           value={editForm.gender}
                           onChange={(e) => handleInputChange('gender', e.target.value)}
-                          className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                          className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         >
                           <option value="" className="text-sm italic">Select gender</option>
                           <option value="Male" className="text-sm italic">Male</option>
@@ -799,7 +799,7 @@ export default function ProfilePage() {
                           type="date"
                           value={editForm.birthday}
                           onChange={(e) => handleInputChange('birthday', e.target.value)}
-                          className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                          className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -810,7 +810,7 @@ export default function ProfilePage() {
                         type="tel"
                         value={editForm.phoneNumber}
                         onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                        className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                        className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="Enter phone number"
                       />
                     </div>
@@ -828,7 +828,7 @@ export default function ProfilePage() {
                           type="text"
                           value={editForm.region}
                           onChange={(e) => handleInputChange('region', e.target.value)}
-                          className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                          className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           placeholder="Enter region"
                         />
                       </div>
@@ -838,7 +838,7 @@ export default function ProfilePage() {
                           type="text"
                           value={editForm.zone}
                           onChange={(e) => handleInputChange('zone', e.target.value)}
-                          className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                          className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           placeholder="Enter zone"
                         />
                       </div>
@@ -850,7 +850,7 @@ export default function ProfilePage() {
                         type="text"
                         value={editForm.church}
                         onChange={(e) => handleInputChange('church', e.target.value)}
-                        className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                        className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="Enter church"
                       />
                     </div>
@@ -867,7 +867,7 @@ export default function ProfilePage() {
                         <select
                           value={editForm.designation}
                           onChange={(e) => handleInputChange('designation', e.target.value)}
-                          className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                          className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         >
                           <option value="" className="text-sm italic">Select designation</option>
                           <option value="Soprano" className="text-sm italic">Soprano</option>
@@ -883,7 +883,7 @@ export default function ProfilePage() {
                         <select
                           value={editForm.administration}
                           onChange={(e) => handleInputChange('administration', e.target.value)}
-                          className="w-full mt-1 px-2.5 py-1.5 text-sm italic border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-serif"
+                          className="w-full mt-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         >
                           <option value="" className="text-sm italic">Select administration</option>
                           <option value="Coordinator" className="text-sm italic">Coordinator</option>
@@ -908,7 +908,7 @@ export default function ProfilePage() {
                               onChange={() => handleGroupSelect(group.value)}
                               className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 focus:ring-purple-500 focus:ring-2"
                             />
-                            <span className="text-xs text-gray-800 font-medium italic font-serif">{group.label}</span>
+                            <span className="text-xs text-gray-800 font-medium italic">{group.label}</span>
                           </label>
                         ))}
                       </div>
@@ -979,6 +979,11 @@ export default function ProfilePage() {
                       {userProfile.birthday ? new Date(userProfile.birthday).toLocaleDateString() : 'Not provided'}
                     </p>
               </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Phone Number</label>
+                  <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.phoneNumber || 'Not provided'}</p>
             </div>
               </>
             )}

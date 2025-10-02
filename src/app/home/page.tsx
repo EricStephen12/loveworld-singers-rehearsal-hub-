@@ -189,6 +189,8 @@ function HomePageContent() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
+      {/* Responsive Container with Max Width */}
+      <div className="w-full max-w-sm sm:max-w-md md:max-w-[520px] lg:max-w-[550px] xl:max-w-[600px] mx-auto flex flex-col h-full">
       {/* Fixed Header - Full Width */}
       <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50 w-full">
         <div className="w-full">
@@ -519,6 +521,7 @@ function HomePageContent() {
           </div>
         </div>
       </div>
+      </div> {/* End Desktop Container */}
     </div>
   )
 }

@@ -1016,7 +1016,7 @@ export default function EditSongModal({
 
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Lead Guitarist
+                          Base Guitarist
                         </label>
                         <input
                           type="text"
@@ -1024,7 +1024,7 @@ export default function EditSongModal({
                           onChange={(e) => setSongLeadGuitarist(e.target.value)}
                           onPaste={(e) => handlePaste(e, songLeadGuitarist, setSongLeadGuitarist)}
                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                          placeholder="Enter lead guitarist name"
+                          placeholder="Enter base guitarist name"
                         />
                       </div>
 

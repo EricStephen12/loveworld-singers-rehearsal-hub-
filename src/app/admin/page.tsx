@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Home, 
-  Search, 
-  Calendar, 
-  FileText, 
-  ShoppingCart, 
-  MessageCircle, 
+import {
+  Home,
+  Search,
+  Calendar,
+  FileText,
+  ShoppingCart,
+  MessageCircle,
   Settings,
   Bookmark,
   ChevronRight,
@@ -30,7 +30,8 @@ import {
   ExternalLink,
   RefreshCw,
   Users,
-  Send
+  Send,
+  Bell
 } from "lucide-react";
 import { PraiseNightSong, Comment, PraiseNight, Category } from '../../types/supabase';
 import { useRealtimeData } from '../../hooks/useRealtimeData';
@@ -274,6 +275,21 @@ export default function AdminPage() {
   const [userGroups, setUserGroups] = useState<{[key: string]: string[]}>({});
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userSearchTerm, setUserSearchTerm] = useState('');
+
+  // Notifications admin state
+  const [adminNotifications, setAdminNotifications] = useState<any[]>([]);
+  const [isLoadingAdminNotifications, setIsLoadingAdminNotifications] = useState(false);
+  const [notificationForm, setNotificationForm] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    category: 'system',
+    priority: 'medium',
+    targetAudience: 'all',
+    targetGroup: '',
+    actionUrl: '',
+    expiresAt: ''
+  });
 
   // Support messages state
   const [supportMessages, setSupportMessages] = useState<any[]>([]);
@@ -1132,7 +1148,7 @@ export default function AdminPage() {
       key: content.key || '',
       tempo: content.tempo || '',
       leadKeyboardist: content.leadKeyboardist || '',
-      leadGuitarist: content.leadGuitarist || '',
+      // leadGuitarist field kept for data structure
       drummer: content.drummer || '',
       comments: content.comments || [],
       audioFile: content.audioFile || '',
@@ -1160,6 +1176,22 @@ export default function AdminPage() {
       
       console.log('🔄 Loading users with DIRECT query (no complex logic)...');
       
+      // Check if current user is admin
+      const { data: currentUserProfile, error: userError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (userError || currentUserProfile?.role !== 'admin') {
+        console.error('❌ Admin access denied:', userError || 'Not admin');
+        addToast({
+          type: 'error',
+          message: 'Admin access required to view users'
+        });
+        return;
+      }
+
       // DIRECT QUERY - Simple and direct
       console.log('📋 Direct profiles query...');
       const { data: profilesData, error: profilesError } = await supabase
@@ -1355,11 +1387,162 @@ export default function AdminPage() {
     }
   }, [activeSection]);
 
+  // Load admin notifications
+  const loadAdminNotifications = async () => {
+    setIsLoadingAdminNotifications(true);
+    try {
+      console.log('🔔 Loading admin notifications...');
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error('❌ Error loading admin notifications:', error);
+        addToast({
+          type: 'error',
+          message: `Failed to load notifications: ${error.message}`
+        });
+        return;
+      }
+
+      setAdminNotifications(data || []);
+      console.log(`✅ Loaded ${data?.length || 0} notifications`);
+    } catch (err) {
+      console.error('❌ Unexpected error loading admin notifications:', err);
+      addToast({
+        type: 'error',
+        message: 'Failed to load notifications'
+      });
+    } finally {
+      setIsLoadingAdminNotifications(false);
+    }
+  };
+
+  // Create notification
+  const createNotification = async () => {
+    if (!notificationForm.title.trim() || !notificationForm.message.trim()) {
+      addToast({
+        type: 'error',
+        message: 'Please fill in title and message'
+      });
+      return;
+    }
+
+    try {
+      let result;
+
+      if (notificationForm.targetAudience === 'all') {
+        result = await supabase.rpc('create_notification_for_all_users', {
+          p_title: notificationForm.title,
+          p_message: notificationForm.message,
+          p_type: notificationForm.type,
+          p_category: notificationForm.category,
+          p_priority: notificationForm.priority,
+          p_action_url: notificationForm.actionUrl || null,
+          p_expires_at: notificationForm.expiresAt || null
+        });
+      } else if (notificationForm.targetAudience === 'group' && notificationForm.targetGroup) {
+        result = await supabase.rpc('create_notification_for_group', {
+          p_title: notificationForm.title,
+          p_message: notificationForm.message,
+          p_group_name: notificationForm.targetGroup,
+          p_type: notificationForm.type,
+          p_category: notificationForm.category,
+          p_priority: notificationForm.priority,
+          p_action_url: notificationForm.actionUrl || null,
+          p_expires_at: notificationForm.expiresAt || null
+        });
+      } else {
+        addToast({
+          type: 'error',
+          message: 'Please select target audience and group (if applicable)'
+        });
+        return;
+      }
+
+      if (result.error) {
+        console.error('❌ Error creating notification:', result.error);
+        addToast({
+          type: 'error',
+          message: `Failed to send notification: ${result.error.message}`
+        });
+        return;
+      }
+
+      addToast({
+        type: 'success',
+        message: 'Notification sent successfully!'
+      });
+
+      // Reset form
+      setNotificationForm({
+        title: '',
+        message: '',
+        type: 'info',
+        category: 'system',
+        priority: 'medium',
+        targetAudience: 'all',
+        targetGroup: '',
+        actionUrl: '',
+        expiresAt: ''
+      });
+
+      // Reload notifications
+      loadAdminNotifications();
+
+    } catch (err) {
+      console.error('❌ Unexpected error creating notification:', err);
+      addToast({
+        type: 'error',
+        message: 'Failed to send notification'
+      });
+    }
+  };
+
+  // Delete notification
+  const deleteAdminNotification = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      if (error) {
+        console.error('❌ Error deleting notification:', error);
+        addToast({
+          type: 'error',
+          message: `Failed to delete notification: ${error.message}`
+        });
+        return;
+      }
+
+      addToast({
+        type: 'success',
+        message: 'Notification deleted successfully'
+      });
+
+      // Reload notifications
+      loadAdminNotifications();
+
+    } catch (err) {
+      console.error('❌ Unexpected error deleting notification:', err);
+      addToast({
+        type: 'error',
+        message: 'Failed to delete notification'
+      });
+    }
+  };
+
+
   const sidebarItems = [
     { icon: Home, label: 'Home', active: false },
     { icon: FileText, label: 'Pages', active: activeSection === 'Pages' },
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
     { icon: Users, label: 'Users', active: activeSection === 'Users' },
+    { icon: Bell, label: 'Notifications', active: activeSection === 'Notifications' },
     { icon: MessageCircle, label: 'Support', active: activeSection === 'Support' },
     { icon: Music, label: 'Media', active: activeSection === 'Media' },
   ];
@@ -1901,6 +2084,210 @@ export default function AdminPage() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeSection === 'Notifications' && (
+            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">Notifications Management</h2>
+                  <p className="text-slate-600 mt-1">
+                    Create and manage notifications for all users or specific groups
+                    {adminNotifications.length > 0 && (
+                      <span className="ml-2 text-purple-600 font-medium">
+                        ({adminNotifications.length} notifications)
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <button
+                  onClick={loadAdminNotifications}
+                  disabled={isLoadingAdminNotifications}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingAdminNotifications ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
+
+              {/* Create Notification Form */}
+              <div className="mb-8 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Send Notification</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                    <input
+                      type="text"
+                      value={notificationForm.title}
+                      onChange={(e) => setNotificationForm(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter notification title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select
+                      value={notificationForm.type}
+                      onChange={(e) => setNotificationForm(prev => ({ ...prev, type: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="info">Info</option>
+                      <option value="success">Success</option>
+                      <option value="warning">Warning</option>
+                      <option value="error">Error</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select
+                      value={notificationForm.category}
+                      onChange={(e) => setNotificationForm(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="system">System</option>
+                      <option value="rehearsal">Rehearsal</option>
+                      <option value="announcement">Announcement</option>
+                      <option value="reminder">Reminder</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <select
+                      value={notificationForm.priority}
+                      onChange={(e) => setNotificationForm(prev => ({ ...prev, priority: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                  <textarea
+                    value={notificationForm.message}
+                    onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter notification message"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Target Audience</label>
+                    <select
+                      value={notificationForm.targetAudience}
+                      onChange={(e) => setNotificationForm(prev => ({ ...prev, targetAudience: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="all">All Users</option>
+                      <option value="group">Specific Group</option>
+                    </select>
+                  </div>
+                  {notificationForm.targetAudience === 'group' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Group Name</label>
+                      <input
+                        type="text"
+                        value={notificationForm.targetGroup}
+                        onChange={(e) => setNotificationForm(prev => ({ ...prev, targetGroup: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Enter group name"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Action URL (Optional)</label>
+                    <input
+                      type="url"
+                      value={notificationForm.actionUrl}
+                      onChange={(e) => setNotificationForm(prev => ({ ...prev, actionUrl: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="https://example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Expires At (Optional)</label>
+                    <input
+                      type="datetime-local"
+                      value={notificationForm.expiresAt}
+                      onChange={(e) => setNotificationForm(prev => ({ ...prev, expiresAt: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={createNotification}
+                  className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  Send Notification
+                </button>
+              </div>
+
+              {/* Notifications List */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Notifications</h3>
+
+                {isLoadingAdminNotifications ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading notifications...</p>
+                  </div>
+                ) : adminNotifications.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No notifications sent yet</p>
+                  </div>
+                ) : (
+                  adminNotifications.map((notification) => (
+                    <div key={notification.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-medium text-gray-900">{notification.title}</h4>
+                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                              notification.priority === 'high' ? 'bg-red-100 text-red-700' :
+                              notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {notification.priority}
+                            </span>
+                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                              notification.category === 'admin' ? 'bg-purple-100 text-purple-700' :
+                              notification.category === 'system' ? 'bg-blue-100 text-blue-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {notification.category}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 text-sm mb-2">{notification.message}</p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span>Target: {notification.target_audience === 'all' ? 'All Users' : notification.target_group || 'Individual'}</span>
+                            <span>{new Date(notification.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteAdminNotification(notification.id)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete notification"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
 

@@ -19,6 +19,7 @@ import { getMenuItems } from "@/config/menuItems";
 import { useAudio } from "@/contexts/AudioContext";
 import { usePageSearch, PageSearchResult } from "@/hooks/usePageSearch";
 import GlobalMiniPlayer from "@/components/GlobalMiniPlayer";
+import AudioWave from "@/components/AudioWave";
 
 function PraiseNightPageContent() {
   const searchParams = useSearchParams();
@@ -88,7 +89,7 @@ function PraiseNightPageContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Audio context
-  const { setCurrentSong, play } = useAudio();
+  const { currentSong, isPlaying, setCurrentSong, play } = useAudio();
 
   // Add missing state variables that are used but not defined
   const [activeTab, setActiveTab] = useState('lyrics');
@@ -283,7 +284,16 @@ function PraiseNightPageContent() {
     setSelectedSongIndex(index); // Set the selected song index
     setSelectedSong({ ...song, imageIndex: index });
     setIsSongDetailOpen(true);
-    setCurrentSong(song, false); // Set the current song in global audio context WITHOUT auto-play
+
+    // Check if this song is already playing
+    if (currentSong?.id === song.id && isPlaying) {
+      // Song is already playing, just open modal without changing anything
+      console.log('🎵 Song already playing, opening modal only');
+    } else {
+      // Set as current song (will continue from where it left off if it was paused)
+      setCurrentSong(song, false); // Set without auto-play since user clicked
+      console.log('🎵 Setting new song:', song.title);
+    }
 
     // Dispatch event to hide mini player
     window.dispatchEvent(new CustomEvent('songDetailOpen'));
@@ -623,8 +633,8 @@ function PraiseNightPageContent() {
             </div>
 
             {/* Header Search Overlay */}
-             <div className={`absolute inset-0 bg-white/95 backdrop-blur-xl transition-all duration-300 ease-out ${isSearchOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
-               }`}>
+            <div className={`absolute inset-0 bg-white/95 backdrop-blur-xl transition-all duration-300 ease-out ${isSearchOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
+              }`}>
                <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 h-full">
                 <div className="flex-1 relative">
                   <input
@@ -1087,9 +1097,13 @@ function PraiseNightPageContent() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 lg:gap-4">
                         <div className="w-10 h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm">
+                          {currentSong?.id === song.id ? (
+                            <AudioWave className="h-6 w-6" />
+                          ) : (
                           <span className="text-sm lg:text-base font-semibold text-purple-600">
                             {index + 1}
                           </span>
+                          )}
                         </div>
                         <div className="flex-1">
                           <h3 className="font-medium text-slate-900 text-sm lg:text-base group-hover:text-black leading-tight">
@@ -1120,7 +1134,7 @@ function PraiseNightPageContent() {
         )}
 
         {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
-        </div>
+      </div>
       </div>
       {/* ✅ End of Scrollable Content */}
 
@@ -1150,7 +1164,7 @@ function PraiseNightPageContent() {
       )}
 
        {/* ✅ Fixed Bottom Bar with Categories and FAB */}
-       {filteredPraiseNights.length > 0 && !pageParam && categoryFilter !== 'archive' && (
+      {filteredPraiseNights.length > 0 && !pageParam && categoryFilter !== 'archive' && (
          <div className="flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
              <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
               {/* Category buttons with text - Take up most of the space */}

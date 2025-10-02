@@ -15,6 +15,7 @@ export interface UserProfile {
   church?: string;
   designation?: 'Soprano' | 'Alto' | 'Tenor' | 'Bass' | 'Instrumentalist' | 'Backup Singer';
   administration?: 'Coordinator' | 'Assistant Coordinator' | 'Secretary' | 'Treasurer' | 'Member';
+  role?: 'user' | 'admin';
   social_provider?: 'google' | 'kingschat' | 'email';
   social_id?: string;
   profile_image_url?: string;

@@ -493,12 +493,12 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                   <span><span className="font-semibold uppercase">KEY:</span> {selectedSong?.key || ''}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  <span><span className="font-semibold uppercase">LEAD KEYBOARDIST:</span> {selectedSong?.leadKeyboardist || ''}</span>
+                  <span><span className="font-semibold uppercase">KEYBOARDIST:</span> {selectedSong?.leadKeyboardist || ''}</span>
                   <span><span className="font-semibold uppercase">TEMPO:</span> {selectedSong?.tempo || ''}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
                   <span><span className="font-semibold uppercase">DRUMMER:</span> {selectedSong?.drummer || ''}</span>
-                  <span><span className="font-semibold uppercase">LEAD GUITARIST:</span> {selectedSong?.leadGuitarist || ''}</span>
+                  <span><span className="font-semibold uppercase">BASE GUITARIST:</span> {selectedSong?.leadGuitarist || ''}</span>
                 </div>
               </div>
             </div>
