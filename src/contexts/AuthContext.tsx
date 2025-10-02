@@ -18,9 +18,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // Check if we're in a logout state from URL
+  const [isLogoutFromURL] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const urlParams = new URLSearchParams(window.location.search)
+    return urlParams.get('logout') === 'true'
+  })
+
   // Initialize from cache immediately for instant load
   const [user, setUser] = useState<User | null>(() => {
     if (typeof window === 'undefined') return null
+    if (isLogoutFromURL) return null // Don't restore user if logout
     const cached = AuthService.getCachedSession()
     console.log('🔐 AuthContext init: Cached session:', cached ? 'Found' : 'Not found')
     return cached?.user || null
@@ -28,12 +36,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [session, setSession] = useState<Session | null>(() => {
     if (typeof window === 'undefined') return null
+    if (isLogoutFromURL) return null // Don't restore session if logout
     const cached = AuthService.getCachedSession()
     return cached
   })
 
   const [profile, setProfile] = useState<UserProfile | null>(() => {
     if (typeof window === 'undefined') return null
+    if (isLogoutFromURL) return null // Don't restore profile if logout
     try {
       const cached = localStorage.getItem('cached_user_profile')
       if (cached) {
@@ -49,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [isLoading, setIsLoading] = useState(false) // ✅ Always false - instant load with cache
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [logoutComplete, setLogoutComplete] = useState(false)
 
   const refreshProfile = async () => {
     console.log('Refreshing profile...')
@@ -66,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🚪 Starting logout process...')
       setIsLoggingOut(true)
+      setLogoutComplete(true)
       
       // Clear ALL localStorage data to prevent any restoration
       const keysToRemove = []
@@ -96,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       setSession(null)
       setProfile(null)
+      setLogoutComplete(true)
       
       // Force redirect even if there's an error
       if (typeof window !== 'undefined') {
@@ -111,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const verifyCachedSession = async () => {
       try {
         // Don't verify session if we're logging out
-        if (isLoggingOut) return
+        if (isLoggingOut || logoutComplete) return
         
         const cachedSession = AuthService.getCachedSession()
 
@@ -185,12 +198,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes (login/logout events)
     const { data: { subscription } } = AuthService.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted || isLoggingOut) return
+        if (!isMounted || isLoggingOut || logoutComplete) return
 
         console.log('Auth state changed:', event)
 
         // During logout events, don't restore session
-        if (event === 'SIGNED_OUT' || isLoggingOut) {
+        if (event === 'SIGNED_OUT' || isLoggingOut || logoutComplete) {
           console.log('🚪 Logout event detected, not restoring session')
           return
         }
