@@ -14,12 +14,6 @@ export default function SplashPage() {
     // Prevent multiple redirects
     if (hasRedirected) return
 
-    // Hide the instant splash screen
-    const instantSplash = document.getElementById('instant-splash')
-    if (instantSplash) {
-      instantSplash.style.display = 'none'
-    }
-
     // Redirect INSTANTLY - no waiting
     setHasRedirected(true)
 
