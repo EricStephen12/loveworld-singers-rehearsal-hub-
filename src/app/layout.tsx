@@ -88,17 +88,63 @@ export default function RootLayout({
         <link rel="preload" href="/logo.png" as="image" />
         <link rel="preload" href="/images/home.jpg" as="image" />
 
-        <meta name="theme-color" content="#ffffff" />
+        {/* ✅ INSTANT SPLASH SCREEN - Critical CSS */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            /* Instant splash screen to prevent white screen */
+            #instant-splash {
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100vw;
+              height: 100vh;
+              background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6366F1 100%);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 9999;
+              animation: fadeOut 0.5s ease-in-out 1.5s forwards;
+            }
+            
+            #instant-splash .logo {
+              width: 120px;
+              height: 120px;
+              animation: bounce 2s ease-in-out infinite;
+            }
+            
+            @keyframes bounce {
+              0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+              40% { transform: translateY(-10px); }
+              60% { transform: translateY(-5px); }
+            }
+            
+            @keyframes fadeOut {
+              to { opacity: 0; visibility: hidden; }
+            }
+            
+            /* Hide splash when app loads */
+            body.loaded #instant-splash {
+              display: none;
+            }
+          `
+        }} />
+
+        <meta name="theme-color" content="#8B5CF6" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="LWSRHP - LOVEWORLD SINGERS REHEARSAL HUB PORTAL" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-navbutton-color" content="#ffffff" />
+        <meta name="msapplication-navbutton-color" content="#8B5CF6" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="msapplication-TileColor" content="#ffffff" />
+        <meta name="msapplication-TileColor" content="#8B5CF6" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>
       <body className={`${inter.variable} ${poppins.variable} ${outfit.variable} font-sans`}>
+        {/* ✅ INSTANT SPLASH SCREEN - Prevents white screen */}
+        <div id="instant-splash">
+          <img src="/logo.png" alt="LWSRHP" className="logo" />
+        </div>
+        
         <ServiceWorkerRegistration />
         <AuthProvider>
           <AudioProvider>
@@ -112,6 +158,18 @@ export default function RootLayout({
             {/* <GlobalMiniPlayer /> */}
           </AudioProvider>
         </AuthProvider>
+        
+        {/* ✅ Hide splash when app loads */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            // Hide splash screen when app is ready
+            document.addEventListener('DOMContentLoaded', function() {
+              setTimeout(function() {
+                document.body.classList.add('loaded');
+              }, 1000);
+            });
+          `
+        }} />
       </body>
     </html>
   )
