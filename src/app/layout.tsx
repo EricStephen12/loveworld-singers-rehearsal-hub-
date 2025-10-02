@@ -5,7 +5,7 @@ import { AudioProvider } from '@/contexts/AudioContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import RealtimeNotifications from '@/components/RealtimeNotifications'
 import VersionChecker from '@/components/VersionChecker'
-import ScreenshotPrevention from '@/components/ScreenshotPrevention'
+// import ScreenshotPrevention from '@/components/ScreenshotPrevention'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
 import ErrorBoundary from '@/components/ErrorBoundary'
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
@@ -104,14 +104,12 @@ export default function RootLayout({
         <ErrorBoundary>
           <AuthProvider>
             <AudioProvider>
-              <ScreenshotPrevention />
-              <VersionChecker />
+              {/* <ScreenshotPrevention /> */}
               <main className="h-full w-full bg-gray-50">
                 {children}
               </main>
               <PWAInstall />
               <RealtimeNotifications />
-              {/* <GlobalMiniPlayer /> */}
             </AudioProvider>
           </AuthProvider>
         </ErrorBoundary>

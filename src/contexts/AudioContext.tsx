@@ -306,12 +306,26 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   // Update audio source when song changes
   useEffect(() => {
-    console.log('Audio loading effect triggered for song:', currentSong?.title);
-    console.log('Audio file URL:', currentSong?.audioFile);
+    console.log('🎵 Audio loading effect triggered for song:', currentSong?.title);
+    console.log('🎵 Audio file URL:', currentSong?.audioFile);
+    console.log('🎵 Current audio src:', audioRef.current?.src);
 
     if (currentSong?.audioFile && audioRef.current && currentSong.audioFile.trim() !== '') {
       try {
-        // Reset audio state
+        // Check if this is the same song that's already loaded to prevent restart
+        if (audioRef.current.src && audioRef.current.src === currentSong.audioFile) {
+          console.log('🎵 Same audio file already loaded, skipping audio reset - NO RESTART');
+          return; // Don't reset audio state for the same song
+        }
+
+        // Additional check: if the audio is already playing and it's the same file, don't restart
+        if (audioRef.current.src && audioRef.current.src === currentSong.audioFile && isPlaying) {
+          console.log('🎵 Same audio file already playing, skipping audio reset - NO RESTART');
+          return; // Don't restart the same song that's already playing
+        }
+
+        console.log('🎵 Different audio file, resetting audio state');
+        // Reset audio state only for new songs
         setCurrentTime(0);
         setDuration(0);
         setIsLoading(true);
@@ -356,17 +370,39 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   }, [currentSong]);
 
   const setCurrentSongWithAutoPlay = (song: PraiseNightSong | null, autoPlay: boolean = false) => {
-    console.log('🎵 Setting current song:', song?.title, 'autoPlay:', autoPlay);
-    console.log('🎵 Song audioFile:', song?.audioFile);
-    console.log('🎵 Song mediaId:', song?.mediaId);
+    console.log('🎵 setCurrentSongWithAutoPlay called:', {
+      songTitle: song?.title,
+      songId: song?.id,
+      autoPlay: autoPlay,
+      currentSongId: currentSong?.id,
+      currentSongTitle: currentSong?.title,
+      isPlaying: isPlaying,
+      isSameSong: currentSong?.id === song?.id
+    });
+
+    // Check if this is the same song that's already playing
+    if (currentSong?.id === song?.id && isPlaying) {
+      console.log('🎵 Same song already playing, skipping ALL audio changes - EXITING');
+      return; // Don't restart the same song - exit completely
+    }
+
+    // Check if this is the same song but paused - also don't restart
+    if (currentSong?.id === song?.id && !isPlaying) {
+      console.log('🎵 Same song but paused, skipping ALL audio changes - EXITING');
+      return; // Don't restart the same song - exit completely
+    }
+
+    console.log('🎵 Different song or new song, proceeding with audio changes');
 
     // Stop current playback when changing songs
     if (audioRef.current) {
+      console.log('🎵 Stopping current audio');
       audioRef.current.pause();
       setIsPlaying(false);
       setCurrentTime(0);
     }
 
+    console.log('🎵 Setting new song in state');
     setCurrentSong(song);
     setShouldAutoPlay(autoPlay);
   };

@@ -162,6 +162,9 @@ export class AuthService {
       // Add welcome achievements
       await this.addAchievement(user.id, 'Profile Complete', 'Completed your profile information')
 
+      // Clear cached profile to force fresh load
+      localStorage.removeItem('cached_user_profile')
+      
       // Refresh and cache the updated profile
       await this.getCurrentUserProfile()
 

@@ -30,14 +30,14 @@ export default function ProfilePage() {
     administration: ''
   })
   const [selectedGroup, setSelectedGroup] = useState<string>('')
-  // ✅ UPDATED: Match database values exactly
+  // ✅ UPDATED: Official group names
   const [availableGroups] = useState([
     { value: 'yourloveworldsingers', label: 'Your LoveWorld Singers' },
-    { value: 'PMC', label: 'PMC' },
-    { value: 'Main Choir', label: 'Main Choir' },
-    { value: '24 Worship', label: '24 Worship' },
-    { value: 'Teens Voice', label: 'Teens Voice' },
-    { value: 'Orchestra', label: 'Orchestra' }
+    { value: 'pmc', label: 'PMC' },
+    { value: '24worship', label: '24 Worship' },
+    { value: 'lmaorchestra', label: 'LMA/LOVEWORLD ORCHESTRA' },
+    { value: 'nationalzonalchoir', label: 'National Zonal Choir Representatives' },
+    { value: 'internationalzonalchoir', label: 'International Zonal Choir Representatives' }
   ])
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -45,6 +45,8 @@ export default function ProfilePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
+  const [saveProgress, setSaveProgress] = useState(0)
+  const [saveStage, setSaveStage] = useState('')
   const [qrCode, setQrCode] = useState('')
   const [timeLeft, setTimeLeft] = useState(0) // Will be set when QR is generated
   const [isClient, setIsClient] = useState(false)
@@ -315,14 +317,9 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     console.log('🚀 Starting profile save process...')
     setIsSaving(true)
-    setSaveMessage('🔄 Saving changes...')
-    
-    // Add timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.log('⏰ Profile save timeout - resetting state')
-      setIsSaving(false)
-      setSaveMessage('Save operation timed out. Please try again.')
-    }, 10000) // 10 second timeout
+    setSaveProgress(0)
+    setSaveStage('Validating...')
+    setSaveMessage('')
     
     try {
       console.log('🚀 Starting profile save...')
@@ -331,37 +328,35 @@ export default function ProfilePage() {
       console.log('👤 Current user:', user?.id)
       
       // Basic validation
+      setSaveProgress(10)
+      setSaveStage('Validating form data...')
+      
       if (!editForm.firstName.trim()) {
-        setSaveMessage('First name is required')
-        setTimeout(() => setSaveMessage(''), 2000)
+        setSaveMessage('❌ First name is required')
         setIsSaving(false)
         return
       }
       
       if (!editForm.lastName.trim()) {
-        setSaveMessage('Last name is required')
-        setTimeout(() => setSaveMessage(''), 2000)
+        setSaveMessage('❌ Last name is required')
         setIsSaving(false)
         return
       }
       
       if (!editForm.phoneNumber.trim()) {
-        setSaveMessage('Phone number is required')
-        setTimeout(() => setSaveMessage(''), 2000)
+        setSaveMessage('❌ Phone number is required')
         setIsSaving(false)
         return
       }
       
       if (!editForm.region.trim()) {
-        setSaveMessage('Region is required')
-        setTimeout(() => setSaveMessage(''), 2000)
+        setSaveMessage('❌ Region is required')
         setIsSaving(false)
         return
       }
       
       if (!editForm.church.trim()) {
-        setSaveMessage('Church is required')
-        setTimeout(() => setSaveMessage(''), 2000)
+        setSaveMessage('❌ Church is required')
         setIsSaving(false)
         return
       }
@@ -383,6 +378,8 @@ export default function ProfilePage() {
       console.log('📤 Sending update data:', updateData)
       
       // Test database connection first
+      setSaveProgress(20)
+      setSaveStage('Connecting to database...')
       console.log('🔍 Testing database connection...')
       const { data: testData, error: testError } = await supabase
         .from('profiles')
@@ -391,27 +388,38 @@ export default function ProfilePage() {
       
       if (testError) {
         console.error('❌ Database connection failed:', testError)
-        setSaveMessage(`Database connection failed: ${testError.message}`)
+        setSaveMessage(`❌ Database connection failed: ${testError.message}`)
+        setIsSaving(false)
         return
       }
       
       console.log('✅ Database connection successful:', testData)
       
       // Update profile using the ultra-fast hook
+      setSaveProgress(40)
+      setSaveStage('Updating profile...')
       const profileSuccess = await updateProfile(updateData)
       
       console.log('✅ Profile update result:', profileSuccess)
 
       // ✅ NOW SAVE USER GROUPS (RLS issue is fixed!)
+      setSaveProgress(70)
+      setSaveStage('Saving group membership...')
       console.log('💾 Saving user groups...')
       const groupsSuccess = await saveUserGroups()
 
       console.log('✅ Groups update result:', groupsSuccess)
 
       if (profileSuccess && groupsSuccess) {
+        setSaveProgress(100)
+        setSaveStage('Complete!')
         setSaveMessage('✅ Profile and groups updated successfully!')
         setIsEditing(false)
-        setTimeout(() => setSaveMessage(''), 5000)
+        setTimeout(() => {
+          setSaveMessage('')
+          setSaveProgress(0)
+          setSaveStage('')
+        }, 3000)
         
         // Dispatch event to notify other components that groups were updated
         window.dispatchEvent(new CustomEvent('groupsUpdated', { 
@@ -419,18 +427,31 @@ export default function ProfilePage() {
         }))
         console.log('📢 Dispatched groupsUpdated event with group:', selectedGroup)
       } else if (profileSuccess) {
+        setSaveProgress(80)
+        setSaveStage('Profile saved, groups failed')
         setSaveMessage('✅ Profile updated! ⚠️ Groups update failed.')
-        setTimeout(() => setSaveMessage(''), 5000)
+        setTimeout(() => {
+          setSaveMessage('')
+          setSaveProgress(0)
+          setSaveStage('')
+        }, 3000)
       } else {
         setSaveMessage('❌ Failed to update profile. Check console for details.')
-        setTimeout(() => setSaveMessage(''), 5000)
+        setTimeout(() => {
+          setSaveMessage('')
+          setSaveProgress(0)
+          setSaveStage('')
+        }, 3000)
       }
     } catch (error) {
       console.error('❌ Error saving profile:', error)
-      setSaveMessage(`Error saving profile: ${error instanceof Error ? error.message : 'Unknown error'}`)
-      setTimeout(() => setSaveMessage(''), 2000)
+      setSaveMessage(`❌ Error saving profile: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setTimeout(() => {
+        setSaveMessage('')
+        setSaveProgress(0)
+        setSaveStage('')
+      }, 3000)
     } finally {
-      clearTimeout(timeoutId)
       setIsSaving(false)
       console.log('✅ Profile save process completed - resetting saving state')
     }
@@ -511,7 +532,6 @@ export default function ProfilePage() {
     totalRehearsals: 0,
     attendanceRate: 0,
     lastCheckIn: "Never",
-    achievements: ["Profile Completed"],
     qrCode: profileData.id ? `LW-USER-${profileData.id.slice(0, 8).toUpperCase()}` : "LW-USER-00000000"
   }
 
@@ -917,14 +937,44 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Save Message */}
-                {saveMessage && (
-                  <div className={`p-4 rounded-lg text-sm font-medium ${
-                    saveMessage.includes('successfully')
-                      ? 'bg-green-50 text-green-800 border border-green-200'
-                      : 'bg-red-50 text-red-800 border border-red-200'
-                  }`}>
-                    {saveMessage}
+                {/* Save Progress & Message */}
+                {(isSaving || saveMessage) && (
+                  <div className="p-4 rounded-lg border bg-white shadow-sm">
+                    {isSaving ? (
+                      <div className="space-y-3">
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-300 ease-out"
+                            style={{ width: `${saveProgress}%` }}
+                          />
+                        </div>
+                        
+                        {/* Progress Text */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">
+                            {saveStage}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {saveProgress}%
+                          </span>
+                        </div>
+                        
+                        {/* Loading Animation */}
+                        <div className="flex items-center space-x-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                          <span className="text-sm text-gray-600">Saving your changes...</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={`p-3 rounded-lg text-sm font-medium ${
+                        saveMessage.includes('✅')
+                          ? 'bg-green-50 text-green-800 border border-green-200'
+                          : 'bg-red-50 text-red-800 border border-red-200'
+                      }`}>
+                        {saveMessage}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -935,13 +985,21 @@ export default function ProfilePage() {
                     disabled={isSaving}
                     className="flex-1 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
                   >
-                    {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {isSaving ? 'Saving Changes...' : 'Save Changes'}
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
                   </button>
                   <button
                     onClick={() => {
                       setIsEditing(false)
                       setSaveMessage('')
+                      setSaveProgress(0)
+                      setSaveStage('')
                     }}
                     disabled={isSaving}
                     className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
@@ -1173,21 +1231,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Achievements */}
-      <div className="px-4 py-4 pb-8">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-800 mb-3">Achievements</h3>
-          
-          <div className="space-y-2">
-            {userProfile.achievements.map((achievement, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-gray-700">{achievement}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
       </div>
 
       <SharedDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Menu" items={menuItems} />

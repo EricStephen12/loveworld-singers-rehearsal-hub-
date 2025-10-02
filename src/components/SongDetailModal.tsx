@@ -35,20 +35,32 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
   const [mainPlayerWasPlaying, setMainPlayerWasPlaying] = useState(false);
   
   // Use global audio context
-  const { isPlaying, currentTime, duration, isLoading, hasError, togglePlayPause, audioRef, setCurrentSong } = useAudio();
+  const { currentSong, isPlaying, currentTime, duration, isLoading, hasError, togglePlayPause, audioRef, setCurrentSong } = useAudio();
 
-  // Set the current song when modal opens (only once per song)
+  // Set the current song when modal opens (only if it's a different song)
   useEffect(() => {
     if (selectedSong && isOpen) {
-      console.log('🎵 SongDetailModal: Setting current song:', {
-        title: selectedSong.title,
+      console.log('🎵 SongDetailModal: Checking if song needs to be set:', {
+        selectedSongId: selectedSong.id,
+        selectedSongTitle: selectedSong.title,
+        currentSongId: currentSong?.id,
+        currentSongTitle: currentSong?.title,
+        isSameSong: currentSong?.id === selectedSong.id,
         audioFile: selectedSong.audioFile,
         hasAudioFile: !!selectedSong.audioFile,
         audioFileLength: selectedSong.audioFile?.length
       });
-      setCurrentSong(selectedSong, false);
+      
+      // Only set the song if it's different from the current one
+      // This prevents restarting the same song when opening the modal
+      if (currentSong?.id !== selectedSong.id) {
+        console.log('🎵 SongDetailModal: Different song, calling setCurrentSong');
+        setCurrentSong(selectedSong, false);
+      } else {
+        console.log('🎵 SongDetailModal: Same song already playing, skipping audio changes - NO setCurrentSong call');
+      }
     }
-  }, [selectedSong?.title, isOpen]); // Remove setCurrentSong from dependencies to prevent loop
+  }, [selectedSong?.title, isOpen, currentSong?.id]); // Add currentSong?.id to dependencies
 
   // Load songs from the same category AND current filter, find current song index
   useEffect(() => {

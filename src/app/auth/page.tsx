@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
-import { AuthService } from '@/lib/auth-service'
+import { AuthService } from '@/lib/auth-service-simple'
 import type { SignUpData } from '@/types/supabase'
 
 export default function AuthPage() {

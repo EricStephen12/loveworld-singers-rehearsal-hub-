@@ -281,6 +281,15 @@ function PraiseNightPageContent() {
 
   // Handle song card click - opens song detail modal
   const handleSongClick = (song: any, index: number) => {
+    console.log('🎵 handleSongClick called with:', {
+      songId: song.id,
+      songTitle: song.title,
+      currentSongId: currentSong?.id,
+      currentSongTitle: currentSong?.title,
+      isPlaying: isPlaying,
+      isSameSong: currentSong?.id === song.id
+    });
+
     setSelectedSongIndex(index); // Set the selected song index
     setSelectedSong({ ...song, imageIndex: index });
     setIsSongDetailOpen(true);
@@ -288,11 +297,18 @@ function PraiseNightPageContent() {
     // Check if this song is already playing
     if (currentSong?.id === song.id && isPlaying) {
       // Song is already playing, just open modal without changing anything
-      console.log('🎵 Song already playing, opening modal only');
+      console.log('🎵 Song already playing, opening modal only - NO setCurrentSong call');
+      // Don't call setCurrentSong at all - just open the modal
+      return; // Exit early to prevent any further processing
+    } else if (currentSong?.id === song.id && !isPlaying) {
+      // Same song but paused - just open modal, don't restart
+      console.log('🎵 Same song but paused, opening modal only - NO setCurrentSong call');
+      // Don't call setCurrentSong at all - just open the modal
+      return; // Exit early to prevent any further processing
     } else {
-      // Set as current song (will continue from where it left off if it was paused)
+      // Different song - set as current song (will continue from where it left off if it was paused)
+      console.log('🎵 Different song, calling setCurrentSong:', song.title);
       setCurrentSong(song, false); // Set without auto-play since user clicked
-      console.log('🎵 Setting new song:', song.title);
     }
 
     // Dispatch event to hide mini player

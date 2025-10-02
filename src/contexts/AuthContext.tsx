@@ -1,8 +1,8 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { AuthService } from '@/lib/auth-service'
+import { AuthService } from '@/lib/auth-service-simple'
 import type { UserProfile } from '@/types/supabase'
 
 interface AuthContextType {
@@ -18,234 +18,120 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Check if we're in a logout state from URL
-  const [isLogoutFromURL] = useState(() => {
-    if (typeof window === 'undefined') return false
-    const urlParams = new URLSearchParams(window.location.search)
-    return urlParams.get('logout') === 'true'
-  })
-
-  // Initialize from cache immediately for instant load
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window === 'undefined') return null
-    if (isLogoutFromURL) return null // Don't restore user if logout
-    const cached = AuthService.getCachedSession()
-    console.log('🔐 AuthContext init: Cached session:', cached ? 'Found' : 'Not found')
-    return cached?.user || null
-  })
-
-  const [session, setSession] = useState<Session | null>(() => {
-    if (typeof window === 'undefined') return null
-    if (isLogoutFromURL) return null // Don't restore session if logout
-    const cached = AuthService.getCachedSession()
-    return cached
-  })
-
-  const [profile, setProfile] = useState<UserProfile | null>(() => {
-    if (typeof window === 'undefined') return null
-    if (isLogoutFromURL) return null // Don't restore profile if logout
-    try {
-      const cached = localStorage.getItem('cached_user_profile')
-      if (cached) {
-        const parsed = JSON.parse(cached)
-        console.log('👤 AuthContext init: Cached profile found for:', parsed.first_name)
-        return parsed
-      }
-    } catch (error) {
-      console.error('Error parsing cached profile:', error)
-    }
-    return null
-  })
-
-  const [isLoading, setIsLoading] = useState(false) // ✅ Always false - instant load with cache
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [logoutComplete, setLogoutComplete] = useState(false)
+  // Simple state - no complex caching
+  const [user, setUser] = useState<User | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   const refreshProfile = async () => {
-    console.log('Refreshing profile...')
-    const userProfile = await AuthService.getCurrentUserProfile()
-    console.log('Refreshed profile:', userProfile)
-    setProfile(userProfile)
-
-    // Cache the profile
-    if (userProfile) {
-      localStorage.setItem('cached_user_profile', JSON.stringify(userProfile))
+    try {
+      const userProfile = await AuthService.getCurrentUserProfile()
+      setProfile(userProfile)
+    } catch (error) {
+      console.error('Profile refresh error:', error)
     }
   }
 
   const signOut = async () => {
     try {
-      console.log('🚪 Starting logout process...')
-      setIsLoggingOut(true)
-      setLogoutComplete(true)
+      console.log('🚪 Logging out...')
       
-      // Clear ALL localStorage data to prevent any restoration
-      const keysToRemove = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key) {
-          keysToRemove.push(key)
-        }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key))
-
-      // Clear state immediately
+      // Clear all state immediately
       setUser(null)
       setSession(null)
       setProfile(null)
-
+      
+      // Clear localStorage
+      localStorage.clear()
+      
       // Sign out from Supabase
       await AuthService.signOut()
-
-      console.log('✅ Logout completed, redirecting...')
-      // Force redirect to auth page with cache busting
-      if (typeof window !== 'undefined') {
-        window.location.href = '/auth?logout=true&t=' + Date.now()
-      }
+      
+      // Redirect to auth
+      window.location.href = '/auth'
     } catch (error) {
       console.error('Logout error:', error)
-      // Clear state even if there's an error
-      setUser(null)
-      setSession(null)
-      setProfile(null)
-      setLogoutComplete(true)
-      
       // Force redirect even if there's an error
-      if (typeof window !== 'undefined') {
-        window.location.href = '/auth?logout=true&t=' + Date.now()
-      }
+      window.location.href = '/auth'
     }
   }
 
   useEffect(() => {
     let isMounted = true
 
-    // Verify cached session is still valid
-    const verifyCachedSession = async () => {
+    // Simple auth check - no complex caching
+    const checkAuth = async () => {
       try {
-        // Don't verify session if we're logging out
-        if (isLoggingOut || logoutComplete) return
+        console.log('🔍 Checking authentication...')
+        const session = await AuthService.getCurrentSession()
         
-        const cachedSession = AuthService.getCachedSession()
-
-        // If we have cached session, verify it's still valid
-        if (cachedSession) {
-          console.log('🔍 Verifying cached session...')
-          // Session already set from initial state, just verify in background
-          const session = await AuthService.getCurrentSession()
-
-          if (isMounted && session) {
-            console.log('✅ Session is valid')
-            // Session is valid, update if needed
-            if (session.access_token !== cachedSession.access_token) {
-              console.log('🔄 Updating session with new token')
-              setSession(session)
-              setUser(session.user)
+        if (isMounted) {
+          if (session) {
+            console.log('✅ User is authenticated')
+            setSession(session)
+            setUser(session.user)
+            
+            // Load profile
+            try {
+              const userProfile = await AuthService.getCurrentUserProfile()
+              if (isMounted && userProfile) {
+                setProfile(userProfile)
+              }
+            } catch (error) {
+              console.error('Profile load error:', error)
             }
-
-            // Load/refresh profile in background if not cached
-            if (!profile) {
-              console.log('📥 Loading profile in background...')
-              AuthService.getCurrentUserProfile()
-                .then(userProfile => {
-                  if (isMounted && userProfile) {
-                    setProfile(userProfile)
-                    localStorage.setItem('cached_user_profile', JSON.stringify(userProfile))
-                  }
-                })
-                .catch(error => {
-                  console.error('Background profile load error:', error)
-                })
-            }
-          } else if (isMounted && !session) {
-            // Cached session is invalid, clear it
-            console.warn('⚠️ Cached session is invalid, clearing...')
+          } else {
+            console.log('ℹ️ No active session')
             setSession(null)
             setUser(null)
             setProfile(null)
-            localStorage.removeItem('cached_user_profile')
           }
-        } else {
-          // No cached session, check if there's a session
-          console.log('ℹ️ No cached session found, checking Supabase...')
-          const session = await AuthService.getCurrentSession()
-
-          if (isMounted) {
-            setSession(session)
-            setUser(session?.user || null)
-
-            if (session?.user) {
-              AuthService.getCurrentUserProfile()
-                .then(userProfile => {
-                  if (isMounted && userProfile) {
-                    setProfile(userProfile)
-                    localStorage.setItem('cached_user_profile', JSON.stringify(userProfile))
-                  }
-                })
-                .catch(error => {
-                  console.error('Background profile load error:', error)
-                })
-            }
-          }
+          setIsLoading(false)
         }
       } catch (error) {
-        console.error('Session verification error:', error)
+        console.error('Auth check error:', error)
+        if (isMounted) {
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+          setIsLoading(false)
+        }
       }
     }
 
-    verifyCachedSession()
+    checkAuth()
 
-    // Listen for auth changes (login/logout events)
+    // Listen for auth changes
     const { data: { subscription } } = AuthService.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted || isLoggingOut || logoutComplete) return
+        if (!isMounted) return
 
         console.log('Auth state changed:', event)
-
-        // During logout events, don't restore session
-        if (event === 'SIGNED_OUT' || isLoggingOut || logoutComplete) {
-          console.log('🚪 Logout event detected, not restoring session')
-          return
-        }
-
-        // Only update if the session actually changed to prevent unnecessary re-renders
-        setSession(prevSession => {
-          if (prevSession?.access_token !== session?.access_token) {
-            return session
-          }
-          return prevSession
-        })
-        
+        setSession(session)
         setUser(session?.user || null)
 
         if (session?.user) {
-          // Load profile on auth change
-          AuthService.getCurrentUserProfile()
-            .then(userProfile => {
-              if (isMounted && userProfile) {
-                setProfile(userProfile)
-                localStorage.setItem('cached_user_profile', JSON.stringify(userProfile))
-              }
-            })
-            .catch(error => {
-              console.error('Auth change profile load error:', error)
-              if (isMounted) {
-                setProfile(null)
-              }
-            })
+          // Load profile
+          try {
+            const userProfile = await AuthService.getCurrentUserProfile()
+            if (isMounted && userProfile) {
+              setProfile(userProfile)
+            }
+          } catch (error) {
+            console.error('Profile load error:', error)
+          }
         } else {
-          // User logged out, clear cache
           setProfile(null)
-          localStorage.removeItem('cached_user_profile')
         }
       }
     )
 
     return () => {
       isMounted = false
-      subscription.unsubscribe()
+      subscription?.unsubscribe()
     }
-  }, [profile])
+  }, [])
 
   const isProfileComplete = profile?.profile_completed === true
 
