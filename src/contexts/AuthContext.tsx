@@ -67,15 +67,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🚪 Starting logout process...')
       setIsLoggingOut(true)
       
-      // Clear all cached data FIRST
-      localStorage.removeItem('cached_user_profile')
-      localStorage.removeItem('cached_session')
-      localStorage.removeItem('cached_pages_data')
-      localStorage.removeItem('cached_pages_timestamp')
-      localStorage.removeItem('loveworld_audio_state')
-      localStorage.removeItem('loveworld_audio_time')
-      localStorage.removeItem('loveworld_audio_song')
-      localStorage.removeItem('audio_timestamp')
+      // Clear ALL localStorage data to prevent any restoration
+      const keysToRemove = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key) {
+          keysToRemove.push(key)
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key))
 
       // Clear state immediately
       setUser(null)
@@ -86,9 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await AuthService.signOut()
 
       console.log('✅ Logout completed, redirecting...')
-      // Force redirect to auth page
+      // Force redirect to auth page with cache busting
       if (typeof window !== 'undefined') {
-        window.location.href = '/auth'
+        window.location.href = '/auth?logout=true&t=' + Date.now()
       }
     } catch (error) {
       console.error('Logout error:', error)
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Force redirect even if there's an error
       if (typeof window !== 'undefined') {
-        window.location.href = '/auth'
+        window.location.href = '/auth?logout=true&t=' + Date.now()
       }
     }
   }
@@ -188,6 +188,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!isMounted || isLoggingOut) return
 
         console.log('Auth state changed:', event)
+
+        // During logout events, don't restore session
+        if (event === 'SIGNED_OUT' || isLoggingOut) {
+          console.log('🚪 Logout event detected, not restoring session')
+          return
+        }
 
         // Only update if the session actually changed to prevent unnecessary re-renders
         setSession(prevSession => {

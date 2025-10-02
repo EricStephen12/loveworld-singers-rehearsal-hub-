@@ -27,6 +27,15 @@ export default function AuthPage() {
   // Check if already logged in - redirect immediately
   useEffect(() => {
     const checkAuth = async () => {
+      // Check if this is a logout redirect - if so, don't check for existing session
+      const urlParams = new URLSearchParams(window.location.search)
+      const isLogout = urlParams.get('logout')
+      
+      if (isLogout) {
+        console.log('🚪 Auth page: Logout redirect detected, staying on auth page')
+        return
+      }
+      
       // Only check once to prevent double redirects
       const cachedSession = AuthService.getCachedSession()
       if (cachedSession) {
