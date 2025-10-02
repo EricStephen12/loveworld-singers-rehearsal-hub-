@@ -55,8 +55,8 @@ export default function ScreenshotPrevention() {
           (e.key === 'PrintScreen') ||
           (e.altKey && e.key === 'PrintScreen') ||
           // Additional mobile keys
-          (e.key === 'VolumeDown' && e.key === 'Power') ||
-          (e.key === 'VolumeUp' && e.key === 'Power')
+          (e.key === 'VolumeDown') ||
+          (e.key === 'VolumeUp')
         ) {
           e.preventDefault()
           return false
