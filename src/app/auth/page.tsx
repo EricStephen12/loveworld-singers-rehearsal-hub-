@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { AuthService } from '@/lib/auth-service-simple'
+import AuthCheck from '@/components/AuthCheck'
 import type { SignUpData } from '@/types/supabase'
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter()
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
@@ -421,5 +422,13 @@ export default function AuthPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <AuthCheck>
+      <AuthPageContent />
+    </AuthCheck>
   )
 }

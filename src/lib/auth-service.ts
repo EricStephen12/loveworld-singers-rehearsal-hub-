@@ -105,15 +105,34 @@ export class AuthService {
   // Get current user profile
   static async getCurrentUserProfile(): Promise<UserProfile | null> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      // Add timeout protection to prevent hanging
+      const userPromise = supabase.auth.getUser()
+      const userTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('User check timeout'))
+        }, 3000) // 3 second timeout
+      })
+
+      const userResult = await Promise.race([userPromise, userTimeoutPromise]) as any
+      const { data: { user } } = userResult
 
       if (!user) return null
 
-      const { data: profile, error } = await supabase
+      // Add timeout protection for profile fetch
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
+
+      const profileTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Profile fetch timeout'))
+        }, 3000) // 3 second timeout
+      })
+
+      const profileResult = await Promise.race([profilePromise, profileTimeoutPromise]) as any
+      const { data: profile, error } = profileResult
 
       if (error) {
         console.error('Profile fetch error:', error)
@@ -242,10 +261,19 @@ export class AuthService {
     }
   }
 
-  // Get current session
+  // Get current session with timeout protection
   static async getCurrentSession() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      // Add timeout protection to prevent hanging
+      const sessionPromise = supabase.auth.getSession()
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Session check timeout'))
+        }, 4000) // 4 second timeout
+      })
+
+      const sessionResult = await Promise.race([sessionPromise, timeoutPromise]) as any
+      const { data: { session } } = sessionResult
       console.log('📡 getCurrentSession result:', session ? 'Session found' : 'No session')
       return session
     } catch (error) {

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { User, Session } from '@supabase/supabase-js'
 import { AuthService } from '@/lib/auth-service-simple'
 import { userCache, profileCache, invalidateUserCache } from '@/lib/smart-cache'
+import { OfflineFallback } from '@/lib/offline-fallback'
 import type { UserProfile } from '@/types/supabase'
 
 interface AuthContextType {
@@ -120,8 +121,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
+    let timeoutId: NodeJS.Timeout
 
-    // Simple auth check - no complex caching
+    // Simple auth check with timeout protection
     const checkAuth = async () => {
       try {
         console.log('🔍 Checking authentication...')
@@ -136,9 +138,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // ✅ ALWAYS check session, even on auth page
-        // This allows redirect to work when user logs in
-        const session = await AuthService.getCurrentSession()
+        // ✅ TIMEOUT PROTECTION: Don't wait forever for auth
+        const authPromise = AuthService.getCurrentSession()
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error('Auth check timeout - proceeding without session'))
+          }, 5000) // 5 second timeout
+        })
+
+        let session
+        try {
+          session = await Promise.race([authPromise, timeoutPromise])
+        } catch (error) {
+          console.log('⚠️ Auth check failed, trying offline fallback...')
+          // Try offline fallback
+          session = OfflineFallback.getCachedSession()
+          if (session) {
+            console.log('📱 Using cached session from offline fallback')
+          }
+        }
 
         if (isMounted) {
           if (session) {
@@ -146,14 +164,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(session)
             setUser(session.user)
 
-            // Load profile
+            // Load profile with timeout protection and offline fallback
             try {
-              const userProfile = await AuthService.getCurrentUserProfile()
+              const profilePromise = AuthService.getCurrentUserProfile()
+              const profileTimeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                  reject(new Error('Profile load timeout'))
+                }, 3000) // 3 second timeout for profile
+              })
+
+              let userProfile
+              try {
+                userProfile = await Promise.race([profilePromise, profileTimeoutPromise])
+              } catch (error) {
+                console.log('⚠️ Profile load failed, trying offline fallback...')
+                // Try offline fallback
+                userProfile = OfflineFallback.getCachedProfile()
+                if (userProfile) {
+                  console.log('📱 Using cached profile from offline fallback')
+                }
+              }
+
               if (isMounted && userProfile) {
                 setProfile(userProfile)
               }
             } catch (error) {
               console.error('Profile load error:', error)
+              // Continue without profile - user can still use the app
             }
           } else {
             console.log('ℹ️ No active session')
@@ -166,10 +203,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Auth check error:', error)
         if (isMounted) {
+          // On any error, assume no session and proceed
+          console.log('⚠️ Auth check failed - proceeding without session')
           setSession(null)
           setUser(null)
           setProfile(null)
           setIsLoading(false)
+        }
+      } finally {
+        // Clear timeout if it was set
+        if (timeoutId) {
+          clearTimeout(timeoutId)
         }
       }
     }

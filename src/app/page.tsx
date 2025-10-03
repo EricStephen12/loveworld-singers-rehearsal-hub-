@@ -2,34 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
 
 export default function SplashPage() {
   const router = useRouter()
-  const { user, isLoading } = useAuth()
   const [hasRedirected, setHasRedirected] = useState(false)
 
-  // ✅ INSTANT REDIRECT - No splash delay
+  // ✅ PURE UI SPLASH - NO AUTH CHECKING
   useEffect(() => {
     // Prevent multiple redirects
     if (hasRedirected) return
     
-    // Wait for auth to finish loading
-    if (isLoading) return
-
-    // Redirect INSTANTLY - no waiting
-    setHasRedirected(true)
-
-    if (!user) {
-      // No user - go to auth
-      console.log('🔄 Splash: No user, redirecting to auth')
+    // Show splash for 2 seconds then redirect to auth
+    const timer = setTimeout(() => {
+      console.log('🎨 Splash complete - redirecting to auth')
+      setHasRedirected(true)
       router.replace('/auth')
-    } else {
-      // User is authenticated - go to home instantly
-      console.log('✅ Splash: User authenticated, redirecting to home')
-      router.replace('/home')
-    }
-  }, [user, isLoading, hasRedirected, router])
+    }, 2000) // 2 second splash display
+
+    return () => clearTimeout(timer)
+  }, [hasRedirected, router])
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center">
