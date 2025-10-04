@@ -158,6 +158,7 @@ export interface ProfileCompletionData {
 
 export interface PraiseNight {
   id: number;
+  firebaseId?: string; // Firebase document ID for updates
   name: string;
   date: string;
   location: string;
@@ -174,6 +175,7 @@ export interface PraiseNight {
 
 export interface PraiseNightSong {
   id?: number; // Database ID for the song
+  firebaseId?: string; // Firebase document ID for updates
   title: string;
   status: 'heard' | 'unheard';
   category: string;

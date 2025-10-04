@@ -17,7 +17,7 @@ export default function NotificationsPage() {
 
   // Use real-time notifications hook
   const { notifications, loading, error, markAsRead, markAllAsRead, deleteNotification } = useRealtimeNotifications()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { createNotificationForAll, createNotificationForGroup } = useNotificationActions()
   const [showSettings, setShowSettings] = useState(false)
   const [notificationSettings, setNotificationSettings] = useState({
@@ -241,7 +241,7 @@ export default function NotificationsPage() {
           </div>
 
           {/* Admin Create Notification Section */}
-          {user?.role === 'admin' && (
+          {profile?.role === 'admin' && (
             <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Send Notification</h3>
               <div className="space-y-3">

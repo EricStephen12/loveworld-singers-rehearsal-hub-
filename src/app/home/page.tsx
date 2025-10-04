@@ -183,9 +183,9 @@ function HomePageContent() {
   ]
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col">
-      {/* Responsive Container with Max Width */}
-      <div className="w-full max-w-sm sm:max-w-md md:max-w-[520px] lg:max-w-[550px] xl:max-w-[600px] mx-auto flex flex-col h-full">
+     <div className="h-screen w-screen overflow-hidden flex flex-col">
+       {/* Responsive Container with Max Width */}
+       <div className="w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto flex flex-col h-full">
       {/* Fixed Header - Full Width */}
       <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50 w-full">
         <div className="w-full">
@@ -353,8 +353,8 @@ function HomePageContent() {
       {/* Scrollable Content Container */}
       <div className="flex-1 overflow-y-auto">
         <div className="w-full">
-          {/* Hero Banner - Carousel */}
-          <div className="px-3 sm:px-4 py-6 pt-20">
+           {/* Hero Banner - Carousel */}
+           <div className="px-3 sm:px-6 md:px-8 lg:px-12 py-6 pt-20">
             <div className="relative h-[30vh] rounded-3xl overflow-hidden shadow-lg">
               {/* Carousel Images */}
               <div className="relative w-full h-full">
@@ -382,9 +382,9 @@ function HomePageContent() {
             <h1 className="text-1xl font-bold text-gray-800">LoveWorld Singers Rehearsal Hub Portal</h1>
           </div>
 
-          {/* Features Grid */}
-          <div className="px-3 pb-4">
-            <div className="grid grid-cols-3 gap-2">
+           {/* Features Grid */}
+           <div className="px-3 sm:px-6 md:px-8 lg:px-12 pb-4">
+             <div className="grid grid-cols-3 gap-2">
               {features.map((feature, index) => (
                 <Link
                   key={index}
@@ -410,8 +410,8 @@ function HomePageContent() {
             </div>
           </div>
 
-          {/* About Section */}
-          <div className="px-4 pb-6">
+           {/* About Section */}
+           <div className="px-3 sm:px-6 md:px-8 lg:px-12 pb-6">
             <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
             <div className="space-y-2">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -433,8 +433,8 @@ function HomePageContent() {
             </div>
           </div>
 
-          {/* FAQ Section */}
-          <div className="px-4 pb-6">
+           {/* FAQ Section */}
+           <div className="px-3 sm:px-6 md:px-8 lg:px-12 pb-6">
             <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">FAQ</h2>
             <div className="space-y-2">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

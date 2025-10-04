@@ -1,15 +1,15 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
-import { User, Session } from '@supabase/supabase-js'
-import { AuthService } from '@/lib/auth-service-simple'
+import { User } from 'firebase/auth'
+import { FirebaseAuthService } from '@/lib/firebase-auth'
+import { FirebaseDatabaseService } from '@/lib/firebase-database'
 import { userCache, profileCache, invalidateUserCache } from '@/lib/smart-cache'
 import { OfflineFallback } from '@/lib/offline-fallback'
 import type { UserProfile } from '@/types/supabase'
 
 interface AuthContextType {
   user: User | null
-  session: Session | null
   profile: UserProfile | null
   isLoading: boolean
   isProfileComplete: boolean
@@ -22,17 +22,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Simple state - no complex caching
   const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const refreshProfile = useCallback(async () => {
-    if (!user?.id) return
+    if (!user?.uid) return
     
     try {
       // Check cache first
-      const cacheKey = `profile_${user.id}`
+      const cacheKey = `profile_${user.uid}`
       const cachedProfile = profileCache.get(cacheKey)
       
       if (cachedProfile) {
@@ -42,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       console.log('💾 Fetching fresh profile')
-      const userProfile = await AuthService.getCurrentUserProfile()
+      const userProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid)
       if (userProfile) {
         setProfile(userProfile)
         // Cache the profile
@@ -51,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Profile refresh error:', error)
     }
-  }, [user?.id])
+  }, [user?.uid])
 
   const signOut = useCallback(async () => {
     console.log('🚪 NUCLEAR LOGOUT - Destroying all session data...')
@@ -61,7 +60,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Clear all state immediately - no async
     setUser(null)
-    setSession(null)
     setProfile(null)
     
     // Clear ALL possible storage
@@ -69,22 +67,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.clear()
       sessionStorage.clear()
       // Clear specific keys that might persist
-      localStorage.removeItem('supabase.auth.token')
-      localStorage.removeItem('sb-auth-token')
-      localStorage.removeItem('supabase.auth.session')
-      sessionStorage.removeItem('supabase.auth.token')
-      sessionStorage.removeItem('sb-auth-token')
-      sessionStorage.removeItem('supabase.auth.session')
+      localStorage.removeItem('firebase.auth.token')
+      localStorage.removeItem('firebase-auth-token')
+      localStorage.removeItem('firebase.auth.session')
+      sessionStorage.removeItem('firebase.auth.token')
+      sessionStorage.removeItem('firebase-auth-token')
+      sessionStorage.removeItem('firebase.auth.session')
       // Clear any other possible auth keys
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key && (key.includes('supabase') || key.includes('auth') || key.includes('session'))) {
+        if (key && (key.includes('firebase') || key.includes('auth') || key.includes('session'))) {
           localStorage.removeItem(key)
         }
       }
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i)
-        if (key && (key.includes('supabase') || key.includes('auth') || key.includes('session'))) {
+        if (key && (key.includes('firebase') || key.includes('auth') || key.includes('session'))) {
           sessionStorage.removeItem(key)
         }
       }
@@ -99,17 +97,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Clear caches
     try {
-      invalidateUserCache(user?.id)
+      invalidateUserCache(user?.uid)
     } catch (e) {
       console.log('Cache clear error:', e)
     }
     
-    // Force Supabase logout and wait for it
+    // Force Firebase logout and wait for it
     try {
-      await AuthService.signOut()
-      console.log('✅ Supabase logout successful')
+      const result = await FirebaseAuthService.signOut()
+      if (result.success) {
+        console.log('✅ Firebase logout successful')
+      } else {
+        console.log('Firebase logout error:', result.error)
+      }
     } catch (error) {
-      console.log('Supabase logout error:', error)
+      console.log('Firebase logout error:', error)
     }
     
     // Force immediate redirect with replace to prevent back button
@@ -117,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🚪 Redirecting to auth...')
       window.location.replace('/auth')
     }, 100)
-  }, [user?.id])
+  }, [user?.uid])
 
   useEffect(() => {
     let isMounted = true
@@ -131,7 +133,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If we're logging out, don't check auth
         if (isLoggingOut) {
           console.log('🚪 Logout in progress - skipping auth check')
-          setSession(null)
           setUser(null)
           setProfile(null)
           setIsLoading(false)
@@ -139,34 +140,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // ✅ TIMEOUT PROTECTION: Don't wait forever for auth
-        const authPromise = AuthService.getCurrentSession()
+        const authPromise = FirebaseAuthService.getCurrentUser()
         const timeoutPromise = new Promise((_, reject) => {
           timeoutId = setTimeout(() => {
             reject(new Error('Auth check timeout - proceeding without session'))
           }, 5000) // 5 second timeout
         })
 
-        let session
+        let currentUser
         try {
-          session = await Promise.race([authPromise, timeoutPromise])
+          currentUser = await Promise.race([authPromise, timeoutPromise])
         } catch (error) {
           console.log('⚠️ Auth check failed, trying offline fallback...')
           // Try offline fallback
-          session = OfflineFallback.getCachedSession()
-          if (session) {
+          currentUser = OfflineFallback.getCachedSession()
+          if (currentUser) {
             console.log('📱 Using cached session from offline fallback')
           }
         }
 
         if (isMounted) {
-          if (session) {
+          if (currentUser) {
             console.log('✅ User is authenticated')
-            setSession(session)
-            setUser(session.user)
+            setUser(currentUser)
 
             // Load profile with timeout protection and offline fallback
             try {
-              const profilePromise = AuthService.getCurrentUserProfile()
+              const profilePromise = FirebaseDatabaseService.getDocument('profiles', currentUser.uid)
               const profileTimeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => {
                   reject(new Error('Profile load timeout'))
@@ -194,7 +194,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           } else {
             console.log('ℹ️ No active session')
-            setSession(null)
             setUser(null)
             setProfile(null)
           }
@@ -205,7 +204,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isMounted) {
           // On any error, assume no session and proceed
           console.log('⚠️ Auth check failed - proceeding without session')
-          setSession(null)
           setUser(null)
           setProfile(null)
           setIsLoading(false)
@@ -221,34 +219,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth()
 
     // Listen for auth changes
-    const { data: { subscription } } = AuthService.onAuthStateChange(
-      async (event, session) => {
+    const unsubscribe = FirebaseAuthService.onAuthStateChange(
+      async (user) => {
         // If we're logging out, ignore ALL auth events
         if (isLoggingOut) {
-          console.log('🚪 Logout in progress - ignoring auth event:', event)
+          console.log('🚪 Logout in progress - ignoring auth event')
           return
         }
 
         if (!isMounted) return
 
-        console.log('Auth state changed:', event)
+        console.log('🔥 Firebase Auth state changed:', user ? `User signed in: ${user.email}` : 'User signed out')
+        console.log('🔥 Auth persistence working:', user ? 'YES' : 'NO')
 
-        // ✅ ALWAYS update session state, even on auth page
+        // ✅ ALWAYS update user state, even on auth page
         // This allows redirect to work when user logs in
-        setSession(session)
-        setUser(session?.user || null)
+        setUser(user)
 
-        if (session?.user) {
+        if (user) {
           // Load profile
           try {
-            const userProfile = await AuthService.getCurrentUserProfile()
+            console.log('📋 Loading profile for user:', user.uid)
+            const userProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid)
             if (isMounted && userProfile) {
+              console.log('✅ Profile loaded successfully')
               setProfile(userProfile)
+            } else {
+              console.log('⚠️ No profile found for user')
             }
           } catch (error) {
-            console.error('Profile load error:', error)
+            console.error('❌ Profile load error:', error)
           }
         } else {
+          console.log('👤 No user - clearing profile')
           setProfile(null)
         }
       }
@@ -256,7 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false
-      subscription?.unsubscribe()
+      unsubscribe()
     }
   }, [isLoggingOut])
 
@@ -267,43 +270,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Handle redirects - only redirect FROM auth page TO home when logged in
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    console.log('AuthContext: Checking redirect conditions...', {
-      pathname: window.location.pathname,
-      hasUser: !!user,
-      hasSession: !!session,
-      isLoggingOut
-    });
-
-    // Don't redirect if we're logging out
-    if (isLoggingOut) {
-      console.log('AuthContext: Logging out, not redirecting');
-      return
-    }
-
-    // ✅ ONLY redirect FROM /auth TO /home when user logs in
-    // Don't redirect if already on another page
-    if (user && session && window.location.pathname === '/auth') {
-      console.log('✅ AuthContext: User authenticated on auth page, redirecting to home')
-      window.location.href = '/home'
-    }
-  }, [user, session, isLoggingOut])
+  // Remove automatic redirects - let AuthGuard handle all redirects
+  // This prevents redirect loops between AuthContext and AuthGuard
 
   const isProfileComplete = profile?.profile_completed === true
+  
+  // Debug logging
+  console.log('AuthContext: Profile state:', {
+    hasProfile: !!profile,
+    profileCompleted: profile?.profile_completed,
+    isProfileComplete
+  })
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
-    user,
-    session,
-    profile,
-    isLoading,
-    isProfileComplete,
-    signOut,
-    refreshProfile
-  }), [user, session, profile, isLoading, isProfileComplete, signOut, refreshProfile])
+        user,
+        profile,
+        isLoading,
+        isProfileComplete,
+        signOut,
+        refreshProfile
+  }), [user, profile, isLoading, isProfileComplete, signOut, refreshProfile])
 
   return (
     <AuthContext.Provider value={contextValue}>

@@ -22,7 +22,7 @@ export default function SupportSystemTest() {
         return;
       }
       
-      setTestResult(prev => prev + `✅ User from hook: ${user.id}\n`);
+      setTestResult(prev => prev + `✅ User from hook: ${user.uid}\n`);
       
       // Test 2: Check Supabase auth
       const { data: { user: supabaseUser }, error: authError } = await supabase.auth.getUser();
@@ -40,7 +40,7 @@ export default function SupportSystemTest() {
       setTestResult(prev => prev + `✅ Supabase user: ${supabaseUser.id}\n`);
       
       // Test 3: Check if user IDs match
-      if (user.id !== supabaseUser.id) {
+      if (user.uid !== supabaseUser.id) {
         setTestResult(prev => prev + '⚠️ User ID mismatch between hook and Supabase\n');
       } else {
         setTestResult(prev => prev + '✅ User IDs match\n');

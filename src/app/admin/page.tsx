@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  Home,
-  Search,
-  Calendar,
-  FileText,
-  ShoppingCart,
-  MessageCircle,
+import { 
+  Home, 
+  Search, 
+  Calendar, 
+  FileText, 
+  ShoppingCart, 
+  MessageCircle, 
   Settings,
   Bookmark,
   ChevronRight,
@@ -35,12 +35,10 @@ import {
 } from "lucide-react";
 import { PraiseNightSong, Comment, PraiseNight, Category } from '../../types/supabase';
 import { useRealtimeData } from '../../hooks/useRealtimeData';
-import { createPage, updatePage, deletePage, createSong, updateSong, deleteSong, updateSongsCategory, handleCategoryDeletion, getAllCategories, createCategory, updateCategory, deleteCategory } from '../../lib/database';
-import { supabase } from '@/lib/supabase';
-import { clearAllCaches } from '@/utils/cacheBuster';
+import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { FirebaseAuthService } from '@/lib/firebase-auth';
 import { logAdminAction } from '@/lib/admin-activity-logger';
 import { versionManager } from '@/utils/versionManager';
-import { smartCache } from '@/utils/smartCache';
 import { uploadBannerImage } from '@/utils/imageUpload';
 import EditSongModal from '../../components/EditSongModal';
 import MediaManager from '../../components/MediaManager';
@@ -228,6 +226,15 @@ export default function AdminPage() {
   const allSongs = useMemo(() => {
     if (loading || !allPraiseNights) return [];
     
+    console.log('🎵 Admin - All Praise Nights:', allPraiseNights.length);
+    allPraiseNights.forEach((page, index) => {
+      console.log(`🎵 Page ${index}:`, {
+        id: page.id,
+        name: page.name,
+        songsCount: page.songs.length
+      });
+    });
+    
     // Get all songs from all praise nights
     const allSongsWithIds: PraiseNightSong[] = [];
     
@@ -240,14 +247,31 @@ export default function AdminPage() {
       });
     });
     
+    console.log('🎵 Admin - All Songs Total:', allSongsWithIds.length);
+    console.log('🎵 Admin - Selected Page:', selectedPage?.id, selectedPage?.name);
+    console.log('🎵 Admin - All Songs Details:', allSongsWithIds.map(song => ({
+      id: song.id,
+      firebaseId: song.firebaseId,
+      title: song.title,
+      praiseNightId: song.praiseNightId
+    })));
+    
     return allSongsWithIds;
-  }, [allPraiseNights, loading]);
+  }, [allPraiseNights, loading, selectedPage]);
 
   // Management state
   const [showPageModal, setShowPageModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingPage, setEditingPage] = useState<PraiseNight | null>(null);
   const [editingPageCategory, setEditingPageCategory] = useState<any | null>(null);
+  
+  // Delete confirmation dialogs
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [pageToDelete, setPageToDelete] = useState<PraiseNight | null>(null);
+  const [showDeleteSongDialog, setShowDeleteSongDialog] = useState(false);
+  const [songToDelete, setSongToDelete] = useState<PraiseNightSong | null>(null);
+  const [showDeleteCategoryDialog, setShowDeleteCategoryDialog] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newPageName, setNewPageName] = useState('');
   const [newPageDate, setNewPageDate] = useState('');
@@ -344,8 +368,19 @@ export default function AdminPage() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const categories = await getAllCategories();
-        setDbCategories(categories);
+        const categories = await FirebaseDatabaseService.getCollection('categories');
+        console.log('🔥 Raw categories from Firebase:', categories);
+        
+        // Map categories to include both Firebase ID and Supabase ID
+        const mappedCategories = categories.map(category => ({
+          ...category,
+          firebaseId: category.id, // Firebase document ID (string)
+          id: category.id, // Keep Firebase ID as primary ID
+          supabaseId: category.id // This will be the Firebase ID for now
+        }));
+        
+        console.log('🔥 Mapped categories:', mappedCategories);
+        setDbCategories(mappedCategories as Category[]);
       } catch (error) {
         console.error('Error loading categories:', error);
       }
@@ -354,10 +389,19 @@ export default function AdminPage() {
     loadCategories();
   }, []);
 
-  // Get pages from Supabase (includes unassigned for admin)
+  // Get pages from Firebase (includes unassigned for admin)
   const pages = useMemo(() => {
     if (loading || !allPraiseNights) return [];
-    return allPraiseNights; // Supabase data includes all pages
+    console.log('📄 Admin pages loaded:', allPraiseNights.length, 'pages');
+    console.log('📄 All pages data:', allPraiseNights);
+    allPraiseNights.forEach((page, index) => {
+      console.log(`📄 Page ${index}:`, {
+        id: page.id,
+        firebaseId: page.firebaseId,
+        name: page.name
+      });
+    });
+    return allPraiseNights; // Firebase data includes all pages
   }, [allPraiseNights, loading, showPageModal]); // Refresh when data changes
 
   // Get page categories for selected page (extract from songs)
@@ -426,12 +470,12 @@ export default function AdminPage() {
           isActive: true
         };
 
-        const success = await createCategory(newCategory);
+        const success = await FirebaseDatabaseService.createCategory(newCategory);
         
         if (success) {
           // Reload categories from database
-          const categories = await getAllCategories();
-          setDbCategories(categories);
+          const categories = await FirebaseDatabaseService.getCollection('categories');
+          setDbCategories(categories as Category[]);
           
           addToast({
             type: 'success',
@@ -479,18 +523,32 @@ export default function AdminPage() {
         const dbCategory = dbCategories.find(cat => cat.name === oldCategoryName);
         
         if (dbCategory) {
-          // Update database category
-          const success = await updateCategory(parseInt(dbCategory.id), {
+          // Update database category using Firebase document ID
+          console.log('🔄 Updating category:', {
+            oldName: oldCategoryName,
+            newName: newCategoryName,
+            categoryId: dbCategory.id,
+            firebaseId: dbCategory.firebaseId
+          });
+          
+          const categoryId = dbCategory.firebaseId || dbCategory.id;
+          const success = await FirebaseDatabaseService.updateCategory(categoryId, {
             name: newCategoryName
           });
           
           if (success) {
             // Reload categories from database
-            const categories = await getAllCategories();
-            setDbCategories(categories);
+            const categories = await FirebaseDatabaseService.getCollection('categories');
+            const mappedCategories = categories.map(category => ({
+              ...category,
+              firebaseId: category.id,
+              id: category.id,
+              supabaseId: category.id
+            }));
+            setDbCategories(mappedCategories as Category[]);
             
             // Also update songs that use this category
-            await updateSongsCategory(oldCategoryName, newCategoryName);
+            await FirebaseDatabaseService.updateSongsCategory(oldCategoryName, newCategoryName);
             await refreshData();
             
             addToast({
@@ -502,7 +560,7 @@ export default function AdminPage() {
           }
         } else {
           // Update song-based category (legacy behavior)
-          const success = await updateSongsCategory(oldCategoryName, newCategoryName);
+          const success = await FirebaseDatabaseService.updateSongsCategory(oldCategoryName, newCategoryName);
           if (success) {
             await refreshData();
             
@@ -528,56 +586,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteCategory = async (categoryName: string) => {
-    if (confirm(`Are you sure you want to delete the category "${categoryName}"? All songs in this category will be moved to "Uncategorized".`)) {
-      try {
-        // Check if this is a database category or song-based category
-        const dbCategory = dbCategories.find(cat => cat.name === categoryName);
-        
-        if (dbCategory) {
-          // Delete from database
-          const success = await deleteCategory(parseInt(dbCategory.id));
-          
-          if (success) {
-            // Reload categories from database
-            const categories = await getAllCategories();
-            setDbCategories(categories);
-            
-            // Move songs to uncategorized
-            await handleCategoryDeletion(categoryName, 'Uncategorized');
-            await refreshData();
-            
-            addToast({
-              type: 'success',
-              message: `Category "${categoryName}" deleted successfully! Songs moved to "Uncategorized".`
-            });
-          } else {
-            throw new Error('Failed to delete category from database');
-          }
-        } else {
-          // Handle song-based category (legacy behavior)
-          const success = await handleCategoryDeletion(categoryName, 'Uncategorized');
-          
-          if (success) {
-            await refreshData();
-            
-            addToast({
-              type: 'success',
-              message: `Category "${categoryName}" deleted successfully! Songs moved to "Uncategorized".`
-            });
-          } else {
-            throw new Error('Failed to delete category');
-          }
-        }
-      } catch (error) {
-        console.error('Error deleting category:', error);
-        addToast({
-          type: 'error',
-          message: `Failed to delete category: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
-      }
-    }
-  };
 
 
   // Song management functions
@@ -586,12 +594,23 @@ export default function AdminPage() {
     setShowSongModal(true);
   };
 
-  const handleSaveSong = async (songData: PraiseNightSong & { id?: number }) => {
+  const handleSaveSong = async (songData: PraiseNightSong & { id?: number; firebaseId?: string }) => {
     try {
+      console.log('🎵 handleSaveSong called with:', {
+        hasId: !!songData.id,
+        hasFirebaseId: !!songData.firebaseId,
+        id: songData.id,
+        firebaseId: songData.firebaseId,
+        title: songData.title
+      });
+      
       // If songData has an ID, it's an existing song being updated
       if (songData.id) {
-        console.log('🔄 Updating existing song with ID:', songData.id);
-        const success = await updateSong(songData.id, songData);
+        console.log('🔄 Updating existing song with ID:', songData.id, 'Firebase ID:', songData.firebaseId);
+        // Use firebaseId for Firebase operations
+        const firebaseId = songData.firebaseId;
+        console.log('🔥 Using Firebase ID for update:', firebaseId);
+        const success = await FirebaseDatabaseService.updateSong(firebaseId, songData);
         
         if (success) {
           console.log('✅ Song updated successfully, refreshing data...');
@@ -637,17 +656,11 @@ export default function AdminPage() {
       }
 
       // Check if this is a new song (no existing song with same title and praiseNightId)
-      const { data: existingSong, error: fetchError } = await supabase
-        .from('songs')
-        .select('id')
-        .eq('praisenightid', songData.praiseNightId)
-        .eq('title', songData.title)
-        .single();
+      const songs = await FirebaseDatabaseService.getCollection('songs') as any[];
+      const existingSong = songs.find(song => 
+        song.praisenightid === songData.praiseNightId && song.title === songData.title
+      );
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        // PGRST116 is "not found" error, which is expected for new songs
-        throw new Error(`Database error: ${fetchError.message}`);
-      }
 
       if (existingSong) {
         // Song exists, update it
@@ -656,7 +669,7 @@ export default function AdminPage() {
           title: songData.title,
           newCategory: songData.category
         });
-        const success = await updateSong(existingSong.id, songData);
+        const success = await FirebaseDatabaseService.updateSong(existingSong.id, songData);
         
         if (success) {
           console.log('✅ Song updated successfully, refreshing data...');
@@ -716,7 +729,13 @@ export default function AdminPage() {
       } else {
         // Song doesn't exist, create it
         console.log('🎵 Creating new song:', songData.title);
-        const createdSong = await createSong(songData);
+        console.log('🎵 Song data being created:', {
+          title: songData.title,
+          praiseNightId: songData.praiseNightId,
+          selectedPageId: selectedPage?.id,
+          selectedPageName: selectedPage?.name
+        });
+        const createdSong = await FirebaseDatabaseService.createSong(songData);
         console.log('🎵 Song creation result:', createdSong);
         
         if (createdSong) {
@@ -748,50 +767,60 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteSong = async (songTitle: string) => {
-    if (confirm(`Are you sure you want to delete "${songTitle}"?`)) {
-      try {
-        // Find the song to get its page ID
-        const songToDelete = allSongs.find(song => song.title === songTitle);
-        if (!songToDelete) {
-          throw new Error(`Song "${songTitle}" not found in current data`);
-        }
+  const handleDeleteSong = (song: PraiseNightSong) => {
+    setSongToDelete(song);
+    setShowDeleteSongDialog(true);
+  };
 
-        // Get the song ID from the database
-        const { data: songs, error: fetchError } = await supabase
-          .from('songs')
-          .select('id')
-          .eq('praisenightid', songToDelete.praiseNightId)
-          .eq('title', songTitle)
-          .single();
-
-        if (fetchError || !songs) {
-          throw new Error(`Could not find song "${songTitle}" in database`);
-        }
-
-        // Delete from Supabase using the song ID
-        const success = await deleteSong(songs.id);
+  const confirmDeleteSong = async () => {
+    if (!songToDelete) return;
+    
+    try {
+      console.log('🗑️ Deleting song:', songToDelete.title);
+      console.log('🗑️ Song details:', {
+        id: songToDelete.id,
+        firebaseId: songToDelete.firebaseId,
+        title: songToDelete.title,
+        praiseNightId: songToDelete.praiseNightId
+      });
+      
+      // Delete from Firebase using the Firebase ID
+      const firebaseId = songToDelete.firebaseId || songToDelete.id.toString();
+      console.log('🗑️ Using Firebase ID for deletion:', firebaseId);
+      const success = await FirebaseDatabaseService.deleteSong(firebaseId);
+      
+      if (success) {
+        console.log('✅ Song deleted successfully');
         
-        if (success) {
-          // Refresh data from Supabase
-          await refreshData();
-          
-          // Show success toast
-          addToast({
-            type: 'success',
-            message: `Song "${songTitle}" deleted successfully!`
-          });
-        } else {
-          throw new Error('Failed to delete song from database');
-        }
-      } catch (error) {
-        console.error('Error deleting song:', error);
+        // Simple refresh without aggressive cache clearing
+        await refreshData();
+        console.log('🔄 Data refreshed after deletion');
+        
+        // Show success toast
         addToast({
-          type: 'error',
-          message: `Failed to delete song: ${error instanceof Error ? error.message : 'Unknown error'}`
+          type: 'success',
+          message: `Song "${songToDelete.title}" deleted successfully!`
         });
+        
+        // Close dialog
+        setShowDeleteSongDialog(false);
+        setSongToDelete(null);
+      } else {
+        console.log('❌ Song deletion failed in Firebase');
+        throw new Error('Failed to delete song from database');
       }
+    } catch (error) {
+      console.error('Error deleting song:', error);
+      addToast({
+        type: 'error',
+        message: `Failed to delete song: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
     }
+  };
+
+  const cancelDeleteSong = () => {
+    setShowDeleteSongDialog(false);
+    setSongToDelete(null);
   };
 
   const handleToggleSongStatus = async (song: PraiseNightSong) => {
@@ -799,19 +828,17 @@ export default function AdminPage() {
       const newStatus = song.status === 'heard' ? 'unheard' : 'heard';
       
       // Get the song ID from the database
-      const { data: songs, error: fetchError } = await supabase
-        .from('songs')
-        .select('id')
-        .eq('praisenightid', song.praiseNightId)
-        .eq('title', song.title)
-        .single();
+      const allSongs = await FirebaseDatabaseService.getCollection('songs') as any[];
+      const songRecord = allSongs.find(s => 
+        s.praisenightid === song.praiseNightId && s.title === song.title
+      );
 
-      if (fetchError || !songs) {
+      if (!songRecord) {
         throw new Error(`Could not find song "${song.title}" in database`);
       }
 
-      // Update in Supabase using the song ID
-      const success = await updateSong(songs.id, { status: newStatus });
+      // Update in Firebase using the song ID
+      const success = await FirebaseDatabaseService.updateSong(songRecord.id, { status: newStatus });
       
       if (success) {
         // Refresh data from Supabase
@@ -871,7 +898,7 @@ export default function AdminPage() {
           }
         }
         
-        const newPage = await createPage({
+        const newPage = await FirebaseDatabaseService.createPage({
           id: 0, // Will be set by database
           name: newPageName.trim(),
           date: newPageDate || 'TBD',
@@ -939,6 +966,7 @@ export default function AdminPage() {
 
   const handleEditPage = (page: PraiseNight) => {
     console.log('✏️ handleEditPage called with page:', page);
+    console.log('📄 Page countdown data:', page.countdown);
     setEditingPage(page);
     setNewPageName(page.name);
     setNewPageDate(page.date);
@@ -946,10 +974,21 @@ export default function AdminPage() {
     setNewPageDescription(''); // PraiseNight doesn't have description field
     setNewPageCategory(page.category || 'unassigned'); // Default to unassigned if not set
     setNewPageBannerImage(page.bannerImage || '');
-    setNewPageDays(page.countdown.days);
-    setNewPageHours(page.countdown.hours);
-    setNewPageMinutes(page.countdown.minutes);
-    setNewPageSeconds(page.countdown.seconds);
+    
+    // Load countdown data - check both nested and flat structure
+    const countdown = page.countdown || {};
+    setNewPageDays(countdown.days || 0);
+    setNewPageHours(countdown.hours || 0);
+    setNewPageMinutes(countdown.minutes || 0);
+    setNewPageSeconds(countdown.seconds || 0);
+    
+    console.log('📄 Loaded countdown values:', {
+      days: countdown.days || 0,
+      hours: countdown.hours || 0,
+      minutes: countdown.minutes || 0,
+      seconds: countdown.seconds || 0
+    });
+    
     setShowPageModal(true);
     console.log('✅ Edit page modal opened, editingPage set to:', page);
   };
@@ -974,7 +1013,7 @@ export default function AdminPage() {
           });
 
           // WAIT for upload to complete
-          const uploadResult = await uploadBannerImage(newPageBannerFile, editingPage.id);
+          const uploadResult = await uploadBannerImage(newPageBannerFile, parseInt(editingPage.firebaseId || editingPage.id.toString()));
 
           if (uploadResult.success && uploadResult.url) {
             console.log('✅ Banner image uploaded successfully:', uploadResult.url);
@@ -1009,19 +1048,33 @@ export default function AdminPage() {
           }
         });
         
-        const success = await updatePage(editingPage.id, {
+        console.log('🔍 Admin Update Debug:');
+        console.log('editingPage:', editingPage);
+        console.log('editingPage.firebaseId:', editingPage.firebaseId);
+        console.log('editingPage.id:', editingPage.id);
+        console.log('Using ID:', editingPage.firebaseId || editingPage.id.toString());
+        
+        const updateData = {
           name: newPageName.trim(),
           date: newPageDate,
           location: newPageLocation,
           category: newPageCategory,
           bannerImage: bannerImageUrl,
-          countdown: {
+          countdownDays: newPageDays,
+          countdownHours: newPageHours,
+          countdownMinutes: newPageMinutes,
+          countdownSeconds: newPageSeconds
+        };
+        
+        console.log('🔍 Update Data:', updateData);
+        console.log('🔍 Countdown Values:', {
             days: newPageDays,
             hours: newPageHours,
             minutes: newPageMinutes,
             seconds: newPageSeconds
-          }
         });
+        
+        const success = await FirebaseDatabaseService.updatePage(editingPage.firebaseId || editingPage.id.toString(), updateData);
         
         console.log('✅ Page update result:', success);
 
@@ -1077,21 +1130,30 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeletePage = async (id: number) => {
-    if (confirm('Are you sure you want to delete this page?')) {
-      try {
-        const page = pages.find(p => p.id === id);
-        const success = await deletePage(id);
+  const handleDeletePage = (page: PraiseNight) => {
+    setPageToDelete(page);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeletePage = async () => {
+    if (!pageToDelete) return;
+    
+    try {
+      const success = await FirebaseDatabaseService.deletePage(pageToDelete.firebaseId || pageToDelete.id.toString());
 
         if (success) {
-          // Refresh data from Supabase
+        // Refresh data from Firebase
           await refreshData();
           
           // Show success toast
           addToast({
             type: 'success',
-            message: `Page "${page?.name || 'Unknown'}" deleted successfully!`
+          message: `Page "${pageToDelete.name}" deleted successfully!`
           });
+        
+        // Close dialog
+        setShowDeleteDialog(false);
+        setPageToDelete(null);
         } else {
           throw new Error('Failed to delete page');
         }
@@ -1101,8 +1163,12 @@ export default function AdminPage() {
           type: 'error',
           message: `Failed to delete page: ${error instanceof Error ? error.message : 'Unknown error'}`
         });
-      }
     }
+  };
+
+  const cancelDeletePage = () => {
+    setShowDeleteDialog(false);
+    setPageToDelete(null);
   };
 
   // Category content management functions (simplified for Supabase)
@@ -1125,6 +1191,62 @@ export default function AdminPage() {
       type: 'info',
       message: 'Categories are now managed through songs. Edit songs instead.'
     });
+  };
+
+  const handleDeleteCategory = (category: Category) => {
+    setCategoryToDelete(category);
+    setShowDeleteCategoryDialog(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    
+    try {
+      console.log('🗑️ Deleting category:', categoryToDelete);
+      console.log('🗑️ Category Firebase ID:', categoryToDelete.firebaseId || categoryToDelete.id);
+      
+      // Use Firebase document ID for deletion
+      const firebaseId = categoryToDelete.firebaseId || categoryToDelete.id;
+      const success = await FirebaseDatabaseService.deleteCategory(firebaseId);
+      
+      if (success) {
+        // Reload categories from database
+        const categories = await FirebaseDatabaseService.getCollection('categories');
+        const mappedCategories = categories.map(category => ({
+          ...category,
+          firebaseId: category.id,
+          id: category.id,
+          supabaseId: category.id
+        }));
+        setDbCategories(mappedCategories as Category[]);
+        
+        // Move songs to uncategorized
+        await FirebaseDatabaseService.handleCategoryDeletion(categoryToDelete.name, 'Uncategorized');
+        await refreshData();
+        
+        addToast({
+          type: 'success',
+          message: `Category "${categoryToDelete.name}" deleted successfully! Songs moved to "Uncategorized".`
+        });
+        
+        // Close dialog
+        setShowDeleteCategoryDialog(false);
+        setCategoryToDelete(null);
+      } else {
+        throw new Error('Failed to delete category from database');
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      addToast({
+        type: 'error',
+        message: `Failed to delete category: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  };
+
+  const cancelDeleteCategory = () => {
+    setShowDeleteCategoryDialog(false);
+    setCategoryToDelete(null);
   };
 
   const handleDeletePageCategory = (id: string) => {
@@ -1169,43 +1291,39 @@ export default function AdminPage() {
   const loadUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      // Clear cache and use DIRECT approach
-      console.log('🔄 Clearing cache and using DIRECT approach...');
+      // Use DIRECT approach
+      console.log('🔄 Using DIRECT approach...');
       await versionManager.checkForUpdates();
-      smartCache.clearCache('admin-users-cache');
       
       console.log('🔄 Loading users with DIRECT query (no complex logic)...');
       
       // Check if current user is admin
-      const { data: currentUserProfile, error: userError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', (await supabase.auth.getUser()).data.user?.id)
-        .single();
+      const user = await FirebaseAuthService.getCurrentUser();
+      let currentUserProfile = null;
+      if (user) {
+        currentUserProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid);
+      }
 
-      if (userError || currentUserProfile?.role !== 'admin') {
-        console.error('❌ Admin access denied:', userError || 'Not admin');
+      if (!currentUserProfile || (currentUserProfile as any).role !== 'admin') {
+        console.error('❌ Admin access denied: Not admin');
         addToast({
           type: 'error',
           message: 'Admin access required to view users'
         });
         return;
       }
-
+      
       // DIRECT QUERY - Simple and direct
       console.log('📋 Direct profiles query...');
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const profilesData = await FirebaseDatabaseService.getCollection('profiles');
       
-      console.log('📊 Raw query result:', { data: profilesData, error: profilesError });
+      console.log('📊 Raw query result:', { data: profilesData });
       
-      if (profilesError) {
-        console.error('❌ Profiles query failed:', profilesError);
+      if (!profilesData) {
+        console.error('❌ Profiles query failed');
         addToast({
           type: 'error',
-          message: `Database error: ${profilesError.message}`
+          message: `Database error: Failed to fetch profiles`
         });
         return;
       }
@@ -1219,19 +1337,17 @@ export default function AdminPage() {
       console.log('📊 Using profiles directly:', allUsers.length, 'users');
       
       // Fetch user groups for all users
-      const { data: groups, error: groupsError } = await supabase
-        .from('user_groups')
-        .select('user_id, group_name');
+      const groups = await FirebaseDatabaseService.getCollection('user_groups');
       
-      if (groupsError) {
-        console.error('❌ Error loading user groups:', groupsError);
+      if (!groups) {
+        console.error('❌ Error loading user groups');
         // Don't return here, just log the error and continue
       } else {
         console.log('🏷️ User groups data:', groups);
         
         // Organize groups by user ID
         const groupsByUser: {[key: string]: string[]} = {};
-        groups?.forEach(group => {
+        groups?.forEach((group: any) => {
           if (!groupsByUser[group.user_id]) {
             groupsByUser[group.user_id] = [];
           }
@@ -1270,12 +1386,8 @@ export default function AdminPage() {
   const loadSupportMessages = async () => {
     setSupportLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('support_messages')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const data = await FirebaseDatabaseService.getCollection('support_messages');
 
-      if (error) throw error;
       setSupportMessages(data || []);
     } catch (error) {
       console.error('Error loading support messages:', error);
@@ -1293,16 +1405,11 @@ export default function AdminPage() {
     
     setReplying(true);
     try {
-      const { error } = await supabase
-        .from('support_messages')
-        .update({
+      await FirebaseDatabaseService.updateDocument('support_messages', messageId, {
           admin_response: replyText.trim(),
           admin_responded_at: new Date().toISOString(),
           status: 'resolved'
-        })
-        .eq('id', messageId);
-
-      if (error) throw error;
+      });
 
       addToast({
         type: 'success',
@@ -1325,12 +1432,7 @@ export default function AdminPage() {
 
   const updateMessageStatus = async (messageId: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from('support_messages')
-        .update({ status })
-        .eq('id', messageId);
-
-      if (error) throw error;
+      await FirebaseDatabaseService.updateDocument('support_messages', messageId, { status });
 
       addToast({
         type: 'success',
@@ -1358,24 +1460,14 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeSection !== 'Support') return;
 
-    const channel = supabase
-      .channel('admin_support_messages')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'support_messages'
-        },
-        (payload) => {
-          console.log('Support message updated:', payload);
-          loadSupportMessages(); // Reload messages when there's an update
-        }
-      )
-      .subscribe();
+    // Firebase doesn't have real-time subscriptions like Supabase
+    // We'll use polling instead for support messages
+    const interval = setInterval(() => {
+      loadSupportMessages();
+    }, 5000); // Poll every 5 seconds
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [activeSection]);
 
@@ -1393,20 +1485,7 @@ export default function AdminPage() {
     try {
       console.log('🔔 Loading admin notifications...');
 
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) {
-        console.error('❌ Error loading admin notifications:', error);
-        addToast({
-          type: 'error',
-          message: `Failed to load notifications: ${error.message}`
-        });
-        return;
-      }
+      const data = await FirebaseDatabaseService.getCollection('notifications');
 
       setAdminNotifications(data || []);
       console.log(`✅ Loaded ${data?.length || 0} notifications`);
@@ -1435,25 +1514,31 @@ export default function AdminPage() {
       let result;
 
       if (notificationForm.targetAudience === 'all') {
-        result = await supabase.rpc('create_notification_for_all_users', {
-          p_title: notificationForm.title,
-          p_message: notificationForm.message,
-          p_type: notificationForm.type,
-          p_category: notificationForm.category,
-          p_priority: notificationForm.priority,
-          p_action_url: notificationForm.actionUrl || null,
-          p_expires_at: notificationForm.expiresAt || null
+        // Create notification for all users in Firebase
+        result = await FirebaseDatabaseService.createDocument('notifications', Date.now().toString(), {
+          title: notificationForm.title,
+          message: notificationForm.message,
+          type: notificationForm.type,
+          category: notificationForm.category,
+          priority: notificationForm.priority,
+          action_url: notificationForm.actionUrl || null,
+          expires_at: notificationForm.expiresAt || null,
+          target_audience: 'all',
+          created_at: new Date().toISOString()
         });
       } else if (notificationForm.targetAudience === 'group' && notificationForm.targetGroup) {
-        result = await supabase.rpc('create_notification_for_group', {
-          p_title: notificationForm.title,
-          p_message: notificationForm.message,
-          p_group_name: notificationForm.targetGroup,
-          p_type: notificationForm.type,
-          p_category: notificationForm.category,
-          p_priority: notificationForm.priority,
-          p_action_url: notificationForm.actionUrl || null,
-          p_expires_at: notificationForm.expiresAt || null
+        // Create notification for specific group in Firebase
+        result = await FirebaseDatabaseService.createDocument('notifications', Date.now().toString(), {
+          title: notificationForm.title,
+          message: notificationForm.message,
+          target_group: notificationForm.targetGroup,
+          type: notificationForm.type,
+          category: notificationForm.category,
+          priority: notificationForm.priority,
+          action_url: notificationForm.actionUrl || null,
+          expires_at: notificationForm.expiresAt || null,
+          target_audience: 'group',
+          created_at: new Date().toISOString()
         });
       } else {
         addToast({
@@ -1505,19 +1590,7 @@ export default function AdminPage() {
   // Delete notification
   const deleteAdminNotification = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId);
-
-      if (error) {
-        console.error('❌ Error deleting notification:', error);
-        addToast({
-          type: 'error',
-          message: `Failed to delete notification: ${error.message}`
-        });
-        return;
-      }
+      await FirebaseDatabaseService.deleteDocument('notifications', notificationId);
 
       addToast({
         type: 'success',
@@ -1737,7 +1810,7 @@ export default function AdminPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen lg:min-h-0 lg:ml-0">
+      <div className="flex-1 flex flex-col min-h-screen lg:min-h-0 lg:ml-0 overflow-hidden">
         {/* Top Header */}
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 sm:px-6 py-4 mt-16 lg:mt-0">
           <div className="flex items-center justify-between">
@@ -1820,7 +1893,7 @@ export default function AdminPage() {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-x-auto">
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-x-auto overflow-y-auto">
           {activeSection === 'Categories' && (
             <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
@@ -1847,7 +1920,7 @@ export default function AdminPage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteCategory(category.name)}
+                          onClick={() => handleDeleteCategory(category)}
                           className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1909,12 +1982,9 @@ export default function AdminPage() {
                       
                       // Test direct query
                       console.log('🔍 DEBUG: Testing direct query...');
-                      const { data, error } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .order('created_at', { ascending: false });
+                      const data = await FirebaseDatabaseService.getCollection('profiles');
                       
-                      console.log('🔍 DEBUG: Direct query result:', { data, error });
+                      console.log('🔍 DEBUG: Direct query result:', { data });
                       console.log('🔍 DEBUG: Data length:', data?.length || 0);
                       
                       if (data && data.length > 0) {
@@ -2409,7 +2479,7 @@ export default function AdminPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeletePage(page.id);
+                              handleDeletePage(page);
                             }}
                             className="p-2 sm:p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete Page"
@@ -2484,7 +2554,11 @@ export default function AdminPage() {
                         }`}
                         onClick={() => setStatusFilter('all')}
                       >
-                        All Songs {allSongs.filter(song => song.praiseNightId === selectedPage.id).length}
+                        All Songs {(() => {
+                          const filteredSongs = allSongs.filter(song => song.praiseNightId === selectedPage.id);
+                          console.log('🎵 Admin - Filtered Songs for Page', selectedPage?.id, ':', filteredSongs.length, filteredSongs.map(s => s.title));
+                          return filteredSongs.length;
+                        })()}
                       </button>
                       <button 
                         className={`pb-3 font-medium transition-colors ${
@@ -2509,7 +2583,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* Songs Table - Desktop */}
-                    <div className="hidden lg:block overflow-x-auto">
+                    <div className="hidden lg:block overflow-x-auto overflow-y-auto max-h-[60vh]">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-slate-200">
@@ -2580,7 +2654,7 @@ export default function AdminPage() {
                                     <Edit className="w-4 h-4" />
                                   </button>
                                   <button 
-                                    onClick={() => handleDeleteSong(song.title)}
+                                    onClick={() => handleDeleteSong(song)}
                                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -2594,7 +2668,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* Songs Cards - Mobile */}
-                    <div className="lg:hidden space-y-4">
+                    <div className="lg:hidden space-y-4 overflow-y-auto max-h-[60vh]">
                       {allSongs
                         .filter(song => song.praiseNightId === selectedPage.id)
                         .filter(song => {
@@ -2638,7 +2712,7 @@ export default function AdminPage() {
                                 <Edit className="w-4 h-4" />
                               </button>
                               <button 
-                                onClick={() => handleDeleteSong(song.title)}
+                                onClick={() => handleDeleteSong(song)}
                                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -3264,6 +3338,134 @@ export default function AdminPage() {
          praiseNightCategories={pages.map(page => ({ id: page.id, name: page.name, description: 'Praise Night Event', date: page.date, location: page.location, icon: 'Music', color: '#8B5CF6', isActive: true, createdAt: new Date(), updatedAt: new Date(), countdown: page.countdown }))}
         onUpdate={handleSaveSong}
       />
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && pageToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Page</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-2">
+                Are you sure you want to delete the page:
+              </p>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-medium text-gray-900">{pageToDelete.name}</p>
+                <p className="text-sm text-gray-500">{pageToDelete.location}</p>
+                <p className="text-sm text-gray-500">{pageToDelete.date}</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={cancelDeletePage}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeletePage}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Delete Page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Song Confirmation Dialog */}
+      {showDeleteSongDialog && songToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Song</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-2">
+                Are you sure you want to delete the song:
+              </p>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-medium text-gray-900">{songToDelete.title}</p>
+                <p className="text-sm text-gray-500">Lead Singer: {songToDelete.leadSinger || 'Not specified'}</p>
+                <p className="text-sm text-gray-500">Status: {songToDelete.status}</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={cancelDeleteSong}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteSong}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Delete Song
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Category Confirmation Dialog */}
+      {showDeleteCategoryDialog && categoryToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Category</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-2">
+                Are you sure you want to delete the category:
+              </p>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-medium text-gray-900">{categoryToDelete.name}</p>
+                <p className="text-sm text-gray-500">{categoryToDelete.description}</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={cancelDeleteCategory}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteCategory}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Delete Category
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       
       {/* Toast Notifications */}

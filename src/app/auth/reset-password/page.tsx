@@ -3,8 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
-import { AuthService } from '@/lib/auth-service'
-import { supabase } from '@/lib/supabase-client'
+import { FirebaseAuthService } from '@/lib/firebase-auth'
 
 function ResetPasswordContent() {
   const router = useRouter()
@@ -23,9 +22,9 @@ function ResetPasswordContent() {
     // Check if user is authenticated (should be set by callback)
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const user = await FirebaseAuthService.getCurrentUser()
         
-        if (!session) {
+        if (!user) {
           setError('Invalid or expired reset link. Please request a new password reset.')
         }
       } catch (error) {
@@ -55,7 +54,7 @@ function ResetPasswordContent() {
       }
 
       // Update password
-      await AuthService.updatePassword(formData.password)
+      await FirebaseAuthService.updatePassword(formData.password)
       setSuccess(true)
       
       // Redirect to home after 3 seconds

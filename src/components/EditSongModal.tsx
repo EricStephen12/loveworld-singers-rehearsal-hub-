@@ -6,8 +6,8 @@ import { X, Save, Trash2, FolderOpen, Clock, Plus, History } from 'lucide-react'
 import { PraiseNightSong, Comment, Category } from '../types/supabase';
 import MediaSelectionModal from './MediaSelectionModal';
 import BasicTextEditor from './BasicTextEditor';
-import { createHistoryEntry, deleteHistoryEntry } from '@/lib/database';
-import { supabase } from '@/lib/supabase';
+// import { createHistoryEntry, deleteHistoryEntry } from '@/lib/firebase-database-service';
+import { FirebaseDatabaseService } from '@/lib/firebase-database';
 
 interface MediaFile {
   id: string;
@@ -177,8 +177,9 @@ export default function EditSongModal({
           break;
       }
       
-      const success = await createHistoryEntry({
-        song_id: song.id,
+      // Create history entry in Firebase
+      const success = await FirebaseDatabaseService.createHistoryEntry({
+        song_id: parseInt(song.id.toString()),
         title: historyTitle,
         description: historyDescription,
         type: historyType,
@@ -221,14 +222,7 @@ export default function EditSongModal({
     if (!song?.id) return;
     
     try {
-      const { data, error } = await supabase
-        .from('song_history')
-        .select('*')
-        .eq('song_id', song.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
+      const data = await FirebaseDatabaseService.getHistoryBySongId(parseInt(song.id.toString()));
       setHistoryEntries(data || []);
     } catch (error) {
       console.error('Error loading history entries:', error);
@@ -240,7 +234,8 @@ export default function EditSongModal({
     if (!confirm('Are you sure you want to delete this history entry?')) return;
     
     try {
-      const success = await deleteHistoryEntry(historyId);
+      // Delete history entry from Firebase
+      const success = await FirebaseDatabaseService.deleteHistoryEntry(historyId);
       if (success) {
         // Remove from local state
         setHistoryEntries(prev => prev.filter(entry => entry.id !== historyId));
@@ -400,7 +395,7 @@ export default function EditSongModal({
       setSongLyrics(song.lyrics || '');
       setSongSolfas(song.solfas || '');
       
-      setSongComments(song.comments);
+      setSongComments(Array.isArray(song.comments) ? song.comments : []);
       setNewComment('');
       
       // Load rehearsal count from song data, default to 1 if not set
@@ -462,60 +457,18 @@ export default function EditSongModal({
         key: '',
         tempo: ''
       });
+      
+      // Clear history when no song
+      setHistoryEntries([]);
     }
-  }, [song, praiseNightCategories]);
+    
+    // Load history entries when song is available
+    if (song?.id) {
+      loadHistoryEntries();
+    }
+  }, [song]);
 
-  // Smart change detection function
-  const detectSignificantChanges = () => {
-    if (!song) {
-      console.log('🎯 No song - returning empty changes');
-      return []; // No changes for new songs
-    }
-    
-    const changes = [];
-    const currentAudioFile = audioFile ? audioFile.url : songAudioFile;
-    
-    console.log('🎯 Change detection debug:', {
-      currentLyrics: songLyrics.trim().substring(0, 50) + '...',
-      originalLyrics: originalValues.lyrics.trim().substring(0, 50) + '...',
-      lyricsChanged: songLyrics.trim() !== originalValues.lyrics.trim(),
-      lyricsLength: songLyrics.trim().length,
-      currentSolfas: songSolfas.trim().substring(0, 50) + '...',
-      originalSolfas: originalValues.solfas.trim().substring(0, 50) + '...',
-      solfasChanged: songSolfas.trim() !== originalValues.solfas.trim(),
-      solfasLength: songSolfas.trim().length
-    });
-    
-    // Check for significant changes (ignore minor whitespace/formatting changes)
-    if (songLyrics.trim() !== originalValues.lyrics.trim() && 
-        songLyrics.trim().length > 10) {
-      changes.push('lyrics');
-      console.log('🎯 Lyrics change detected');
-    }
-    
-    if (songSolfas.trim() !== originalValues.solfas.trim() && 
-        songSolfas.trim().length > 5) {
-      changes.push('solfas');
-      console.log('🎯 Solfas change detected');
-    }
-    
-    if (currentAudioFile !== originalValues.audioFile && 
-        currentAudioFile && 
-        originalValues.audioFile) {
-      changes.push('audio');
-      console.log('🎯 Audio change detected');
-    }
-    
-    // Check metadata changes (only if significant)
-    if (songTitle.trim() !== originalValues.title.trim() && 
-        songTitle.trim().length > 2) {
-      changes.push('metadata');
-      console.log('🎯 Metadata change detected');
-    }
-    
-    console.log('🎯 Final detected changes:', changes);
-    return changes;
-  };
+  // Manual history creation only - no automatic change detection
 
   const handleUpdate = () => {
     if (songTitle.trim()) {
@@ -554,7 +507,8 @@ export default function EditSongModal({
         rehearsalCount: rehearsalCount, // Save rehearsal count to database
         comments: songComments,
         audioFile: finalAudioFile,
-        mediaId: audioFile ? parseInt(audioFile.id) : undefined, // Store media ID for database relationship (convert string to number)
+        // Only include mediaId if it exists (Firebase doesn't allow undefined values)
+        ...(audioFile && { mediaId: parseInt(audioFile.id) }),
         // Preserve existing history array
         history: song?.history || []
       };
@@ -586,64 +540,32 @@ export default function EditSongModal({
 
       // Pass the song ID if editing an existing song
       if (song && song.id) {
-        onUpdate({ ...updatedSong, id: song.id });
+        console.log('🎵 EditSongModal - Editing existing song:', {
+          songId: song.id,
+          songFirebaseId: song.firebaseId,
+          songTitle: song.title
+        });
+        
+        // Use firebaseId for Firebase operations, keep numeric id for UI compatibility
+        const updateData = {
+          ...updatedSong,
+          id: song.id, // Keep numeric id for UI
+          firebaseId: song.firebaseId // Use firebaseId for Firebase operations
+        };
+        
+        console.log('🎵 EditSongModal - Song data:', {
+          songId: song.id,
+          songFirebaseId: song.firebaseId,
+          songTitle: song.title
+        });
+        console.log('🎵 EditSongModal - Sending update data:', updateData);
+        onUpdate(updateData);
       } else {
+        console.log('🎵 EditSongModal - Creating new song');
         onUpdate(updatedSong);
       }
       
-      // Automatic history creation for significant changes
-      if (detectSignificantChanges().length > 0 && song?.id) {
-        const significantChanges = detectSignificantChanges();
-        console.log('🎯 Creating automatic history entries for:', significantChanges);
-        
-        // Create history entries for each significant change (in background)
-        significantChanges.forEach(async (changeType) => {
-          try {
-            let content = '';
-            let version = '1.0';
-
-            switch (changeType) {
-              case 'lyrics':
-                content = songLyrics;
-                break;
-              case 'solfas':
-                content = songSolfas;
-                break;
-              case 'audio':
-                content = audioFile ? audioFile.url : songAudioFile;
-                break;
-              case 'metadata':
-                content = JSON.stringify({
-                  title: songTitle,
-                  category: songCategory,
-                  leadSinger: songLeadSinger,
-                  writer: songWriter,
-                  conductor: songConductor,
-                  key: songKey,
-                  tempo: songTempo
-                });
-                break;
-            }
-
-            if (content.trim()) {
-              await createHistoryEntry({
-                song_id: song?.id || 0,
-                title: `${changeType} Version ${version}`,
-                description: `Updated ${changeType} on ${new Date().toLocaleString()}`,
-                type: changeType,
-                old_value: '',
-                new_value: content,
-                created_by: 'admin'
-              });
-              console.log(`✅ Auto-created history entry for ${changeType}`);
-            }
-          } catch (error) {
-            console.error(`❌ Error creating auto history entry for ${changeType}:`, error);
-          }
-        });
-        } else {
-        console.log('🎵 No significant changes detected - no history entries created');
-      }
+      // Manual history creation only - no automatic history
       
       onClose();
     }
@@ -657,14 +579,14 @@ export default function EditSongModal({
         date: new Date().toISOString(),
         author: 'Pastor'
       };
-      setSongComments([...songComments, comment]);
+      setSongComments([...(Array.isArray(songComments) ? songComments : []), comment]);
       setNewComment('');
     }
   };
 
 
   const handleDeleteComment = (commentId: string) => {
-    setSongComments(songComments.filter(comment => comment.id !== commentId));
+    setSongComments((Array.isArray(songComments) ? songComments : []).filter(comment => comment.id !== commentId));
   };
 
   if (!isOpen) return null;
@@ -1075,7 +997,10 @@ export default function EditSongModal({
                         <BasicTextEditor
                           id="lyrics-editor"
                           value={songLyrics}
-                          onChange={setSongLyrics}
+                          onChange={(value) => {
+                            console.log('🎵 Lyrics onChange called with:', value);
+                            setSongLyrics(value);
+                          }}
                           placeholder="Enter complete song lyrics here...
 
 Example:
@@ -1123,7 +1048,10 @@ Bridge:
                         <BasicTextEditor
                           id="solfas-editor"
                           value={songSolfas}
-                          onChange={setSongSolfas}
+                          onChange={(value) => {
+                            console.log('🎵 Solfas onChange called with:', value);
+                            setSongSolfas(value);
+                          }}
                           placeholder="Enter solfas notation here...
 
 Example:
@@ -1148,7 +1076,7 @@ Do Re Mi Fa Sol La Ti Do"
                         <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
                         Pastor Comments
                         <span className="ml-auto text-xs sm:text-sm font-normal text-slate-500 bg-gray-200 px-2 py-1 rounded-full">
-                          {songComments.length} comment{songComments.length !== 1 ? 's' : ''}
+                          {Array.isArray(songComments) ? songComments.length : 0} comment{(Array.isArray(songComments) ? songComments.length : 0) !== 1 ? 's' : ''}
                         </span>
                       </h4>
                         <button
@@ -1168,7 +1096,10 @@ Do Re Mi Fa Sol La Ti Do"
                           <div className="flex-1">
                             <textarea
                               value={newComment}
-                              onChange={(e) => setNewComment(e.target.value)}
+                              onChange={(e) => {
+                                console.log('🎵 Comment onChange called with:', e.target.value);
+                                setNewComment(e.target.value);
+                              }}
                               onPaste={(e) => handlePaste(e, newComment, setNewComment)}
                               rows={3}
                               dir="ltr"
@@ -1191,7 +1122,7 @@ Do Re Mi Fa Sol La Ti Do"
 
                       {/* Display existing comments */}
                       <div className="space-y-4 max-h-80 overflow-y-auto">
-                        {songComments.length === 0 ? (
+                        {(!songComments || !Array.isArray(songComments) || songComments.length === 0) ? (
                           <div className="text-center py-8 text-slate-500">
                             <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
                               <span className="text-slate-400 text-xl">💬</span>
@@ -1200,7 +1131,7 @@ Do Re Mi Fa Sol La Ti Do"
                             <p className="text-xs text-slate-400">Add the first comment above</p>
                           </div>
                         ) : (
-                          songComments.map((comment) => (
+                          (Array.isArray(songComments) ? songComments : []).map((comment) => (
                             <div key={comment.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">

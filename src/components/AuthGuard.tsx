@@ -44,22 +44,28 @@ export default function AuthGuard({
       return;
     }
 
-    // If user exists but profile hasn't loaded yet, wait a bit longer
+    // If user exists but no profile yet, allow access (profile might be created)
     if (user && !profile) {
-      console.log('AuthGuard: User exists but profile not loaded yet, waiting...');
-      // Give profile more time to load
-      const timer = setTimeout(() => {
-        if (!profile) {
-          console.log('AuthGuard: Profile still not loaded, allowing access anyway');
-          setShouldRender(true);
-        }
-      }, 2000);
-      return () => clearTimeout(timer);
+      console.log('AuthGuard: User exists but no profile yet, allowing access');
+      setShouldRender(true);
+      return;
     }
 
     // If complete profile is required but profile is not complete
+        if (requireCompleteProfile && user && profile && profile.profile_completed === false) {
+          console.log('AuthGuard: Profile incomplete, redirecting to profile completion page');
+          console.log('AuthGuard: Profile data:', profile);
+          console.log('AuthGuard: profile_completed value:', profile.profile_completed);
+          console.log('AuthGuard: Redirecting to /profile-completion');
+          router.push('/profile-completion');
+          return;
+        }
+
+    // If complete profile is required but profile is not complete (check isProfileComplete)
     if (requireCompleteProfile && user && profile && !isProfileComplete) {
-      console.log('AuthGuard: Profile incomplete, redirecting to profile completion');
+      console.log('AuthGuard: Profile incomplete (isProfileComplete=false), redirecting to profile completion page');
+      console.log('AuthGuard: isProfileComplete:', isProfileComplete);
+      console.log('AuthGuard: Redirecting to /profile-completion');
       router.push('/profile-completion');
       return;
     }

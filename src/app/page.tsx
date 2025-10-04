@@ -12,12 +12,12 @@ export default function SplashPage() {
     // Prevent multiple redirects
     if (hasRedirected) return
     
-    // Show splash for 2 seconds then redirect to auth
+    // Show splash for 1 second then redirect to auth
     const timer = setTimeout(() => {
       console.log('🎨 Splash complete - redirecting to auth')
       setHasRedirected(true)
       router.replace('/auth')
-    }, 2000) // 2 second splash display
+    }, 1000) // 1 second splash display
 
     return () => clearTimeout(timer)
   }, [hasRedirected, router])

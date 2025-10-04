@@ -18,7 +18,7 @@ export default function TestSupportPage() {
     try {
       // Test 1: Check authentication
       setTestResult(prev => prev + '1️⃣ AUTHENTICATION TEST\n');
-      setTestResult(prev => prev + `   useAuth hook - user: ${user?.id || 'null'}\n`);
+      setTestResult(prev => prev + `   useAuth hook - user: ${user?.uid || 'null'}\n`);
       setTestResult(prev => prev + `   useAuth hook - profile: ${profile?.email || 'null'}\n`);
       
       const { data: { user: supabaseUser }, error: authError } = await supabase.auth.getUser();

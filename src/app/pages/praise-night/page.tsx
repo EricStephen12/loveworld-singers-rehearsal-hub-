@@ -29,7 +29,7 @@ function PraiseNightPageContent() {
   const songParam = searchParams.get('song');
 
   // Use real-time Supabase data for instant updates
-  const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, preloadData } = useRealtimeData();
+  const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, preloadData, refreshData } = useRealtimeData();
   const [currentPraiseNight, setCurrentPraiseNightState] = useState<PraiseNight | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -49,6 +49,41 @@ function PraiseNightPageContent() {
     // Start preloading immediately for instant navigation
     preloadData();
   }, [preloadData]);
+
+  // Refresh data when page becomes visible (after admin updates)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 Page became visible, refreshing data...');
+        refreshData();
+      }
+    };
+
+    const handleFocus = () => {
+      console.log('🔄 Page focused, refreshing data...');
+      refreshData();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refreshData]);
+
+  // Periodic refresh to ensure data stays up to date
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Periodic refresh...');
+      refreshData();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [refreshData]);
 
   // Handle page parameter from search results
   useEffect(() => {
@@ -211,6 +246,16 @@ function PraiseNightPageContent() {
       setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       return;
     }
+    
+    console.log('🕐 Praise Night Page - Current Praise Night:', {
+      id: currentPraiseNight.id,
+      name: currentPraiseNight.name,
+      countdown: currentPraiseNight.countdown,
+      countdownDays: currentPraiseNight.countdown?.days,
+      countdownHours: currentPraiseNight.countdown?.hours,
+      countdownMinutes: currentPraiseNight.countdown?.minutes,
+      countdownSeconds: currentPraiseNight.countdown?.seconds
+    });
 
     // Create a unique key for this praise night's countdown
     const countdownKey = `countdown_${currentPraiseNight.id}`;
@@ -227,6 +272,12 @@ function PraiseNightPageContent() {
       // Create new target date based on current countdown
       const now = new Date();
       const countdown = currentPraiseNight.countdown || { days: 0, hours: 0, minutes: 0, seconds: 0 };
+      
+      console.log('🕐 Praise Night Countdown Data:', {
+        pageId: currentPraiseNight.id,
+        pageName: currentPraiseNight.name,
+        countdown: countdown
+      });
       
       // Calculate target date by adding countdown to current time
       targetDate = new Date(now.getTime() + 
@@ -487,7 +538,7 @@ function PraiseNightPageContent() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-purple-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         
@@ -862,7 +913,7 @@ function PraiseNightPageContent() {
 
 
        {/* ✅ Scrollable Content Container */}
-       <div className="flex-1 overflow-y-auto">
+       <div className="flex-1">
          <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative pb-24">
         {/* Offline Banner */}
         <OfflineIndicator />
@@ -1180,7 +1231,7 @@ function PraiseNightPageContent() {
       )}
 
        {/* ✅ Fixed Bottom Bar with Categories and FAB */}
-      {filteredPraiseNights.length > 0 && !pageParam && categoryFilter !== 'archive' && (
+      {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
          <div className="flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
              <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
               {/* Category buttons with text - Take up most of the space */}

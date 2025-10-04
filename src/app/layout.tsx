@@ -6,26 +6,13 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import RealtimeNotifications from '@/components/RealtimeNotifications'
 import VersionChecker from '@/components/VersionChecker'
 // import ScreenshotPrevention from '@/components/ScreenshotPrevention'
-import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
+import SuperFastServiceWorker from '@/components/SuperFastServiceWorker'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import OfflineIndicator from '@/components/OfflineIndicator'
+import { PerformanceOptimizer } from '@/lib/performance-optimizer'
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
-// Use system fonts as fallback to avoid Google Fonts network issues
-const inter = { 
-  variable: '--font-inter',
-  className: 'font-sans'
-};
-
-const poppins = { 
-  variable: '--font-poppins',
-  className: 'font-display'
-};
-
-const outfit = { 
-  variable: '--font-outfit',
-  className: 'font-heading'
-};
+// Use system fonts for faster loading
 
 // Static version for PWA stability (only change when manifest actually changes)
 const APP_VERSION = '3.0.0'; // ✅ Updated for instant loading optimizations
@@ -95,8 +82,8 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="167x167" href="/logo.png" />
 
         {/* ✅ INSTANT LOADING - Resource Hints */}
-        <link rel="preconnect" href="https://supabase.co" />
-        <link rel="dns-prefetch" href="https://supabase.co" />
+        <link rel="preconnect" href="https://firebase.googleapis.com" />
+        <link rel="dns-prefetch" href="https://firebase.googleapis.com" />
         <link rel="preload" href="/logo.png" as="image" />
         <link rel="preload" href="/lmm.png" as="image" />
         <link rel="preload" href="/APP ICON/pwa_192_filled.png" as="image" />
@@ -105,9 +92,7 @@ export default function RootLayout({
         <link rel="preload" href="/_next/static/css/app/layout.css" as="style" />
         <link rel="preload" href="/_next/static/chunks/webpack.js" as="script" />
         
-        {/* Preload critical fonts */}
-        <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-        <link rel="preload" href="/fonts/poppins.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        {/* Fonts removed for faster loading */}
 
         <meta name="theme-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -119,8 +104,23 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#ffffff" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>
-      <body className={`${inter.variable} ${poppins.variable} ${outfit.variable} font-sans`}>
-        <ServiceWorkerRegistration />
+      <body className="font-sans">
+        {/* <SuperFastServiceWorker /> */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            // Optimize performance on load
+            if (typeof window !== 'undefined') {
+              window.addEventListener('load', () => {
+                console.log('🚀 Optimizing PWA performance...');
+                // Disable heavy features for speed
+                localStorage.setItem('disable_realtime', 'true');
+                localStorage.setItem('disable_chat', 'true');
+                localStorage.setItem('disable_notifications', 'true');
+                console.log('✅ Performance optimized!');
+              });
+            }
+          `
+        }} />
         <ErrorBoundary>
           <AuthProvider>
             <AudioProvider>

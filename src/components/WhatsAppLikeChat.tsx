@@ -88,12 +88,12 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
 
   // Load user groups with smart caching
   const loadUserGroups = useCallback(async () => {
-    if (!user?.id) {
+    if (!user?.uid) {
       console.log('❌ No user ID available')
       return
     }
 
-    const cacheKey = `groups_${user.id}`
+    const cacheKey = `groups_${user.uid}`
     const cachedGroups = groupsCache.get(cacheKey)
     
     if (cachedGroups) {
@@ -110,7 +110,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
       const { data: userGroupsData, error: userGroupsError } = await supabase
         .from('user_groups')
         .select('group_name')
-        .eq('user_id', user.id)
+        .eq('user_id', user.uid)
 
       if (userGroupsError) {
         console.error('❌ Error loading user groups:', userGroupsError)
@@ -159,8 +159,8 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
             description: mapping.description,
             members: [
               {
-                id: user.id,
-                user_id: user.id,
+                id: user.uid,
+                user_id: user.uid,
                 first_name: profile?.first_name || 'User',
                 last_name: profile?.last_name || '',
                 profile_image_url: profile?.profile_image_url || '',
@@ -186,11 +186,11 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
     } catch (error) {
       console.error('❌ Error loading user groups:', error)
     }
-  }, [user?.id, profile])
+  }, [user?.uid, profile])
 
   // Load friends from database
   const loadFriends = async () => {
-    if (!user?.id) return
+    if (!user?.uid) return
 
     try {
       const { data, error } = await supabase
@@ -207,7 +207,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
             administration
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', user.uid)
 
       if (error) {
         console.error('Error loading friends:', error)
@@ -243,7 +243,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
       const dummyMessages = [
         {
           id: '1',
-          sender_id: user?.id || 'demo',
+          sender_id: user?.uid || 'demo',
           sender_name: profile?.first_name ? `${profile.first_name} ${profile.last_name}`.trim() : 'You',
           sender_image: profile?.profile_image_url || '',
           content: `Welcome to ${selectedGroup?.name}! 🎵`,
@@ -262,7 +262,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
           message_type: 'text' as const
         }
       ]
-      
+
       setMessages(dummyMessages)
       console.log('✅ Loaded dummy messages:', dummyMessages.length)
     } catch (error) {
@@ -272,11 +272,11 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
 
   // Send group message
   const sendGroupMessage = async () => {
-    if (!newMessage.trim() || !selectedGroup || !user?.id) {
+    if (!newMessage.trim() || !selectedGroup || !user?.uid) {
       console.log('❌ Missing required data:', { 
         hasMessage: !!newMessage.trim(), 
         hasGroup: !!selectedGroup, 
-        hasUser: !!user?.id 
+        hasUser: !!user?.uid 
       })
       return
     }
@@ -300,10 +300,10 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
       
       const newMessageObj = {
         id: Date.now().toString(),
-        sender_id: user.id,
+        sender_id: user.uid,
         sender_name: profile?.first_name ? `${profile.first_name} ${profile.last_name}`.trim() : 'You',
         sender_image: profile?.profile_image_url || '',
-        content: newMessage.trim(),
+          content: newMessage.trim(),
         timestamp: new Date().toISOString(),
         is_read: true,
         message_type: 'text' as const
@@ -326,7 +326,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
 
   // Add friend
   const addFriend = async (memberId: string) => {
-    if (!user?.id) return
+    if (!user?.uid) return
 
     try {
       const { error } = await supabase
@@ -809,8 +809,8 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                   <Trash2 className="w-4 h-4" />
                   Clear Chat
                       </button>
+                    </div>
                 </div>
-              </div>
             )}
 
             {/* Messages - WhatsApp-like */}
@@ -833,13 +833,13 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                             <Users className="w-3 h-3 text-gray-600" />
                           </div>
                           <span className="text-xs text-gray-600 font-medium">{message.sender_name}</span>
-                        </div>
-                      )}
-                      
+              </div>
+            )}
+
                       {/* Message bubble */}
                       <div
                         className={`px-4 py-2 rounded-2xl ${
-                          message.sender_id === user?.id
+                      message.sender_id === user?.id
                             ? 'bg-purple-500 text-white rounded-br-md'
                             : 'bg-gray-100 text-gray-900 rounded-bl-md'
                         }`}
@@ -867,16 +867,16 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                           </div>
                         ) : (
                           <p className="text-sm">{message.content}</p>
-                        )}
-                      </div>
+                      )}
+                    </div>
                       
                       {/* Timestamp - only show if not same minute as previous message */}
                       {!isSameMinute && (
                         <div className={`text-xs text-gray-500 mt-1 ${message.sender_id === user?.id ? 'text-right' : 'text-left'}`}>
                           {messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
+                  </div>
                       )}
-                    </div>
+                </div>
                   </div>
                 )
               })}
@@ -905,20 +905,20 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                 }}
                 className="p-3 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <Paperclip className="w-5 h-5" />
-              </button>
+                  <Paperclip className="w-5 h-5" />
+                </button>
               
               {/* Message input container - iOS style */}
               <div className="flex-1 bg-gray-100 rounded-3xl px-4 py-2 min-h-[44px] flex items-center">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendGroupMessage()}
                   placeholder="Message"
                   className="w-full bg-transparent border-none outline-none text-gray-900 placeholder-gray-500"
                 />
-              </div>
+                </div>
               
               {/* Send/Voice button */}
               {newMessage.trim() ? (
@@ -926,7 +926,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                   onClick={sendGroupMessage}
                   className="p-3 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors"
                 >
-                  <Send className="w-5 h-5" />
+                    <Send className="w-5 h-5" />
                 </button>
               ) : (
                 <button
@@ -966,16 +966,16 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                     title="Stop recording"
                   >
                     <X className="w-5 h-5" />
-                  </button>
-                </div>
+                </button>
+              </div>
                 {isRecording && (
                   <div className="mt-2 text-center">
                     <p className="text-xs text-red-600">Hold to record, release to send</p>
-                  </div>
-                )}
-              </div>
-            )}
             </div>
+                )}
+          </div>
+        )}
+      </div>
           </div>
         )}
 
@@ -1023,7 +1023,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                     onClick={() => handleMemberClick(member)}
                     className="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                   >
-                    <div className="relative">
+            <div className="relative">
                       <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
                         {member.profile_image_url ? (
                           <img
@@ -1034,9 +1034,9 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
                         ) : (
                           <Users className="w-6 h-6 text-gray-500" />
                         )}
-                      </div>
+              </div>
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full border-2 border-white"></div>
-                    </div>
+            </div>
                     <div className="flex-1 ml-3">
                       <h4 className="font-medium text-gray-900 text-sm">
                         {member.first_name} {member.last_name}
@@ -1081,7 +1081,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
               className="p-1 hover:bg-gray-100 rounded-full"
             >
               <X className="w-4 h-4 text-gray-500" />
-            </button>
+          </button>
           </div>
           
           <div className="flex gap-2">
@@ -1094,7 +1094,7 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
             >
               <UserPlus className="w-4 h-4" />
               Add Friend
-            </button>
+          </button>
             <button
               onClick={() => {
                 setSelectedFriend({
@@ -1116,8 +1116,8 @@ export default function WhatsAppLikeChat({ isOpen, onClose }: WhatsAppLikeChatPr
               <MessageCircle className="w-4 h-4" />
               Chat Now
             </button>
-          </div>
-        </div>
+              </div>
+            </div>
       )}
 
       {/* Call Modal */}

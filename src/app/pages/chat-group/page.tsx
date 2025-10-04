@@ -119,7 +119,7 @@ function ChatGroupContent() {
         {
           id: '2',
           content: 'Thanks for having me! Excited to be part of this ministry 🙏',
-          sender_id: user?.id || '2',
+          sender_id: user?.uid || '2',
           sender_name: 'You',
           sender_image: '',
           created_at: '2024-12-01T10:05:00.000Z',
@@ -141,7 +141,7 @@ function ChatGroupContent() {
         {
           id: '4',
           content: 'Perfect! I\'m ready to start 🎤',
-          sender_id: user?.id || '2',
+          sender_id: user?.uid || '2',
           sender_name: 'You',
           sender_image: '',
           created_at: '2024-12-01T10:12:00.000Z',
@@ -180,7 +180,7 @@ function ChatGroupContent() {
       const newMsg: ChatMessage = {
         id: Date.now().toString(),
         content: messageText,
-        sender_id: user.id,
+        sender_id: user.uid,
         sender_name: 'You',
         sender_image: '',
         created_at: new Date().toISOString(),

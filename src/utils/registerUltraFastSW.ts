@@ -76,10 +76,6 @@ export const preloadCriticalResources = () => {
     { href: '/logo.png', as: 'image' },
     { href: '/lmm.png', as: 'image' },
     
-    // Critical fonts
-    { href: '/fonts/inter.woff2', as: 'font', type: 'font/woff2', crossorigin: 'anonymous' },
-    { href: '/fonts/poppins.woff2', as: 'font', type: 'font/woff2', crossorigin: 'anonymous' },
-    
     // Critical CSS
     { href: '/_next/static/css/app.css', as: 'style' },
   ];
@@ -90,8 +86,8 @@ export const preloadCriticalResources = () => {
     link.href = resource.href;
     link.as = resource.as;
     
-    if (resource.type) link.type = resource.type;
-    if (resource.crossorigin) link.crossOrigin = resource.crossorigin;
+    if ((resource as any).type) link.type = (resource as any).type;
+    if ((resource as any).crossorigin) link.crossOrigin = (resource as any).crossorigin;
     
     document.head.appendChild(link);
   });

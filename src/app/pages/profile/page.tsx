@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, LogOut, Menu, X, Bell, Music, BarChart3, HelpCircle, Home, Play, Loader2 } from 'lucide-react'
+import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, LogOut, Menu, X, Bell, Music, BarChart3, HelpCircle, Home, Play, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -11,9 +11,11 @@ import { useAuth } from '@/contexts/AuthContext'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
 import { ultraFastUploadProfileImage, ultraFastDeleteImage } from '@/utils/ultraFastImageUpload'
 import { validateImageFile } from '@/utils/imageUpload'
-import { supabase } from '@/lib/supabase-client'
+import { FirebaseAuthService } from '@/lib/firebase-auth'
+import { FirebaseDatabaseService } from '@/lib/firebase-database'
+import AuthGuard from '@/components/AuthGuard'
 
-export default function ProfilePage() {
+function ProfilePage() {
   const [showQRCode, setShowQRCode] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -51,6 +53,9 @@ export default function ProfilePage() {
   const [timeLeft, setTimeLeft] = useState(0) // Will be set when QR is generated
   const [isClient, setIsClient] = useState(false)
   const [qrGenerated, setQrGenerated] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
   const { user, signOut, profile: currentProfile, isLoading, refreshProfile } = useAuth()
 
@@ -61,10 +66,18 @@ export default function ProfilePage() {
 
   // Load user groups when user is available
   useEffect(() => {
-    if (user?.id) {
+    if (user?.uid) {
       loadUserGroups()
     }
-  }, [user?.id])
+  }, [user?.uid])
+
+  // Refresh profile data when component mounts
+  useEffect(() => {
+    if (user?.uid && !currentProfile) {
+      console.log('🔄 Refreshing profile data...')
+      refreshProfile()
+    }
+  }, [user?.uid, currentProfile, refreshProfile])
 
   // Profile completion logic
   const isProfileComplete = currentProfile?.profile_completed || false
@@ -73,59 +86,53 @@ export default function ProfilePage() {
   const updateProfile = async (updates: any) => {
     try {
       console.log('🔍 Getting authenticated user...')
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      // Use Firebase Auth instead of Supabase
+      const { getAuth } = await import('firebase/auth')
+      const { initializeApp } = await import('firebase/app')
       
-      if (authError) {
-        console.error('❌ Auth error:', authError)
-        throw new Error(`Authentication error: ${authError.message}`)
+      const firebaseConfig = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
       }
+
+      const app = initializeApp(firebaseConfig)
+      const auth = getAuth(app)
+      const user = auth.currentUser
+      
+      // Firebase auth doesn't have authError like Supabase
+      // Authentication is handled by FirebaseAuthService
       
       if (!user) {
         console.error('❌ No authenticated user found')
         throw new Error('No authenticated user')
       }
 
-      console.log('👤 User ID:', user.id)
+      console.log('👤 User ID:', user.uid)
       console.log('📝 Update data:', updates)
 
-      // Test authentication and profile access before update
-      const { data: testData, error: testError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single()
-
-      if (testError) {
-        console.error('❌ Profile access test failed:', testError)
-        throw new Error(`Cannot access profile: ${testError.message}`)
+      // Test authentication and profile access before update using Firebase
+      const testData = await FirebaseDatabaseService.getDocument('profiles', user.uid)
+      
+      if (!testData) {
+        console.error('❌ Profile access test failed: Profile not found')
+        throw new Error('Cannot access profile: Profile not found')
       }
 
       console.log('✅ Profile access test passed:', testData)
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id)
-        .select()
+      const result = await FirebaseDatabaseService.updateDocument('profiles', user.uid, updates)
 
-      if (error) {
-        console.error('❌ Database update error:', error)
-        console.error('❌ Error details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        })
-        
-        // Check if it's an RLS error
-        if (error.message.includes('row-level security') || error.message.includes('RLS')) {
-          throw new Error(`Permission denied: ${error.message}. Please check your authentication status.`)
-        }
-        
-        throw new Error(`Database error: ${error.message}`)
+      if (!result) {
+        console.error('❌ Database update error: Update failed')
+        throw new Error('Database update failed: Update operation failed')
       }
 
-      console.log('✅ Update successful:', data)
+      console.log('✅ Update successful:', result)
       
       // Refresh profile data
       await refreshProfile()
@@ -138,10 +145,10 @@ export default function ProfilePage() {
 
   // Use default profile data if none is loaded yet - fixed duplicate declaration
   const profileData = currentProfile || {
-    id: user?.id || '',
-    first_name: user?.user_metadata?.first_name || '',
-    middle_name: user?.user_metadata?.middle_name || '',
-    last_name: user?.user_metadata?.last_name || '',
+    id: user?.uid || '',
+    first_name: (user as any)?.user_metadata?.first_name || '',
+    middle_name: (user as any)?.user_metadata?.middle_name || '',
+    last_name: (user as any)?.user_metadata?.last_name || '',
     email: user?.email || '',
     phone_number: '',
     gender: '',
@@ -155,10 +162,17 @@ export default function ProfilePage() {
     social_id: user?.email || '',
     profile_image_url: '',
     profile_completed: false,
-    email_verified: user?.email_confirmed_at ? true : false,
-    created_at: user?.created_at || new Date().toISOString(),
+    email_verified: (user as any)?.email_confirmed_at ? true : false,
+    created_at: (user as any)?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
+
+  // Debug logging
+  console.log('🔍 Profile Debug Info:')
+  console.log('👤 User:', user?.uid)
+  console.log('📋 Current Profile:', currentProfile)
+  console.log('📊 Profile Data:', profileData)
+  console.log('🔄 Is Loading:', isLoading)
 
   // Initialize edit form with profile data (only once on mount)
   useEffect(() => {
@@ -192,20 +206,17 @@ export default function ProfilePage() {
 
   // Load user groups
   const loadUserGroups = async () => {
-    if (!user?.id) return
+    if (!user?.uid) return
     
     try {
-      const { data, error } = await supabase
-        .from('user_groups')
-        .select('group_name')
-        .eq('user_id', user.id)
+      const data = await FirebaseDatabaseService.getCollectionWhere('user_groups', 'user_id', '==', user.uid)
       
-      if (error) {
-        console.error('Error loading user groups:', error)
+      if (!data) {
+        console.error('Error loading user groups: No data returned')
         return
       }
       
-      const groups = data?.map(item => item.group_name) || []
+      const groups = data?.map((item: any) => item.group_name) || []
       setSelectedGroup(groups[0] || '')
       console.log('📋 Loaded user group:', groups[0] || '')
     } catch (error) {
@@ -220,35 +231,26 @@ export default function ProfilePage() {
 
   // Save user groups
   const saveUserGroups = async () => {
-    if (!user?.id) return false
+    if (!user?.uid) return false
     
     try {
       console.log('💾 Saving user group:', selectedGroup)
       
       // First, delete all existing groups for this user
-      const { error: deleteError } = await supabase
-        .from('user_groups')
-        .delete()
-        .eq('user_id', user.id)
+      const existingGroups = await FirebaseDatabaseService.getCollectionWhere('user_groups', 'user_id', '==', user.uid)
       
-      if (deleteError) {
-        console.error('Error deleting existing groups:', deleteError)
-        return false
+      if (existingGroups && existingGroups.length > 0) {
+        for (const group of existingGroups) {
+          await FirebaseDatabaseService.deleteDocument('user_groups', group.id)
+        }
       }
       
       // Then, insert new group
       if (selectedGroup) {
-        const { error: insertError } = await supabase
-          .from('user_groups')
-          .insert([{
-            user_id: user.id,
-            group_name: selectedGroup
-          }])
-        
-        if (insertError) {
-          console.error('Error inserting new group:', insertError)
-          return false
-        }
+        await FirebaseDatabaseService.createDocument('user_groups', `${user.uid}_${Date.now()}`, {
+          user_id: user.uid,
+          group_name: selectedGroup
+        })
       }
       
       console.log('✅ User group saved successfully')
@@ -271,7 +273,7 @@ export default function ProfilePage() {
       return
     }
 
-    if (!user?.id) {
+    if (!user?.uid) {
       alert('User not authenticated')
       return
     }
@@ -283,7 +285,7 @@ export default function ProfilePage() {
 
     try {
       // Upload in background without blocking UI
-      const result = await ultraFastUploadProfileImage(file, user.id, (progress) => {
+      const result = await ultraFastUploadProfileImage(file, user.uid, (progress) => {
         setUploadProgress(progress)
       })
 
@@ -325,7 +327,7 @@ export default function ProfilePage() {
       console.log('🚀 Starting profile save...')
       console.log('📝 Edit form data:', editForm)
       console.log('🖼️ Profile image:', profileImage)
-      console.log('👤 Current user:', user?.id)
+      console.log('👤 Current user:', user?.uid)
       
       // Basic validation
       setSaveProgress(10)
@@ -381,19 +383,19 @@ export default function ProfilePage() {
       setSaveProgress(20)
       setSaveStage('Connecting to database...')
       console.log('🔍 Testing database connection...')
-      const { data: testData, error: testError } = await supabase
-        .from('profiles')
-        .select('id')
-        .limit(1)
       
-      if (testError) {
+      try {
+        if (!user?.uid) {
+          throw new Error('User not authenticated')
+        }
+        const testData = await FirebaseDatabaseService.getDocument('profiles', user.uid)
+        console.log('✅ Database connection successful:', testData)
+      } catch (testError) {
         console.error('❌ Database connection failed:', testError)
-        setSaveMessage(`❌ Database connection failed: ${testError.message}`)
+        setSaveMessage(`❌ Database connection failed: ${(testError as Error).message}`)
         setIsSaving(false)
         return
       }
-      
-      console.log('✅ Database connection successful:', testData)
       
       // Update profile using the ultra-fast hook
       setSaveProgress(40)
@@ -478,6 +480,42 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     await signOut()
     // Don't use router.push - signOut already handles redirect
+  }
+
+  // Delete account function
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== 'DELETE') {
+      alert('Please type "DELETE" to confirm account deletion')
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      console.log('🗑️ Deleting user account...')
+      
+      // Delete user profile from Firebase
+      await FirebaseDatabaseService.deleteDocument('profiles', user?.uid || '')
+      
+      // Delete user from Firebase Auth
+      const result = await FirebaseAuthService.deleteUser()
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+      
+      console.log('✅ Account deleted successfully')
+      
+      // Sign out and redirect to auth page
+      await signOut()
+      router.push('/auth')
+      
+    } catch (error) {
+      console.error('❌ Account deletion error:', error)
+      alert('Failed to delete account. Please try again.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteDialog(false)
+      setDeleteConfirmation('')
+    }
   }
 
   // Only redirect if authentication is complete and no user is found
@@ -1233,7 +1271,107 @@ export default function ProfilePage() {
 
       </div>
 
+      {/* Delete Account Section */}
+      <div className="px-4 py-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-red-800 mb-2">Danger Zone</h3>
+          <p className="text-xs text-red-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+          <button
+            onClick={() => setShowDeleteDialog(true)}
+            className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete Account
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Account Dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Account</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-sm text-gray-600 mb-4">
+                This will permanently delete your account and remove all your data from our servers. 
+                This action cannot be undone.
+              </p>
+              
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-red-800 font-medium mb-2">What will be deleted:</p>
+                <ul className="text-xs text-red-700 space-y-1">
+                  <li>• Your profile information</li>
+                  <li>• Your attendance records</li>
+                  <li>• Your group memberships</li>
+                  <li>• All associated data</li>
+                </ul>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type <span className="font-mono bg-gray-100 px-1 rounded">DELETE</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="Type DELETE to confirm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                />
+              </div>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteDialog(false)
+                  setDeleteConfirmation('')
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmation !== 'DELETE' || isDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Account
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <SharedDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Menu" items={menuItems} />
     </div>
   )
 }
+
+export default function ProfilePageWithAuth() {
+  return (
+    <AuthGuard requireAuth={true} requireCompleteProfile={true}>
+      <ProfilePage />
+    </AuthGuard>
+  )
+}
+

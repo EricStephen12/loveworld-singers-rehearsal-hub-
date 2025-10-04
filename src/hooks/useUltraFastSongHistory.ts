@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase-client';
+import { FirebaseDatabaseService } from '@/lib/firebase-database';
 import { HistoryEntry } from '@/types/supabase';
 import { offlineManager } from '@/utils/offlineManager';
 
@@ -74,21 +74,17 @@ export function useUltraFastSongHistory(songId: string | null) {
         setLoading(true);
       }
 
-      // Fetch fresh data in background (non-blocking)
-      const { data, error: fetchError } = await supabase
-        .from('song_history')
-        .select('*')
-        .eq('song_id', songId)
-        .order('created_at', { ascending: false });
-
-      if (fetchError) {
-        console.error('Error fetching song history:', fetchError);
-        setError(fetchError.message);
+      // Fetch fresh data from Firebase (non-blocking)
+      const historyData = await FirebaseDatabaseService.getCollectionWhere('song_history', 'song_id', '==', parseInt(songId));
+      
+      if (!historyData) {
+        console.error('Error fetching song history from Firebase');
+        setError('Failed to fetch song history');
         return;
       }
 
       // Transform the data to match our HistoryEntry interface
-      const historyEntries = (data || []).map(entry => ({
+      const historyEntries = (historyData || []).map((entry: any) => ({
         id: entry.id,
         type: entry.type,
         title: entry.title,

@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { ChevronLeft, BookOpen, Music, Users, Clock, Play, Pause, SkipBack, SkipForward, RotateCcw, Music2, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { PraiseNightSong, HistoryEntry } from "@/types/supabase";
 import { useAudio } from "@/contexts/AudioContext";
-import { supabase } from "@/lib/supabase";
+import { FirebaseDatabaseService } from "@/lib/firebase-database";
+import { FirebaseCommentService } from "@/lib/firebase-comment-service";
 import { useUltraFastSongHistory } from "@/hooks/useUltraFastSongHistory";
 
 interface SongDetailModalProps {
@@ -294,7 +295,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
   // Get older comments for history (all except the latest)
   const getOlderComments = () => {
-    if (!selectedSong) return [];
+    if (!selectedSong || !Array.isArray(selectedSong.comments)) return [];
     
     const pastorComments = selectedSong.comments
       .filter(comment => comment.author === 'Pastor')
@@ -628,7 +629,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
           {activeTab === 'comments' && (
             <div className="space-y-3">
-              {selectedSong?.comments && selectedSong.comments.length > 0 ? (
+              {selectedSong?.comments && Array.isArray(selectedSong.comments) && selectedSong.comments.length > 0 ? (
                 // Show only the latest pastor's comment in main Comments tab
                 selectedSong.comments
                   .filter((comment: any) => comment.author === 'Pastor')

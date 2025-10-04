@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-client'
+import { FirebaseAuthService } from '@/lib/firebase-auth'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -30,16 +30,10 @@ export default function AuthCallbackPage() {
           return
         }
 
-        // Try to get session
-        const { data, error: sessionError } = await supabase.auth.getSession()
+        // Check Firebase auth state
+        const user = FirebaseAuthService.getCurrentUser()
         
-        if (sessionError) {
-          console.error('Session error:', sessionError)
-          router.push('/auth?error=session_error&message=Failed to establish session')
-          return
-        }
-
-        if (data.session) {
+        if (user) {
           // Check if this is a password recovery session
           const type = urlParams.get('type')
           
@@ -51,7 +45,7 @@ export default function AuthCallbackPage() {
             router.push('/home')
           }
         } else {
-          // No session, redirect to auth
+          // No user, redirect to auth
           router.push('/auth?error=no_session&message=No active session found')
         }
       } catch (error) {
