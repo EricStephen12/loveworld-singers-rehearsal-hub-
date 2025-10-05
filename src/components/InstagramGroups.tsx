@@ -500,7 +500,7 @@ export default function InstagramGroups() {
               groups.map((group) => (
                 <div
                   key={group.id}
-                  onClick={() => setSelectedGroup(group)}
+                  onClick={() => router.push(`/pages/chat-group?groupId=${group.id}`)}
                   className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden cursor-pointer hover:bg-gray-800 transition-colors"
                 >
                   <div className="aspect-square bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
@@ -541,7 +541,7 @@ export default function InstagramGroups() {
               friends.map((friend) => (
                 <div
                   key={friend.id}
-                  onClick={() => setSelectedFriend(friend)}
+                  onClick={() => router.push(`/pages/chat-group?groupId=dm&friendId=${friend.id}`)}
                   className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden cursor-pointer hover:bg-gray-800 transition-colors"
                 >
                   <div className="aspect-square bg-gray-800 flex items-center justify-center relative">
@@ -577,7 +577,6 @@ export default function InstagramGroups() {
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">Group Chat</h3>
                 <p className="text-gray-400 mb-4">Chat with members of your groups</p>
-                <p className="text-sm text-gray-500">Select a group to start chatting</p>
               </div>
             </div>
           </div>

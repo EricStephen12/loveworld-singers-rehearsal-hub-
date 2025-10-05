@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Send, Mic, Camera, MoreVertical, Users, Phone, Video, Check, CheckCheck, Clock, Smile, Paperclip, X } from 'lucide-react'
+import { ArrowLeft, Send, Mic, Camera, MoreVertical, Users, Phone, Video, Check, CheckCheck, Clock, Smile, Paperclip, X, Image, FileText, Download, Trash2, Edit, Copy, Info, Bell } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/lib/supabase-client'
+import { FirebaseDatabaseService } from '@/lib/firebase-database'
 
 interface ChatMessage {
   id: string
@@ -46,12 +46,21 @@ function ChatGroupContent() {
   const [onlineMembers, setOnlineMembers] = useState<string[]>([])
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null)
+  const [showMenu, setShowMenu] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [showGroupInfo, setShowGroupInfo] = useState(false)
+  const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null)
+  const [showMessageMenu, setShowMessageMenu] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
 
-  // Get group ID from URL params
+  // Get group ID and friend ID from URL params
   const groupId = searchParams.get('groupId')
+  const friendId = searchParams.get('friendId')
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -70,30 +79,85 @@ function ChatGroupContent() {
     if (!groupId) return
 
     try {
-      // For now, use dummy data since we don't have the full group system
-      setGroupName('Your LoveWorld Singers')
-      setGroupMembers([
-        {
-          id: '1',
-          user_id: '1',
-          first_name: 'Sarah',
-          last_name: 'Johnson',
-          profile_image_url: '',
-          designation: 'LoveWorld Singer',
-          administration: 'Member',
-          is_admin: false
-        },
-        {
-          id: '2',
-          user_id: '2',
-          first_name: 'Michael',
-          last_name: 'Chen',
-          profile_image_url: '',
-          designation: 'LoveWorld Singer',
-          administration: 'Member',
-          is_admin: false
+      if (groupId === 'dm' && friendId) {
+        // Direct message with a friend
+        setGroupName('Direct Message')
+        setGroupMembers([
+          {
+            id: friendId,
+            user_id: friendId,
+            first_name: 'Friend',
+            last_name: 'Name',
+            profile_image_url: '',
+            designation: 'LoveWorld Singer',
+            administration: 'Member',
+            is_admin: false
+          }
+        ])
+      } else {
+        // Load real group data from Firebase
+        try {
+          const groupData = await FirebaseDatabaseService.getDocument('groups', groupId)
+          if (groupData) {
+            setGroupName((groupData as any).name || 'Group Chat')
+            
+            // Load group members
+            const members = (groupData as any).members || []
+            setGroupMembers(members)
+          } else {
+            // Fallback to dummy data
+            setGroupName('Your LoveWorld Singers')
+            setGroupMembers([
+              {
+                id: '1',
+                user_id: '1',
+                first_name: 'Sarah',
+                last_name: 'Johnson',
+                profile_image_url: '',
+                designation: 'LoveWorld Singer',
+                administration: 'Member',
+                is_admin: false
+              },
+              {
+                id: '2',
+                user_id: '2',
+                first_name: 'Michael',
+                last_name: 'Chen',
+                profile_image_url: '',
+                designation: 'LoveWorld Singer',
+                administration: 'Member',
+                is_admin: false
+              }
+            ])
+          }
+        } catch (error) {
+          console.error('Error loading group from Firebase:', error)
+          // Fallback to dummy data
+          setGroupName('Your LoveWorld Singers')
+          setGroupMembers([
+            {
+              id: '1',
+              user_id: '1',
+              first_name: 'Sarah',
+              last_name: 'Johnson',
+              profile_image_url: '',
+              designation: 'LoveWorld Singer',
+              administration: 'Member',
+              is_admin: false
+            },
+            {
+              id: '2',
+              user_id: '2',
+              first_name: 'Michael',
+              last_name: 'Chen',
+              profile_image_url: '',
+              designation: 'LoveWorld Singer',
+              administration: 'Member',
+              is_admin: false
+            }
+          ])
         }
-      ])
+      }
     } catch (error) {
       console.error('Error loading group data:', error)
     }
@@ -104,7 +168,48 @@ function ChatGroupContent() {
 
     try {
       // Enhanced dummy messages with WhatsApp-like features
-      const dummyMessages: ChatMessage[] = [
+      let dummyMessages: ChatMessage[] = []
+      
+      if (groupId === 'dm' && friendId) {
+        // Direct message messages
+        dummyMessages = [
+          {
+            id: '1',
+            content: 'Hey! How are you doing? 🙏',
+            sender_id: friendId,
+            sender_name: 'Friend Name',
+            sender_image: '',
+            created_at: '2024-12-01T10:00:00.000Z',
+            message_type: 'text',
+            is_own: false,
+            status: 'read'
+          },
+          {
+            id: '2',
+            content: 'I\'m doing great! Thanks for asking. How about you?',
+            sender_id: user?.uid || '2',
+            sender_name: 'You',
+            sender_image: '',
+            created_at: '2024-12-01T10:05:00.000Z',
+            message_type: 'text',
+            is_own: true,
+            status: 'read'
+          },
+          {
+            id: '3',
+            content: 'I\'m blessed! Ready for rehearsal today?',
+            sender_id: friendId,
+            sender_name: 'Friend Name',
+            sender_image: '',
+            created_at: '2024-12-01T10:10:00.000Z',
+            message_type: 'text',
+            is_own: false,
+            status: 'read'
+          }
+        ]
+      } else {
+        // Group chat messages
+        dummyMessages = [
         {
           id: '1',
           content: 'Welcome to the group! 🎵',
@@ -160,7 +265,8 @@ function ChatGroupContent() {
           is_own: false,
           status: 'read'
         }
-      ]
+        ]
+      }
 
       setMessages(dummyMessages)
     } catch (error) {
@@ -284,6 +390,137 @@ function ChatGroupContent() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
+  // Emoji picker functionality
+  const emojis = ['😀', '😂', '😍', '🥰', '😎', '🤔', '👍', '👎', '❤️', '🎉', '🎵', '🙏', '🔥', '💯', '✨', '🎤', '🎶', '🎸', '🎹', '🥁']
+  
+  const addEmoji = (emoji: string) => {
+    setNewMessage(prev => prev + emoji)
+    setShowEmojiPicker(false)
+  }
+
+  // Voice recording functionality
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      
+      const chunks: BlobPart[] = []
+      mediaRecorder.ondataavailable = (e) => {
+        chunks.push(e.data)
+      }
+      
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' })
+        // Here you would upload the voice message
+        console.log('Voice message recorded:', blob)
+        // For now, just add a text message indicating voice
+        const voiceMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: '🎤 Voice message',
+          sender_id: user?.uid || '',
+          sender_name: 'You',
+          sender_image: '',
+          created_at: new Date().toISOString(),
+          message_type: 'voice',
+          is_own: true,
+          status: 'sent'
+        }
+        setMessages(prev => [...prev, voiceMessage])
+      }
+      
+      mediaRecorder.start()
+      setIsRecording(true)
+      setRecordingTime(0)
+      
+      // Start recording timer
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1)
+      }, 1000)
+      
+    } catch (error) {
+      console.error('Error starting recording:', error)
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current)
+      }
+    }
+  }
+
+  // Camera functionality
+  const handleCameraClick = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*,video/*'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        // Here you would upload the image/video
+        console.log('Media file selected:', file)
+        // For now, just add a text message indicating media
+        const mediaMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: file.type.startsWith('image/') ? '📷 Photo' : '🎥 Video',
+          sender_id: user?.uid || '',
+          sender_name: 'You',
+          sender_image: '',
+          created_at: new Date().toISOString(),
+          message_type: file.type.startsWith('image/') ? 'image' : 'voice',
+          is_own: true,
+          status: 'sent'
+        }
+        setMessages(prev => [...prev, mediaMessage])
+      }
+    }
+    input.click()
+  }
+
+  // Call functionality
+  const handleCall = () => {
+    console.log('Starting call...')
+    // Here you would implement actual calling functionality
+    alert('Call functionality would be implemented here')
+  }
+
+  const handleVideoCall = () => {
+    console.log('Starting video call...')
+    // Here you would implement actual video calling functionality
+    alert('Video call functionality would be implemented here')
+  }
+
+  // Message menu functionality
+  const handleMessageAction = (action: string, message: ChatMessage) => {
+    switch (action) {
+      case 'reply':
+        setReplyingTo(message)
+        break
+      case 'copy':
+        navigator.clipboard.writeText(message.content)
+        break
+      case 'edit':
+        // Implement edit functionality
+        break
+      case 'delete':
+        setMessages(prev => prev.filter(msg => msg.id !== message.id))
+        break
+    }
+    setShowMessageMenu(false)
+    setSelectedMessage(null)
+  }
+
+  // Format recording time
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header - Fixed - Full Width */}
@@ -301,15 +538,27 @@ function ChatGroupContent() {
             </div>
             <div>
               <h1 className="text-sm font-medium text-gray-900">{groupName}</h1>
-              <p className="text-xs text-gray-500 font-normal">{groupMembers.length} members</p>
+              <p className="text-xs text-gray-500 font-normal">{groupMembers.length} member{groupMembers.length !== 1 ? 's' : ''}</p>
             </div>
           </div>
         </div>
         <div className="flex items-center space-x-1">
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <button 
+            onClick={handleCall}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
             <Phone className="w-5 h-5 text-gray-600" />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <button 
+            onClick={handleVideoCall}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <Video className="w-5 h-5 text-gray-600" />
+          </button>
+          <button 
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
             <MoreVertical className="w-5 h-5 text-gray-600" />
           </button>
         </div>
@@ -345,11 +594,18 @@ function ChatGroupContent() {
                   )}
                   
                   {/* Message bubble */}
-                  <div className={`px-4 py-3 rounded-2xl relative ${
-                    message.is_own 
-                      ? 'bg-purple-500 text-white rounded-br-md' 
-                      : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md'
-                  }`}>
+                  <div 
+                    className={`px-4 py-3 rounded-2xl relative cursor-pointer ${
+                      message.is_own 
+                        ? 'bg-purple-500 text-white rounded-br-md' 
+                        : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md'
+                    }`}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setSelectedMessage(message)
+                      setShowMessageMenu(true)
+                    }}
+                  >
                     {/* Reply indicator */}
                     {message.reply_to && (
                       <div className="border-l-4 border-purple-300 pl-3 mb-2 text-xs opacity-75">
@@ -420,11 +676,165 @@ function ChatGroupContent() {
         </div>
       )}
 
+      {/* Emoji Picker */}
+      {showEmojiPicker && (
+        <div className="fixed bottom-20 left-0 right-0 z-20 bg-white border-t border-gray-200 p-4">
+          <div className="grid grid-cols-10 gap-2">
+            {emojis.map((emoji, index) => (
+              <button
+                key={index}
+                onClick={() => addEmoji(emoji)}
+                className="p-2 text-2xl hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Voice Recording Indicator */}
+      {isRecording && (
+        <div className="fixed bottom-20 left-0 right-0 z-20 bg-red-500 text-white p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+            <span>Recording... {formatRecordingTime(recordingTime)}</span>
+          </div>
+          <button
+            onClick={stopRecording}
+            className="px-4 py-2 bg-white text-red-500 rounded-lg font-medium"
+          >
+            Stop
+          </button>
+        </div>
+      )}
+
+      {/* Message Context Menu */}
+      {showMessageMenu && selectedMessage && (
+        <div className="fixed inset-0 z-30 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-4 w-64">
+            <h3 className="font-semibold mb-3">Message Options</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleMessageAction('reply', selectedMessage)}
+                className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg flex items-center space-x-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Reply</span>
+              </button>
+              <button
+                onClick={() => handleMessageAction('copy', selectedMessage)}
+                className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg flex items-center space-x-2"
+              >
+                <Copy className="w-4 h-4" />
+                <span>Copy</span>
+              </button>
+              {selectedMessage.is_own && (
+                <>
+                  <button
+                    onClick={() => handleMessageAction('edit', selectedMessage)}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg flex items-center space-x-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleMessageAction('delete', selectedMessage)}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg flex items-center space-x-2 text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
+                  </button>
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => setShowMessageMenu(false)}
+              className="w-full mt-3 px-3 py-2 bg-gray-100 rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Group Menu */}
+      {showMenu && (
+        <div className="fixed top-16 right-4 z-20 bg-white border border-gray-200 rounded-lg shadow-lg w-48">
+          <div className="p-2">
+            <button
+              onClick={() => {
+                setShowGroupInfo(true)
+                setShowMenu(false)
+              }}
+              className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg flex items-center space-x-2"
+            >
+              <Info className="w-4 h-4" />
+              <span>Group Info</span>
+            </button>
+            <button
+              onClick={() => {
+                // Implement mute notifications
+                setShowMenu(false)
+              }}
+              className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg flex items-center space-x-2"
+            >
+              <Bell className="w-4 h-4" />
+              <span>Mute Notifications</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Group Info Modal */}
+      {showGroupInfo && (
+        <div className="fixed inset-0 z-30 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 w-80 max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Group Info</h3>
+              <button
+                onClick={() => setShowGroupInfo(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-900">{groupName}</h4>
+                <p className="text-sm text-gray-500">{groupMembers.length} members</p>
+              </div>
+              <div>
+                <h5 className="font-medium text-gray-900 mb-2">Members</h5>
+                <div className="space-y-2">
+                  {groupMembers.map((member) => (
+                    <div key={member.id} className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-purple-600">
+                          {member.first_name[0]}{member.last_name[0]}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{member.first_name} {member.last_name}</p>
+                        <p className="text-xs text-gray-500">{member.designation}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Input Area - Fixed - Full Width */}
       <div className="fixed bottom-0 left-0 right-0 z-10 bg-white border-t border-gray-200 px-3 sm:px-4 py-4 w-full">
         <div className="flex items-end space-x-3">
           {/* Attachment button */}
-          <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+          <button 
+            onClick={handleCameraClick}
+            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+          >
             <Paperclip className="w-6 h-6" />
           </button>
           
@@ -447,7 +857,10 @@ function ChatGroupContent() {
               >
                 <Smile className="w-5 h-5" />
               </button>
-              <button className="p-1 text-gray-500 hover:text-gray-700 transition-colors">
+              <button 
+                onClick={handleCameraClick}
+                className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+              >
                 <Camera className="w-5 h-5" />
               </button>
             </div>
@@ -463,7 +876,12 @@ function ChatGroupContent() {
               <Send className="w-6 h-6" />
             </button>
           ) : (
-            <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+            <button 
+              onMouseDown={startRecording}
+              onMouseUp={stopRecording}
+              onMouseLeave={stopRecording}
+              className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            >
               <Mic className="w-6 h-6" />
             </button>
           )}
