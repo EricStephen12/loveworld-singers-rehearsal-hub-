@@ -10,6 +10,11 @@ import SuperFastServiceWorker from '@/components/SuperFastServiceWorker'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import OfflineIndicator from '@/components/OfflineIndicator'
 import { PerformanceOptimizer } from '@/lib/performance-optimizer'
+
+// Auto-optimize for low data on app startup
+if (typeof window !== 'undefined') {
+  PerformanceOptimizer.autoOptimize()
+}
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
 // Use system fonts for faster loading
