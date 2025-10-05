@@ -23,20 +23,20 @@ export async function getAllPages(): Promise<PraiseNight[]> {
 
     for (const page of pages) {
       // Get songs for this page
-      const songs = await getSongsByPageId(page.id)
+      const songs = await getSongsByPageId(parseInt(page.id))
       
       praiseNights.push({
-        id: page.id,
-        name: page.name,
-        date: page.date,
-        location: page.location,
-        category: page.category,
-        bannerImage: page.bannerImage,
+        id: parseInt(page.id),
+        name: (page as any).name,
+        date: (page as any).date,
+        location: (page as any).location,
+        category: (page as any).category,
+        bannerImage: (page as any).bannerImage,
         countdown: {
-          days: page.countdownDays,
-          hours: page.countdownHours,
-          minutes: page.countdownMinutes,
-          seconds: page.countdownSeconds
+          days: (page as any).countdownDays,
+          hours: (page as any).countdownHours,
+          minutes: (page as any).countdownMinutes,
+          seconds: (page as any).countdownSeconds
         },
         songs: songs
       })
@@ -60,17 +60,17 @@ export async function getPageById(id: number): Promise<PraiseNight | null> {
     const songs = await getSongsByPageId(id)
 
     return {
-      id: page.id,
-      name: page.name,
-      date: page.date,
-      location: page.location,
-      category: page.category,
-      bannerImage: page.bannerImage,
+      id: parseInt(page.id),
+      name: (page as any).name,
+      date: (page as any).date,
+      location: (page as any).location,
+      category: (page as any).category,
+      bannerImage: (page as any).bannerImage,
       countdown: {
-        days: page.countdownDays,
-        hours: page.countdownHours,
-        minutes: page.countdownMinutes,
-        seconds: page.countdownSeconds
+        days: (page as any).countdownDays,
+        hours: (page as any).countdownHours,
+        minutes: (page as any).countdownMinutes,
+        seconds: (page as any).countdownSeconds
       },
       songs: songs
     }
@@ -166,28 +166,28 @@ export async function getSongsByPageId(pageId: number): Promise<PraiseNightSong[
 
     for (const song of songs) {
       const [comments, history] = await Promise.all([
-        getCommentsBySongId(song.id),
-        getHistoryBySongId(song.id)
+        getCommentsBySongId(parseInt(song.id)),
+        getHistoryBySongId(parseInt(song.id))
       ])
 
       praiseNightSongs.push({
-        id: song.id,
-        title: song.title,
-        status: song.status,
-        category: song.category,
-        praiseNightId: song.praiseNightId,
-        leadSinger: song.leadSinger,
-        writer: song.writer,
-        conductor: song.conductor,
-        key: song.key,
-        tempo: song.tempo,
-        leadKeyboardist: song.leadKeyboardist,
-        leadGuitarist: song.leadGuitarist,
-        drummer: song.drummer,
-        lyrics: song.lyrics,
-        solfas: song.solfas,
-        rehearsalCount: song.rehearsalCount,
-        audioFile: song.audioFile,
+        id: parseInt(song.id),
+        title: (song as any).title,
+        status: (song as any).status,
+        category: (song as any).category,
+        praiseNightId: (song as any).praiseNightId,
+        leadSinger: (song as any).leadSinger,
+        writer: (song as any).writer,
+        conductor: (song as any).conductor,
+        key: (song as any).key,
+        tempo: (song as any).tempo,
+        leadKeyboardist: (song as any).leadKeyboardist,
+        leadGuitarist: (song as any).leadGuitarist,
+        drummer: (song as any).drummer,
+        lyrics: (song as any).lyrics,
+        solfas: (song as any).solfas,
+        rehearsalCount: (song as any).rehearsalCount,
+        audioFile: (song as any).audioFile,
         comments: comments,
         history: history
       })
@@ -525,28 +525,28 @@ export async function getSongsByCategory(categoryName: string): Promise<PraiseNi
     
     for (const song of songs) {
       const [comments, history] = await Promise.all([
-        getCommentsBySongId(song.id),
-        getHistoryBySongId(song.id)
+        getCommentsBySongId(parseInt(song.id)),
+        getHistoryBySongId(parseInt(song.id))
       ])
 
       praiseNightSongs.push({
-        id: song.id,
-        title: song.title,
-        status: song.status,
-        category: song.category,
-        praiseNightId: song.praiseNightId,
-        leadSinger: song.leadSinger,
-        writer: song.writer,
-        conductor: song.conductor,
-        key: song.key,
-        tempo: song.tempo,
-        leadKeyboardist: song.leadKeyboardist,
-        leadGuitarist: song.leadGuitarist,
-        drummer: song.drummer,
-        lyrics: song.lyrics,
-        solfas: song.solfas,
-        rehearsalCount: song.rehearsalCount,
-        audioFile: song.audioFile,
+        id: parseInt(song.id),
+        title: (song as any).title,
+        status: (song as any).status,
+        category: (song as any).category,
+        praiseNightId: (song as any).praiseNightId,
+        leadSinger: (song as any).leadSinger,
+        writer: (song as any).writer,
+        conductor: (song as any).conductor,
+        key: (song as any).key,
+        tempo: (song as any).tempo,
+        leadKeyboardist: (song as any).leadKeyboardist,
+        leadGuitarist: (song as any).leadGuitarist,
+        drummer: (song as any).drummer,
+        lyrics: (song as any).lyrics,
+        solfas: (song as any).solfas,
+        rehearsalCount: (song as any).rehearsalCount,
+        audioFile: (song as any).audioFile,
         comments: comments,
         history: history
       })

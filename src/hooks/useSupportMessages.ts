@@ -19,9 +19,9 @@ export function useSupportMessages() {
 
   // Load support messages from Supabase
   const loadMessages = useCallback(async () => {
-    console.log('🔄 loadMessages called, profile:', profile?.email, 'user:', user?.id);
+    console.log('🔄 loadMessages called, profile:', profile?.email, 'user:', user?.uid);
 
-    if (!profile?.email || !user?.id) {
+    if (!profile?.email || !user?.uid) {
       console.log('❌ No profile or user, skipping load');
       return;
     }
@@ -46,7 +46,7 @@ export function useSupportMessages() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.email, user?.id]);
+  }, [profile?.email, user?.uid]);
 
   // Send a new message (create support ticket)
   const sendMessage = useCallback(async (text: string) => {
@@ -139,12 +139,12 @@ export function useSupportMessages() {
 
   // Load messages when user/profile becomes available
   useEffect(() => {
-    console.log('🔄 useEffect triggered, user:', user?.id, 'profile:', profile?.email);
-    if (user?.id && profile?.email) {
+    console.log('🔄 useEffect triggered, user:', user?.uid, 'profile:', profile?.email);
+    if (user?.uid && profile?.email) {
       console.log('✅ User and profile available, loading messages...');
       loadMessages();
     }
-  }, [loadMessages, user?.id, profile?.email]);
+  }, [loadMessages, user?.uid, profile?.email]);
 
   return {
     messages,

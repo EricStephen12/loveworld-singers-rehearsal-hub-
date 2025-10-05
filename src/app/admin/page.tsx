@@ -380,7 +380,7 @@ export default function AdminPage() {
         }));
         
         console.log('🔥 Mapped categories:', mappedCategories);
-        setDbCategories(mappedCategories as Category[]);
+        setDbCategories(mappedCategories as any);
       } catch (error) {
         console.error('Error loading categories:', error);
       }
@@ -475,7 +475,7 @@ export default function AdminPage() {
         if (success) {
           // Reload categories from database
           const categories = await FirebaseDatabaseService.getCollection('categories');
-          setDbCategories(categories as Category[]);
+          setDbCategories(categories as any);
           
           addToast({
             type: 'success',
@@ -528,10 +528,10 @@ export default function AdminPage() {
             oldName: oldCategoryName,
             newName: newCategoryName,
             categoryId: dbCategory.id,
-            firebaseId: dbCategory.firebaseId
+            firebaseId: (dbCategory as any).firebaseId
           });
           
-          const categoryId = dbCategory.firebaseId || dbCategory.id;
+          const categoryId = (dbCategory as any).firebaseId || dbCategory.id;
           const success = await FirebaseDatabaseService.updateCategory(categoryId, {
             name: newCategoryName
           });
@@ -545,7 +545,7 @@ export default function AdminPage() {
               id: category.id,
               supabaseId: category.id
             }));
-            setDbCategories(mappedCategories as Category[]);
+            setDbCategories(mappedCategories as any);
             
             // Also update songs that use this category
             await FirebaseDatabaseService.updateSongsCategory(oldCategoryName, newCategoryName);
@@ -610,7 +610,7 @@ export default function AdminPage() {
         // Use firebaseId for Firebase operations
         const firebaseId = songData.firebaseId;
         console.log('🔥 Using Firebase ID for update:', firebaseId);
-        const success = await FirebaseDatabaseService.updateSong(firebaseId, songData);
+        const success = await FirebaseDatabaseService.updateSong(firebaseId || songData.id, songData);
         
         if (success) {
           console.log('✅ Song updated successfully, refreshing data...');
@@ -785,7 +785,7 @@ export default function AdminPage() {
       });
       
       // Delete from Firebase using the Firebase ID
-      const firebaseId = songToDelete.firebaseId || songToDelete.id.toString();
+      const firebaseId = songToDelete.firebaseId || songToDelete.id?.toString() || '';
       console.log('🗑️ Using Firebase ID for deletion:', firebaseId);
       const success = await FirebaseDatabaseService.deleteSong(firebaseId);
       
@@ -1203,10 +1203,10 @@ export default function AdminPage() {
     
     try {
       console.log('🗑️ Deleting category:', categoryToDelete);
-      console.log('🗑️ Category Firebase ID:', categoryToDelete.firebaseId || categoryToDelete.id);
+      console.log('🗑️ Category Firebase ID:', (categoryToDelete as any).firebaseId || categoryToDelete.id);
       
       // Use Firebase document ID for deletion
-      const firebaseId = categoryToDelete.firebaseId || categoryToDelete.id;
+      const firebaseId = (categoryToDelete as any).firebaseId || categoryToDelete.id;
       const success = await FirebaseDatabaseService.deleteCategory(firebaseId);
       
       if (success) {
@@ -1218,7 +1218,7 @@ export default function AdminPage() {
           id: category.id,
           supabaseId: category.id
         }));
-        setDbCategories(mappedCategories as Category[]);
+        setDbCategories(mappedCategories as any);
         
         // Move songs to uncategorized
         await FirebaseDatabaseService.handleCategoryDeletion(categoryToDelete.name, 'Uncategorized');

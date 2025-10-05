@@ -191,13 +191,4 @@ export class FirebaseAuthService {
     }
   }
 
-  // Sign out user
-  static async signOut() {
-    try {
-      await signOut(auth)
-      return { success: true, error: null }
-    } catch (error: any) {
-      return { success: false, error: error.message }
-    }
-  }
 }

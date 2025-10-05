@@ -49,7 +49,7 @@ export default function WhatsAppUserSupport({ isOpen, onClose }: WhatsAppUserSup
       const { data, error } = await supabase
         .from('support_messages')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user.uid || user.email)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -70,7 +70,7 @@ export default function WhatsAppUserSupport({ isOpen, onClose }: WhatsAppUserSup
       const { error } = await supabase
         .from('support_messages')
         .insert({
-          user_id: user.id,
+          user_id: user.uid || user.email,
           user_name: `${profile.first_name} ${profile.last_name}`,
           user_email: profile.email,
           subject: subject.trim(),
@@ -109,7 +109,7 @@ export default function WhatsAppUserSupport({ isOpen, onClose }: WhatsAppUserSup
             event: '*', 
             schema: 'public', 
             table: 'support_messages',
-            filter: `user_id=eq.${user?.id}`
+            filter: `user_id=eq.${user?.uid || user?.email}`
           },
           () => loadMessages()
         )

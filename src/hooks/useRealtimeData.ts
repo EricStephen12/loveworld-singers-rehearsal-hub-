@@ -31,74 +31,74 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
     const pagesWithSongs = pages.map((page, index) => {
       console.log(`📄 Page ${index} Firebase data:`, {
         id: page.id,
-        name: page.name || page.title || page.page_title,
-        countdownDays: page.countdownDays,
-        countdownHours: page.countdownHours,
-        countdownMinutes: page.countdownMinutes,
-        countdownSeconds: page.countdownSeconds,
-        countdown: page.countdown,
+        name: (page as any).name || (page as any).title || (page as any).page_title,
+        countdownDays: (page as any).countdownDays,
+        countdownHours: (page as any).countdownHours,
+        countdownMinutes: (page as any).countdownMinutes,
+        countdownSeconds: (page as any).countdownSeconds,
+        countdown: (page as any).countdown,
         allFields: Object.keys(page)
       });
       
       // Debug the countdown mapping
       const mappedCountdown = {
-        days: page.countdownDays || page.countdown?.days || 0,
-        hours: page.countdownHours || page.countdown?.hours || 0,
-        minutes: page.countdownMinutes || page.countdown?.minutes || 0,
-        seconds: page.countdownSeconds || page.countdown?.seconds || 0
+        days: (page as any).countdownDays || (page as any).countdown?.days || 0,
+        hours: (page as any).countdownHours || (page as any).countdown?.hours || 0,
+        minutes: (page as any).countdownMinutes || (page as any).countdown?.minutes || 0,
+        seconds: (page as any).countdownSeconds || (page as any).countdown?.seconds || 0
       };
       
       console.log(`📄 Page ${index} Mapped countdown:`, mappedCountdown);
       
       return {
-        id: parseInt(page.page_id) || 0, // Use page_id (numeric) for UI compatibility
+        id: parseInt((page as any).page_id) || 0, // Use page_id (numeric) for UI compatibility
         firebaseId: page.id, // This is the actual Firebase document ID (string)
-        name: page.name || page.title || page.page_title || 'Untitled Page', // Use name or title
-        date: page.date || new Date().toISOString(),
-        location: page.location || '',
-        category: page.category || 'ongoing',
-        bannerImage: page.bannerImage || page.bannerimage || '',
+        name: (page as any).name || (page as any).title || (page as any).page_title || 'Untitled Page', // Use name or title
+        date: (page as any).date || new Date().toISOString(),
+        location: (page as any).location || '',
+        category: (page as any).category || 'ongoing',
+        bannerImage: (page as any).bannerImage || (page as any).bannerimage || '',
         countdown: {
-          days: page.countdownDays || page.countdown?.days || 0,
-          hours: page.countdownHours || page.countdown?.hours || 0,
-          minutes: page.countdownMinutes || page.countdown?.minutes || 0,
-          seconds: page.countdownSeconds || page.countdown?.seconds || 0
+          days: (page as any).countdownDays || (page as any).countdown?.days || 0,
+          hours: (page as any).countdownHours || (page as any).countdown?.hours || 0,
+          minutes: (page as any).countdownMinutes || (page as any).countdown?.minutes || 0,
+          seconds: (page as any).countdownSeconds || (page as any).countdown?.seconds || 0
         },
-        songs: allSongs.filter(song => song.praisenightid === (page.page_id || page.id) || song.praiseNightId === (page.page_id || page.id)).map(song => {
+        songs: allSongs.filter(song => (song as any).praisenightid === ((page as any).page_id || page.id) || (song as any).praiseNightId === ((page as any).page_id || page.id)).map(song => {
           console.log('🎵 Mapping song:', {
             songId: song.id,
             songFirebaseId: song.firebaseId,
-            songTitle: song.title,
+            songTitle: (song as any).title,
             allKeys: Object.keys(song),
             songData: song
           });
           
           // Check if we have a valid Firebase document ID
-          if (!song.firebaseId || song.firebaseId === '0' || song.firebaseId === 0) {
+          if (!song.firebaseId || song.firebaseId === '0' || (song.firebaseId as any) === 0) {
             console.error('❌ Invalid Firebase document ID for song:', song);
             return null; // Skip this song
           }
           return {
           id: song.supabaseId || Math.floor(Math.random() * 1000000), // Use Supabase ID if available, otherwise generate random
           firebaseId: song.firebaseId, // Use Firebase document ID (string) for Firebase operations
-          title: song.title || 'Untitled Song',
-          status: song.status || 'unheard',
-          category: song.category || '',
-          praiseNightId: parseInt(song.praisenightid || song.praiseNightId) || 0,
-          leadSinger: song.leadsinger || song.leadSinger || '',
-          writer: song.writer || '',
-          conductor: song.conductor || '',
-          key: song.key || '',
-          tempo: song.tempo || '',
-          leadKeyboardist: song.leadkeyboardist || song.leadKeyboardist || '',
-          leadGuitarist: song.leadguitarist || song.leadGuitarist || '',
-          drummer: song.drummer || '',
-          lyrics: song.lyrics || '',
-          solfas: song.solfas || '',
-          rehearsalCount: song.rehearsalcount || song.rehearsalCount || 0,
-          audioFile: song.audiofile || song.audioFile || '',
-          comments: song.comments || [],
-          history: song.history || []
+          title: (song as any).title || 'Untitled Song',
+          status: (song as any).status || 'unheard',
+          category: (song as any).category || '',
+          praiseNightId: parseInt((song as any).praisenightid || (song as any).praiseNightId) || 0,
+          leadSinger: (song as any).leadsinger || (song as any).leadSinger || '',
+          writer: (song as any).writer || '',
+          conductor: (song as any).conductor || '',
+          key: (song as any).key || '',
+          tempo: (song as any).tempo || '',
+          leadKeyboardist: (song as any).leadkeyboardist || (song as any).leadKeyboardist || '',
+          leadGuitarist: (song as any).leadguitarist || (song as any).leadGuitarist || '',
+          drummer: (song as any).drummer || '',
+          lyrics: (song as any).lyrics || '',
+          solfas: (song as any).solfas || '',
+          rehearsalCount: (song as any).rehearsalcount || (song as any).rehearsalCount || 0,
+          audioFile: (song as any).audiofile || (song as any).audioFile || '',
+          comments: (song as any).comments || [],
+          history: (song as any).history || []
         };
         }).filter(song => song !== null) // Filter out null songs
       };
@@ -195,10 +195,10 @@ export function useRealtimeData() {
     try {
       // Use the FirebaseDatabaseService to get songs for a specific page
       const allSongs = await FirebaseDatabaseService.getCollection('songs');
-      const songs = allSongs.filter(song => song.praisenightid === pageId || song.praiseNightId === pageId);
+      const songs = allSongs.filter(song => (song as any).praisenightid === pageId || (song as any).praiseNightId === pageId);
       
       console.log('🔥 Firebase songs fetched for page', pageId, ':', songs.length, 'songs');
-      return songs;
+      return songs as unknown as PraiseNightSong[];
     } catch (error) {
       console.error('Error fetching songs from Firebase:', error);
       return [];

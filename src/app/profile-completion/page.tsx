@@ -5,16 +5,19 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, User, MapPin, Users, ChevronDown, Loader2, Check, Sparkles, Heart, Music } from 'lucide-react'
 import { FirebaseAuthService } from '@/lib/firebase-auth'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
+import { useAuth } from '@/contexts/AuthContext'
 import type { ProfileCompletionData } from '@/types/supabase'
 
 export default function ProfileCompletionPage() {
   const router = useRouter()
+  const { refreshProfile } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     firstName: '',
     middleName: '',
     lastName: '',
+    email: '',
     phoneNumber: '',
     gender: '',
     birthday: '',
@@ -145,12 +148,19 @@ export default function ProfileCompletionPage() {
         console.log('✅ User group saved successfully')
       }
       
+      // Refresh the profile in AuthContext to update isProfileComplete
+      console.log('🔄 Refreshing profile in AuthContext...')
+      await refreshProfile()
+      
       console.log('🎉 Profile completion successful! Redirecting to home...')
       
       // Profile completion is now handled by the database
       // No need to set localStorage flags - the database is the source of truth
       
-      router.push('/home')
+      // Small delay to ensure profile refresh completes
+      setTimeout(() => {
+        router.push('/home')
+      }, 500)
     } catch (error: any) {
       console.error('Profile completion error:', error)
       

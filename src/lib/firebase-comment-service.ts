@@ -1,7 +1,7 @@
 // Firebase Comment Service for Loveworld Praise App
 // Handles comments for songs and pages
 
-import { FirebaseDatabaseService } from './firebase-database-service'
+import { FirebaseDatabaseService } from './firebase-database'
 import type { Comment } from '../types/supabase'
 
 export class FirebaseCommentService {
@@ -28,7 +28,7 @@ export class FirebaseCommentService {
       }
 
       await FirebaseDatabaseService.createDocument('comments', comment.id.toString(), comment)
-      return comment
+      return comment as unknown as Comment
     } catch (error) {
       console.error('Error creating comment:', error)
       return null
@@ -39,8 +39,8 @@ export class FirebaseCommentService {
   static async getCommentsBySongId(songId: number): Promise<Comment[]> {
     try {
       const comments = await FirebaseDatabaseService.getCollection('comments')
-      return comments.filter(comment => comment.song_id === songId)
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      return comments.filter((comment: any) => comment.song_id === songId)
+        .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) as unknown as Comment[]
     } catch (error) {
       console.error('Error fetching comments:', error)
       return []
@@ -79,19 +79,20 @@ export class FirebaseCommentService {
       const comment = await FirebaseDatabaseService.getDocument('comments', commentId.toString())
       if (!comment) return false
 
-      const likedBy = comment.liked_by || []
+      const commentData = comment as any
+      const likedBy = commentData.liked_by || []
       if (likedBy.includes(userId)) {
         // Unlike
-        const updatedLikedBy = likedBy.filter(id => id !== userId)
+        const updatedLikedBy = likedBy.filter((id: any) => id !== userId)
         await FirebaseDatabaseService.updateDocument('comments', commentId.toString(), {
-          likes: comment.likes - 1,
+          likes: commentData.likes - 1,
           liked_by: updatedLikedBy,
           updated_at: new Date().toISOString()
         })
       } else {
         // Like
         await FirebaseDatabaseService.updateDocument('comments', commentId.toString(), {
-          likes: comment.likes + 1,
+          likes: commentData.likes + 1,
           liked_by: [...likedBy, userId],
           updated_at: new Date().toISOString()
         })

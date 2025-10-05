@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('💾 Fetching fresh profile')
       const userProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid)
       if (userProfile) {
-        setProfile(userProfile)
+        setProfile(userProfile as any)
         // Cache the profile
         profileCache.set(cacheKey, userProfile)
       }
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Force Firebase logout and wait for it
     try {
       const result = await FirebaseAuthService.signOut()
-      if (result.success) {
+      if ((result as any).success) {
         console.log('✅ Firebase logout successful')
       } else {
         console.log('Firebase logout error:', result.error)
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid)
             if (isMounted && userProfile) {
               console.log('✅ Profile loaded successfully')
-              setProfile(userProfile)
+              setProfile(userProfile as any)
             } else {
               console.log('⚠️ No profile found for user')
             }

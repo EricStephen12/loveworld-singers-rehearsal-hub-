@@ -53,8 +53,8 @@ export class FirebaseDatabaseService {
       
       // Sort by orderIndex in JavaScript to avoid index requirement
       return results.sort((a, b) => {
-        const indexA = a.orderIndex || 0
-        const indexB = b.orderIndex || 0
+        const indexA = (a as any).orderIndex || 0
+        const indexB = (b as any).orderIndex || 0
         return indexA - indexB // Ascending order
       })
     } catch (error) {
@@ -422,22 +422,72 @@ export class FirebaseDatabaseService {
         collection(db, 'song_history'),
         where('song_id', '==', songId)
       )
-      
+
       const querySnapshot = await getDocs(q)
       const results = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }))
-      
+
       // Sort by created_at in JavaScript to avoid index requirement
       return results.sort((a, b) => {
-        const dateA = new Date(a.created_at || 0).getTime()
-        const dateB = new Date(b.created_at || 0).getTime()
+        const dateA = new Date((a as any).created_at || 0).getTime()
+        const dateB = new Date((b as any).created_at || 0).getTime()
         return dateB - dateA // Descending order (newest first)
       })
     } catch (error) {
       console.error('Error getting song history:', error)
       return []
+    }
+  }
+
+  // ===== GROUP POSTS OPERATIONS =====
+
+  static async getGroupPosts(groupId: string) {
+    try {
+      const q = query(
+        collection(db, 'group_posts'),
+        where('group_id', '==', groupId),
+        orderBy('timestamp', 'desc')
+      )
+      const querySnapshot = await getDocs(q)
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+    } catch (error) {
+      console.error('Error getting group posts:', error)
+      return []
+    }
+  }
+
+  static async createGroupPost(postData: any) {
+    try {
+      const docRef = await addDoc(collection(db, 'group_posts'), postData)
+      return { id: docRef.id, ...postData }
+    } catch (error) {
+      console.error('Error creating group post:', error)
+      return null
+    }
+  }
+
+  static async updateGroupPost(postId: string, data: any) {
+    try {
+      await updateDoc(doc(db, 'group_posts', postId), data)
+      return true
+    } catch (error) {
+      console.error('Error updating group post:', error)
+      return false
+    }
+  }
+
+  static async deleteGroupPost(postId: string) {
+    try {
+      await deleteDoc(doc(db, 'group_posts', postId))
+      return true
+    } catch (error) {
+      console.error('Error deleting group post:', error)
+      return false
     }
   }
 

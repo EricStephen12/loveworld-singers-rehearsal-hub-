@@ -16,29 +16,29 @@ export function useChat() {
 
   // Load initial data
   useEffect(() => {
-    if (user?.id) {
+    if (user?.uid) {
       loadInitialData()
       updateOnlineStatus(true)
     }
 
     return () => {
-      if (user?.id) {
+      if (user?.uid) {
         updateOnlineStatus(false)
         cleanupSubscriptions()
       }
     }
-  }, [user?.id])
+  }, [user?.uid])
 
   const loadInitialData = async () => {
-    if (!user?.id) return
+    if (!user?.uid) return
 
     try {
       setIsLoading(true)
       setError(null)
 
       const [conversationsData, contactsData] = await Promise.all([
-        ChatService.getUserConversations(user.id),
-        ChatService.getContacts(user.id)
+        ChatService.getUserConversations(user.uid),
+        ChatService.getContacts(user.uid)
       ])
 
       setConversations(conversationsData)
@@ -52,8 +52,8 @@ export function useChat() {
   }
 
   const updateOnlineStatus = async (isOnline: boolean) => {
-    if (!user?.id) return
-    await ChatService.updateOnlineStatus(user.id, isOnline)
+    if (!user?.uid) return
+    await ChatService.updateOnlineStatus(user.uid, isOnline)
   }
 
   const cleanupSubscriptions = () => {
@@ -67,7 +67,7 @@ export function useChat() {
 
   // Subscribe to conversation messages
   const subscribeToMessages = useCallback((conversationId: string) => {
-    if (!user?.id || subscriptionsRef.current[`messages:${conversationId}`]) return
+    if (!user?.uid || subscriptionsRef.current[`messages:${conversationId}`]) return
 
     const subscription = ChatService.subscribeToMessages(conversationId, (newMessage: Message) => {
       setMessages(prev => {
@@ -79,28 +79,28 @@ export function useChat() {
       })
 
       // Mark as read if it's not from current user
-      if (newMessage.sender_id !== user.id) {
-        ChatService.markMessagesAsRead(conversationId, user.id)
+      if (newMessage.sender_id !== user.uid) {
+        ChatService.markMessagesAsRead(conversationId, user.uid)
       }
     })
 
     subscriptionsRef.current[`messages:${conversationId}`] = subscription
-  }, [user?.id])
+  }, [user?.uid])
 
   // Subscribe to typing indicators
   const subscribeToTyping = useCallback((conversationId: string) => {
-    if (!user?.id || subscriptionsRef.current[`typing:${conversationId}`]) return
+    if (!user?.uid || subscriptionsRef.current[`typing:${conversationId}`]) return
 
     const subscription = ChatService.subscribeToTypingIndicators(conversationId, (indicators: TypingIndicator[]) => {
-      setTypingIndicators(indicators.filter(indicator => indicator.user_id !== user.id))
+      setTypingIndicators(indicators.filter(indicator => indicator.user_id !== user.uid))
     })
 
     subscriptionsRef.current[`typing:${conversationId}`] = subscription
-  }, [user?.id])
+  }, [user?.uid])
 
   // Subscribe to online status changes
   const subscribeToOnlineStatus = useCallback((userIds: string[]) => {
-    if (!user?.id || subscriptionsRef.current['online_status']) return
+    if (!user?.uid || subscriptionsRef.current['online_status']) return
 
     const subscription = ChatService.subscribeToOnlineStatus(userIds, (statuses) => {
       // Update contacts with new online status
@@ -118,7 +118,7 @@ export function useChat() {
     })
 
     subscriptionsRef.current['online_status'] = subscription
-  }, [user?.id])
+  }, [user?.uid])
 
   // Load messages for a conversation
   const loadMessages = useCallback(async (conversationId: string) => {
@@ -131,14 +131,14 @@ export function useChat() {
       subscribeToTyping(conversationId)
       
       // Mark messages as read
-      if (user?.id) {
-        await ChatService.markMessagesAsRead(conversationId, user.id)
+      if (user?.uid) {
+        await ChatService.markMessagesAsRead(conversationId, user.uid)
       }
     } catch (err) {
       console.error('Error loading messages:', err)
       setError('Failed to load messages')
     }
-  }, [user?.id, subscribeToMessages, subscribeToTyping])
+  }, [user?.uid, subscribeToMessages, subscribeToTyping])
 
   // Send a message
   const sendMessage = useCallback(async (
@@ -151,12 +151,12 @@ export function useChat() {
     isDisappearing = false,
     expiresInMinutes = 10
   ) => {
-    if (!user?.id) return null
+    if (!user?.uid) return null
 
     try {
       const message = await ChatService.sendMessage(
         conversationId,
-        user.id,
+        user.uid,
         content,
         messageType,
         fileUrl,
@@ -184,25 +184,25 @@ export function useChat() {
       setError('Failed to send message')
       return null
     }
-  }, [user?.id])
+  }, [user?.uid])
 
   // Set typing indicator
   const setTypingIndicator = useCallback(async (conversationId: string, isTyping: boolean) => {
-    if (!user?.id) return
+    if (!user?.uid) return
 
     try {
-      await ChatService.setTypingIndicator(conversationId, user.id, isTyping)
+      await ChatService.setTypingIndicator(conversationId, user.uid, isTyping)
     } catch (err) {
       console.error('Error setting typing indicator:', err)
     }
-  }, [user?.id])
+  }, [user?.uid])
 
   // Add message reaction
   const addReaction = useCallback(async (messageId: string, reactionType: string) => {
-    if (!user?.id) return
+    if (!user?.uid) return
 
     try {
-      await ChatService.addMessageReaction(messageId, user.id, reactionType)
+      await ChatService.addMessageReaction(messageId, user.uid, reactionType)
       
       // Update local state
       setMessages(prev => prev.map(msg => 
@@ -210,17 +210,17 @@ export function useChat() {
           ? {
               ...msg,
               reactions: [
-                ...(msg.reactions || []).filter(r => r.user_id !== user.id),
+                ...(msg.reactions || []).filter(r => r.user_id !== user.uid),
                 {
-                  id: `${messageId}-${user.id}`,
+                  id: `${messageId}-${user.uid}`,
                   message_id: messageId,
-                  user_id: user.id,
+                  user_id: user.uid,
                   reaction_type: reactionType as any,
                   created_at: new Date().toISOString(),
                   user: {
-                    id: user.id,
-                    first_name: user.user_metadata?.first_name || '',
-                    last_name: user.user_metadata?.last_name || '',
+                    id: user.uid,
+                    first_name: (user as any).user_metadata?.first_name || '',
+                    last_name: (user as any).user_metadata?.last_name || '',
                     email: user.email || ''
                   } as any
                 }
@@ -231,35 +231,35 @@ export function useChat() {
     } catch (err) {
       console.error('Error adding reaction:', err)
     }
-  }, [user?.id])
+  }, [user?.uid])
 
   // Remove message reaction
   const removeReaction = useCallback(async (messageId: string) => {
-    if (!user?.id) return
+    if (!user?.uid) return
 
     try {
-      await ChatService.removeMessageReaction(messageId, user.id)
+      await ChatService.removeMessageReaction(messageId, user.uid)
       
       // Update local state
       setMessages(prev => prev.map(msg => 
         msg.id === messageId 
           ? {
               ...msg,
-              reactions: (msg.reactions || []).filter(r => r.user_id !== user.id)
+              reactions: (msg.reactions || []).filter(r => r.user_id !== user.uid)
             }
           : msg
       ))
     } catch (err) {
       console.error('Error removing reaction:', err)
     }
-  }, [user?.id])
+  }, [user?.uid])
 
   // Get or create conversation
   const getOrCreateConversation = useCallback(async (otherUserId: string) => {
-    if (!user?.id) return null
+    if (!user?.uid) return null
 
     try {
-      const conversation = await ChatService.getOrCreateConversation(user.id, otherUserId)
+      const conversation = await ChatService.getOrCreateConversation(user.uid, otherUserId)
       
       if (conversation) {
         // Update conversations list
@@ -278,7 +278,7 @@ export function useChat() {
       setError('Failed to start conversation')
       return null
     }
-  }, [user?.id])
+  }, [user?.uid])
 
   // Start chat with a contact
   const startChat = useCallback(async (contact: ChatContact) => {
@@ -291,10 +291,10 @@ export function useChat() {
 
   // Refresh data
   const refresh = useCallback(() => {
-    if (user?.id) {
+    if (user?.uid) {
       loadInitialData()
     }
-  }, [user?.id])
+  }, [user?.uid])
 
   return {
     // State
