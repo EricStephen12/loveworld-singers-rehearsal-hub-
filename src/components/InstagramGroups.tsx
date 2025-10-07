@@ -66,6 +66,7 @@ export default function WhatsAppChat() {
   const [newMessage, setNewMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
 
   // Load user groups based on profile (keeping original logic)
   useEffect(() => {
@@ -320,15 +321,34 @@ export default function WhatsAppChat() {
 
       try {
         const chatId = selectedGroup ? selectedGroup.id : `dm_${selectedFriend?.user_id}`
+        console.log('Loading messages for chat:', chatId)
+        
         const msgs = await FirebaseDatabaseService.getCollectionWhere(
           'group_messages',
           'group_id',
           '==',
           chatId
         )
-        setMessages((msgs as Message[]).sort((a, b) => 
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        ))
+        
+        if (msgs && msgs.length > 0) {
+          setMessages((msgs as Message[]).sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          ))
+        } else {
+          // If no messages found, create some sample messages for demo
+          const sampleMessages: Message[] = [
+            {
+              id: '1',
+              group_id: chatId,
+              sender_id: selectedGroup ? selectedGroup.members[0]?.user_id || 'demo' : selectedFriend?.user_id || 'demo',
+              sender_name: selectedGroup ? selectedGroup.members[0]?.first_name || 'Demo User' : selectedFriend?.first_name || 'Demo User',
+              content: selectedGroup ? `Welcome to ${selectedGroup.name}! 🎵` : 'Hello! How are you?',
+              timestamp: new Date(Date.now() - 60000).toISOString(),
+              read: true
+            }
+          ]
+          setMessages(sampleMessages)
+        }
       } catch (error) {
         console.error('Error loading messages:', error)
         setMessages([])
@@ -354,7 +374,7 @@ export default function WhatsAppChat() {
         read: false
       }
 
-      await FirebaseDatabaseService.createDocument('group_messages', message as any, '')
+      await FirebaseDatabaseService.createDocument('group_messages', message.id, message as any)
       setMessages(prev => [...prev, message])
       setNewMessage('')
     } catch (error) {
@@ -377,7 +397,7 @@ export default function WhatsAppChat() {
 
       // Add to friends list
       const updatedFriends = [...userFriends, member.user_id]
-      await FirebaseDatabaseService.updateDocument('users', user.uid, {
+      await FirebaseDatabaseService.updateDocument('profiles', user.uid, {
         friends: updatedFriends
       })
 
@@ -400,6 +420,34 @@ export default function WhatsAppChat() {
     } catch (error) {
       console.error('Error adding friend:', error)
       alert('Failed to add friend')
+    }
+  }
+
+  const handleVideoCall = () => {
+    const targetName = selectedGroup ? selectedGroup.name : `${selectedFriend?.first_name} ${selectedFriend?.last_name}`
+    console.log(`Starting video call with ${targetName}`)
+    // For now, show an alert. In a real app, this would integrate with WebRTC
+    alert(`Video call with ${targetName} - Feature coming soon!`)
+  }
+
+  const handleVoiceCall = () => {
+    const targetName = selectedGroup ? selectedGroup.name : `${selectedFriend?.first_name} ${selectedFriend?.last_name}`
+    console.log(`Starting voice call with ${targetName}`)
+    // For now, show an alert. In a real app, this would integrate with WebRTC
+    alert(`Voice call with ${targetName} - Feature coming soon!`)
+  }
+
+  const handleVoiceRecording = () => {
+    if (isRecording) {
+      // Stop recording
+      setIsRecording(false)
+      console.log('Voice recording stopped')
+      alert('Voice message recorded! (Feature coming soon)')
+    } else {
+      // Start recording
+      setIsRecording(true)
+      console.log('Voice recording started')
+      // In a real app, this would start actual voice recording
     }
   }
 
@@ -696,10 +744,18 @@ export default function WhatsAppChat() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="hover:bg-purple-700 p-2 rounded-full transition-colors">
+              <button 
+                onClick={handleVideoCall}
+                className="hover:bg-purple-700 p-2 rounded-full transition-colors"
+                title="Video Call"
+              >
                 <Video className="w-5 h-5" />
               </button>
-              <button className="hover:bg-purple-700 p-2 rounded-full transition-colors">
+              <button 
+                onClick={handleVoiceCall}
+                className="hover:bg-purple-700 p-2 rounded-full transition-colors"
+                title="Voice Call"
+              >
                 <Phone className="w-5 h-5" />
               </button>
               {selectedGroup && (
@@ -780,7 +836,15 @@ export default function WhatsAppChat() {
                 <Send className="w-5 h-5" />
               </button>
             ) : (
-              <button className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 transition-colors align-item">
+              <button 
+                onClick={handleVoiceRecording}
+                className={`p-3 rounded-full transition-colors ${
+                  isRecording 
+                    ? 'bg-red-600 text-white hover:bg-red-700' 
+                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                }`}
+                title={isRecording ? 'Stop Recording' : 'Voice Message'}
+              >
                 <Mic className="w-5 h-5" />
               </button>
             )}

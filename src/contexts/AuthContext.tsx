@@ -7,6 +7,7 @@ import { FirebaseDatabaseService } from '@/lib/firebase-database'
 import { userCache, profileCache, invalidateUserCache } from '@/lib/smart-cache'
 import { cacheService, CACHE_KEYS } from '@/lib/cache-service'
 import { OfflineFallback } from '@/lib/offline-fallback'
+import { SessionManager } from '@/lib/session-manager'
 import type { UserProfile } from '@/types/supabase'
 
 interface AuthContextType {
@@ -60,6 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Set logout flag immediately
     setIsLoggingOut(true)
+    
+    // Clear session manager
+    SessionManager.clearSession()
     
     // Clear all state immediately - no async
     setUser(null)
@@ -172,6 +176,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('✅ User is authenticated')
             setUser(currentUser)
 
+            // Create or validate session
+            const existingSession = SessionManager.getCurrentSession()
+            if (!existingSession) {
+              // Create new session (10 days by default)
+              SessionManager.createSession(currentUser.uid, currentUser.email || '')
+            }
+
             // Load profile with timeout protection and offline fallback
             try {
               const profilePromise = FirebaseDatabaseService.getDocument('profiles', currentUser.uid)
@@ -265,9 +276,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
+    // Start session monitoring
+    SessionManager.startSessionMonitoring()
+
+    // Listen for session expiration events
+    const handleSessionExpired = () => {
+      console.log('⏰ Session expired, logging out user...')
+      setIsLoggingOut(true)
+      setUser(null)
+      setProfile(null)
+      // Clear all caches
+      if (user?.uid) {
+        cacheService.invalidateUserData(user.uid)
+        invalidateUserCache(user.uid)
+      }
+    }
+
+    window.addEventListener('session-expired', handleSessionExpired)
+
     return () => {
       isMounted = false
       unsubscribe()
+      window.removeEventListener('session-expired', handleSessionExpired)
     }
   }, [isLoggingOut])
 
