@@ -23,6 +23,7 @@ if (typeof window !== 'undefined') {
   
   // Make ViewportHeightFix globally available for debugging
   ;(window as any).ViewportHeightFix = ViewportHeightFix
+  ;(window as any).fixViewport = ViewportHeightFix.forceRefresh
 }
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 

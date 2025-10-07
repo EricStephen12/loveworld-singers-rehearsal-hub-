@@ -36,6 +36,7 @@ export class ViewportHeightFix {
         console.log('📱 App resumed from background - fixing viewport')
         setTimeout(setVH, 100)
         setTimeout(setVH, 500) // Double check after animations
+        setTimeout(setVH, 1000) // Triple check for stubborn cases
       }
     })
 
@@ -51,6 +52,18 @@ export class ViewportHeightFix {
         console.log('📱 Page restored from cache - fixing viewport')
         setTimeout(setVH, 100)
       }
+    })
+
+    // Handle navigation events (when switching between pages)
+    window.addEventListener('popstate', () => {
+      console.log('📱 Navigation event - fixing viewport')
+      setTimeout(setVH, 100)
+    })
+
+    // Handle hash change (when URL hash changes)
+    window.addEventListener('hashchange', () => {
+      console.log('📱 Hash change - fixing viewport')
+      setTimeout(setVH, 100)
     })
 
     console.log('📱 Viewport height fix initialized')

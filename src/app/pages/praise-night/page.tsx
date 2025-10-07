@@ -602,7 +602,7 @@ function PraiseNightPageContent() {
   }
 
   return (
-    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50">
+    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         
@@ -1270,7 +1270,7 @@ function PraiseNightPageContent() {
         )}
 
         {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
-        <div className="h-20"></div> {/* Spacer for fixed bottom elements */}
+        <div className="h-20 safe-area-bottom"></div> {/* Spacer for fixed bottom elements with safe area */}
       </div>
       </div>
       {/* ✅ End of Scrollable Content */}
@@ -1279,7 +1279,7 @@ function PraiseNightPageContent() {
 
       {/* ✅ Category Bar for Individual Archive Pages */}
       {categoryFilter === 'archive' && pageParam && (
-        <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+        <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full safe-area-bottom">
           <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
             {/* Category buttons with auto-scroll and manual scroll - full width horizontal scroll */}
             <div 
@@ -1316,7 +1316,7 @@ function PraiseNightPageContent() {
 
        {/* ✅ Fixed Bottom Bar with Categories - Mobile Responsive */}
       {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
-         <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+         <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full safe-area-bottom">
              <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
               {/* Category buttons with horizontal overflow scroll - same as archive page */}
               <div 
@@ -1361,7 +1361,7 @@ function PraiseNightPageContent() {
           />
 
           {/* Drawer */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 transform transition-transform duration-300 animate-in slide-in-from-bottom">
+          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 transform transition-transform duration-300 animate-in slide-in-from-bottom safe-area-bottom">
             <div className="px-6 py-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
