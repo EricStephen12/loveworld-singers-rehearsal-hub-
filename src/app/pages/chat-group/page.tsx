@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Send, Mic, Camera, MoreVertical, Users, Phone, Video, Check, CheckCheck, Clock, Smile, Paperclip, X, Image, FileText, Download, Trash2, Edit, Copy, Info, Bell } from 'lucide-react'
+import { useFeatureFlag } from '@/components/FeatureUpdateChecker'
 import { useAuth } from '@/contexts/AuthContext'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
 
@@ -36,6 +37,9 @@ function ChatGroupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
+  
+  // Check if video call feature is enabled
+  const isVideoCallEnabled = useFeatureFlag('video-calls')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
@@ -133,29 +137,29 @@ function ChatGroupContent() {
         } catch (error) {
           console.error('Error loading group from Firebase:', error)
           // Fallback to dummy data
-          setGroupName('Your LoveWorld Singers')
-          setGroupMembers([
-            {
-              id: '1',
-              user_id: '1',
-              first_name: 'Sarah',
-              last_name: 'Johnson',
-              profile_image_url: '',
-              designation: 'LoveWorld Singer',
-              administration: 'Member',
-              is_admin: false
-            },
-            {
-              id: '2',
-              user_id: '2',
-              first_name: 'Michael',
-              last_name: 'Chen',
-              profile_image_url: '',
-              designation: 'LoveWorld Singer',
-              administration: 'Member',
-              is_admin: false
-            }
-          ])
+      setGroupName('Your LoveWorld Singers')
+      setGroupMembers([
+        {
+          id: '1',
+          user_id: '1',
+          first_name: 'Sarah',
+          last_name: 'Johnson',
+          profile_image_url: '',
+          designation: 'LoveWorld Singer',
+          administration: 'Member',
+          is_admin: false
+        },
+        {
+          id: '2',
+          user_id: '2',
+          first_name: 'Michael',
+          last_name: 'Chen',
+          profile_image_url: '',
+          designation: 'LoveWorld Singer',
+          administration: 'Member',
+          is_admin: false
+        }
+      ])
         }
       }
     } catch (error) {
@@ -549,12 +553,14 @@ function ChatGroupContent() {
           >
             <Phone className="w-5 h-5 text-gray-600" />
           </button>
-          <button 
-            onClick={handleVideoCall}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <Video className="w-5 h-5 text-gray-600" />
-          </button>
+          {isVideoCallEnabled && (
+            <button 
+              onClick={handleVideoCall}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <Video className="w-5 h-5 text-gray-600" />
+            </button>
+          )}
           <button 
             onClick={() => setShowMenu(!showMenu)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -615,20 +621,20 @@ function ChatGroupContent() {
                     
                     {/* Sender name for other users */}
                     {!message.is_own && showAvatar && (
-                      <p className="text-xs font-medium text-gray-500 mb-1">
-                        {message.sender_name}
-                      </p>
-                    )}
+                <p className="text-xs font-medium text-gray-500 mb-1">
+                  {message.sender_name}
+                </p>
+              )}
                     
                     {/* Message content */}
-                    <p className="text-sm font-normal leading-relaxed">{message.content}</p>
+              <p className="text-sm font-normal leading-relaxed">{message.content}</p>
                     
                     {/* Message time and status */}
                     <div className={`flex items-center justify-end mt-1 space-x-1 ${
-                      message.is_own ? 'text-purple-100' : 'text-gray-400'
-                    }`}>
+                message.is_own ? 'text-purple-100' : 'text-gray-400'
+              }`}>
                       <span className="text-xs">
-                        {formatTime(message.created_at)}
+                {formatTime(message.created_at)}
                       </span>
                       {message.is_own && getMessageStatusIcon(message.status)}
                     </div>

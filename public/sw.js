@@ -40,7 +40,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
-        return Promise.all(
+      return Promise.all(
           cacheNames.map((cacheName) => {
             if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
               console.log('Deleting old cache:', cacheName)
@@ -75,7 +75,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(request)
       .then((cachedResponse) => {
         // Return cached version if available
-        if (cachedResponse) {
+    if (cachedResponse) {
           console.log('Serving from cache:', request.url)
           return cachedResponse
         }
@@ -130,24 +130,24 @@ self.addEventListener('sync', (event) => {
 self.addEventListener('push', (event) => {
   console.log('Push notification received')
   
-  const options = {
+    const options = {
     body: event.data ? event.data.text() : 'New notification from LoveWorld Singers',
     icon: '/icon-192x192.png',
     badge: '/badge-72x72.png',
-    vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
+      vibrate: [100, 50, 100],
+      data: {
+        dateOfArrival: Date.now(),
       primaryKey: 1
-    },
-    actions: [
-      {
-        action: 'explore',
-        title: 'View',
-        icon: '/icon-192x192.png'
       },
-      {
-        action: 'close',
-        title: 'Close',
+      actions: [
+        {
+          action: 'explore',
+          title: 'View',
+        icon: '/icon-192x192.png'
+        },
+        {
+          action: 'close',
+          title: 'Close',
         icon: '/icon-192x192.png'
       }
     ]

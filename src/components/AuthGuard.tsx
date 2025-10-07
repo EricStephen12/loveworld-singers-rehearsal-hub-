@@ -20,6 +20,7 @@ export default function AuthGuard({
   const { user, profile, isLoading, isProfileComplete } = useAuth();
   const router = useRouter();
   const [shouldRender, setShouldRender] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   useEffect(() => {
     console.log('AuthGuard: Checking auth state...', { 
@@ -37,32 +38,90 @@ export default function AuthGuard({
       return;
     }
 
+    // Give auth system time to restore session (like Instagram does)
+    if (!hasCheckedAuth) {
+      // Check if user has any auth indicators - if so, let them through immediately
+      const hasAuthIndicators = typeof window !== 'undefined' && (
+        localStorage.getItem('userAuthenticated') === 'true' ||
+        localStorage.getItem('hasCompletedProfile') === 'true' ||
+        localStorage.getItem('bypassLogin') === 'true'
+      );
+
+      if (hasAuthIndicators) {
+        console.log('AuthGuard: Auth indicators found, allowing immediate access');
+        setHasCheckedAuth(true);
+        setShouldRender(true);
+        return;
+      }
+
+      console.log('AuthGuard: First check - waiting for session restoration...');
+      const timer = setTimeout(() => {
+        setHasCheckedAuth(true);
+      }, 500); // Reduced to 500ms for faster restoration
+      return () => clearTimeout(timer);
+    }
+
+    // Check if user is authenticated (be more lenient like Instagram)
+    const isAuthenticated = user || 
+      (typeof window !== 'undefined' && (
+        localStorage.getItem('userAuthenticated') === 'true' ||
+        localStorage.getItem('hasCompletedProfile') === 'true' ||
+        localStorage.getItem('bypassLogin') === 'true'
+      ));
+
+    // Instagram-style bypass: If user was authenticated recently, just let them through
+    const lastAuthTime = typeof window !== 'undefined' ? localStorage.getItem('lastAuthTime') : null;
+    const timeSinceAuth = lastAuthTime ? Date.now() - parseInt(lastAuthTime) : Infinity;
+    const recentlyAuthenticated = timeSinceAuth < 7 * 24 * 60 * 60 * 1000; // 1 week like Instagram
+    const isOnline = typeof window !== 'undefined' ? navigator.onLine : true;
+
+    if (requireAuth && !isAuthenticated && recentlyAuthenticated) {
+      console.log('AuthGuard: Recently authenticated, allowing access (Instagram-style)');
+      setShouldRender(true);
+      return;
+    }
+
+    // Offline mode: If user has auth indicators and we're offline, let them through
+    if (requireAuth && !isAuthenticated && !isOnline) {
+      const hasAuthIndicators = typeof window !== 'undefined' && (
+        localStorage.getItem('userAuthenticated') === 'true' ||
+        localStorage.getItem('hasCompletedProfile') === 'true' ||
+        localStorage.getItem('bypassLogin') === 'true'
+      );
+
+      if (hasAuthIndicators) {
+        console.log('AuthGuard: Offline mode with auth indicators, allowing access');
+        setShouldRender(true);
+        return;
+      }
+    }
+
     // If auth is required but user is not authenticated
-    if (requireAuth && !user) {
+    if (requireAuth && !isAuthenticated) {
       console.log('AuthGuard: No user, redirecting to auth');
       router.push(redirectTo || '/auth');
       return;
     }
 
-    // If user exists but no profile yet, allow access (profile might be created)
-    if (user && !profile) {
-      console.log('AuthGuard: User exists but no profile yet, allowing access');
+    // If user is authenticated but no profile yet, allow access (profile will be loaded)
+    if (isAuthenticated && !profile) {
+      console.log('AuthGuard: User authenticated but no profile yet, allowing access');
       setShouldRender(true);
       return;
     }
 
-    // If complete profile is required but profile is not complete
-        if (requireCompleteProfile && user && profile && profile.profile_completed === false) {
-          console.log('AuthGuard: Profile incomplete, redirecting to profile completion page');
-          console.log('AuthGuard: Profile data:', profile);
-          console.log('AuthGuard: profile_completed value:', profile.profile_completed);
-          console.log('AuthGuard: Redirecting to /profile-completion');
-          router.push('/profile-completion');
-          return;
-        }
+    // If complete profile is required but profile is not complete (be more lenient)
+    if (requireCompleteProfile && isAuthenticated && profile && profile.profile_completed === false) {
+      console.log('AuthGuard: Profile incomplete, redirecting to profile completion page');
+      console.log('AuthGuard: Profile data:', profile);
+      console.log('AuthGuard: profile_completed value:', profile.profile_completed);
+      console.log('AuthGuard: Redirecting to /profile-completion');
+      router.push('/profile-completion');
+      return;
+    }
 
     // If complete profile is required but profile is not complete (check isProfileComplete)
-    if (requireCompleteProfile && user && profile && !isProfileComplete) {
+    if (requireCompleteProfile && isAuthenticated && profile && !isProfileComplete) {
       console.log('AuthGuard: Profile incomplete (isProfileComplete=false), redirecting to profile completion page');
       console.log('AuthGuard: isProfileComplete:', isProfileComplete);
       console.log('AuthGuard: Redirecting to /profile-completion');
@@ -73,15 +132,17 @@ export default function AuthGuard({
     // If we get here, all requirements are met
     console.log('AuthGuard: All requirements met, rendering children');
     setShouldRender(true);
-  }, [user, profile, isLoading, isProfileComplete, requireAuth, requireCompleteProfile, redirectTo, router]);
+  }, [user, profile, isLoading, isProfileComplete, requireAuth, requireCompleteProfile, redirectTo, router, hasCheckedAuth]);
 
   // Show loading while checking auth
-  if (isLoading) {
+  if (isLoading || !hasCheckedAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">
+            {isLoading ? 'Loading...' : 'Restoring session...'}
+          </p>
         </div>
       </div>
     );

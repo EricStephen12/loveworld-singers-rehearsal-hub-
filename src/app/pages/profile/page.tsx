@@ -189,7 +189,7 @@ function ProfilePage() {
       designation: profileData.designation || '',
       administration: profileData.administration || ''
     })
-
+    
     // Initialize profile image from profile data
     if (profileData.profile_image_url) {
       setProfileImage(profileData.profile_image_url)
@@ -249,7 +249,7 @@ function ProfilePage() {
       if (selectedGroup) {
         await FirebaseDatabaseService.createDocument('user_groups', `${user.uid}_${Date.now()}`, {
           user_id: user.uid,
-          group_name: selectedGroup
+            group_name: selectedGroup
         })
       }
       
@@ -505,8 +505,8 @@ function ProfilePage() {
       console.log('✅ Account deleted successfully')
       
       // Sign out and redirect to auth page
-      await signOut()
-      router.push('/auth')
+    await signOut()
+    router.push('/auth')
       
     } catch (error) {
       console.error('❌ Account deletion error:', error)
@@ -616,14 +616,22 @@ function ProfilePage() {
         onMenuClick={() => setIsMenuOpen(!isMenuOpen)}
         rightButtons={rightButtons}
         rightImageSrc="/logo.png"
+        leftButtons={
+          <button
+            onClick={() => router.push('/home')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        }
       />
 
 
 
       {/* Scrollable Content Container */}
       <div className="flex-1 overflow-y-auto">
-        {/* Profile Header */}
-        <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
+      {/* Profile Header */}
+      <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="text-center">
           <div className="relative inline-block mb-4">
             <div className="relative w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mx-auto overflow-hidden">
@@ -1007,10 +1015,10 @@ function ProfilePage() {
                     ) : (
                       <div className={`p-3 rounded-lg text-sm font-medium ${
                         saveMessage.includes('✅')
-                          ? 'bg-green-50 text-green-800 border border-green-200'
-                          : 'bg-red-50 text-red-800 border border-red-200'
-                      }`}>
-                        {saveMessage}
+                      ? 'bg-green-50 text-green-800 border border-green-200'
+                      : 'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
+                    {saveMessage}
                       </div>
                     )}
                   </div>
@@ -1266,25 +1274,25 @@ function ProfilePage() {
               <p className="text-xs text-gray-400">Check in using your QR code to start tracking</p>
             </div>
           )}
+          
+          {/* Danger Zone - Inside Recent Attendance Section */}
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-red-800 mb-2">Danger Zone</h3>
+              <p className="text-xs text-red-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Account
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      </div>
-
-      {/* Delete Account Section */}
-      <div className="px-4 py-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-red-800 mb-2">Danger Zone</h3>
-          <p className="text-xs text-red-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-          <button
-            onClick={() => setShowDeleteDialog(true)}
-            className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete Account
-          </button>
-        </div>
-      </div>
+      </div> {/* Close Scrollable Content Container */}
 
       {/* Delete Account Dialog */}
       {showDeleteDialog && (
@@ -1297,8 +1305,8 @@ function ProfilePage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Delete Account</h3>
                 <p className="text-sm text-gray-500">This action cannot be undone</p>
-              </div>
-            </div>
+        </div>
+      </div>
             
             <div className="mb-6">
               <p className="text-sm text-gray-600 mb-4">
@@ -1369,7 +1377,7 @@ function ProfilePage() {
 
 export default function ProfilePageWithAuth() {
   return (
-    <AuthGuard requireAuth={true} requireCompleteProfile={true}>
+    <AuthGuard requireAuth={true} requireCompleteProfile={false}>
       <ProfilePage />
     </AuthGuard>
   )

@@ -1607,8 +1607,8 @@ export default function AdminPage() {
           {activeSection === 'Media' && (
             <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6 max-h-full overflow-y-auto">
               <MediaManager />
-            </div>
-          )}
+                </div>
+              )}
 
 
 

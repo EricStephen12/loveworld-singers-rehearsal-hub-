@@ -131,6 +131,7 @@ function PraiseNightPageContent() {
   // Add missing state variables that are used but not defined
   const [activeTab, setActiveTab] = useState('lyrics');
 
+
   // Song categories - get from Supabase data
   const songCategories = useMemo(() => {
     if (!currentPraiseNight?.songs) return [];
@@ -138,15 +139,20 @@ function PraiseNightPageContent() {
     return uniqueCategories;
   }, [currentPraiseNight?.songs]);
 
-  // Categories to show in horizontal bar (first 2)
-  const mainCategories = songCategories.slice(0, 2);
-  // Categories to keep in FAB (remaining ones)
-  const otherCategories = songCategories.slice(2);
+  // Show all categories in horizontal bar (no FAB needed)
+  const mainCategories = songCategories;
+  // No categories in FAB - all are visible
+  const otherCategories: string[] = [];
 
   // Filter states
   const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard');
   const [activeCategory, setActiveCategory] = useState<string>(songCategories[0] || ''); // ✅ Set first category immediately
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
+  
+  // Auto-scroll states
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+  const [scrollDirection, setScrollDirection] = useState<'left' | 'right'>('right');
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
 
   // ✅ Update active category when categories change (e.g., switching pages)
   useEffect(() => {
@@ -155,6 +161,30 @@ function PraiseNightPageContent() {
       setActiveCategory(songCategories[0]);
     }
   }, [songCategories]);
+
+  // Auto-scroll effect
+  useEffect(() => {
+    if (!isAutoScrolling || !categoryScrollRef.current) return;
+
+    const scrollContainer = categoryScrollRef.current;
+    const scrollInterval = setInterval(() => {
+      if (scrollDirection === 'right') {
+        scrollContainer.scrollLeft += 1;
+        // If we've scrolled to the end, reverse direction
+        if (scrollContainer.scrollLeft >= scrollContainer.scrollWidth - scrollContainer.clientWidth) {
+          setScrollDirection('left');
+        }
+      } else {
+        scrollContainer.scrollLeft -= 1;
+        // If we've scrolled to the beginning, reverse direction
+        if (scrollContainer.scrollLeft <= 0) {
+          setScrollDirection('right');
+        }
+      }
+    }, 30); // Smooth scrolling speed
+
+    return () => clearInterval(scrollInterval);
+  }, [isAutoScrolling, scrollDirection]);
 
   // ✅ Reset filter to 'heard' only when switching to a different page (not when just loading)
   const [previousPageId, setPreviousPageId] = useState<number | null>(null);
@@ -170,6 +200,37 @@ function PraiseNightPageContent() {
   const [isSongDetailOpen, setIsSongDetailOpen] = useState(false);
   const [selectedSongIndex, setSelectedSongIndex] = useState<number | null>(null);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+
+  // Auto-skip functionality for mini player (when song detail modal is not open)
+  useEffect(() => {
+    const handleAudioEnded = (event: CustomEvent) => {
+      console.log('🔄 Audio ended in Praise Night page (mini player mode)');
+      
+      // Only handle auto-skip if song detail modal is not open
+      if (!isSongDetailOpen && currentSong && currentPraiseNight?.songs) {
+        const currentSongIndex = currentPraiseNight.songs.findIndex(song => song.id === currentSong.id);
+        console.log('🔄 Current song index:', currentSongIndex, 'Total songs:', currentPraiseNight.songs.length);
+        
+        if (currentSongIndex >= 0 && currentSongIndex < currentPraiseNight.songs.length - 1) {
+          // Go to next song
+          const nextSong = currentPraiseNight.songs[currentSongIndex + 1];
+          console.log('⏭️ Auto-going to next song (mini player):', nextSong.title);
+          
+          // Set the new song in audio context and auto-play
+          setCurrentSong(nextSong, true);
+        } else {
+          console.log('⏭️ No more songs to skip to (mini player), stopping playback');
+          // No more songs, just stop
+          setCurrentSong(null, false);
+        }
+      }
+    };
+
+    window.addEventListener('audioEnded', handleAudioEnded as EventListener);
+    return () => {
+      window.removeEventListener('audioEnded', handleAudioEnded as EventListener);
+    };
+  }, [currentSong, currentPraiseNight?.songs, isSongDetailOpen, setCurrentSong]);
 
   // Listen for global mini player events
   React.useEffect(() => {
@@ -1158,16 +1219,21 @@ function PraiseNightPageContent() {
                       // Open modal without auto-play
                       handleSongClick(song, index);
                     }}
-                    className={`bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer ${selectedSongIndex === index
-                      ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-200/50 bg-purple-50/30'
-                      : 'ring-1 ring-black/5'
+                    className={`backdrop-blur-sm border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer ${
+                      currentSong?.id === song.id
+                        ? isPlaying
+                          ? 'bg-white ring-2 ring-purple-500 shadow-lg shadow-purple-200/50' // Active and playing: white background
+                          : 'bg-purple-100 ring-2 ring-purple-500 shadow-lg shadow-purple-200/50' // Active but not playing: light purple background
+                        : selectedSongIndex === index
+                          ? 'bg-white/70 ring-2 ring-purple-500 shadow-lg shadow-purple-200/50 bg-purple-50/30'
+                          : 'bg-white/70 ring-1 ring-black/5 hover:bg-white/90'
                       }`}
                   >
                     {/* Song Header - Rehearsal Style */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 lg:gap-4">
                         <div className="w-10 h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm">
-                          {currentSong?.id === song.id ? (
+                          {currentSong?.id === song.id && isPlaying ? (
                             <AudioWave className="h-6 w-6" />
                           ) : (
                           <span className="text-sm lg:text-base font-semibold text-purple-600">
@@ -1214,19 +1280,33 @@ function PraiseNightPageContent() {
       {/* ✅ Category Bar for Individual Archive Pages */}
       {categoryFilter === 'archive' && pageParam && (
         <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
-          <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
-            {/* Category buttons with text - Take up most of the space */}
-            <div className="flex-1 flex gap-2">
+          <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
+            {/* Category buttons with auto-scroll and manual scroll - full width horizontal scroll */}
+            <div 
+              ref={categoryScrollRef}
+              className="w-full flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+              onScroll={(e) => {
+                // Pause auto-scroll when user manually scrolls
+                setIsAutoScrolling(false);
+                // Resume auto-scroll after 3 seconds of no manual scrolling
+                clearTimeout((e.target as any).scrollTimeout);
+                (e.target as any).scrollTimeout = setTimeout(() => {
+                  setIsAutoScrolling(true);
+                }, 3000);
+              }}
+              onMouseEnter={() => setIsAutoScrolling(false)}
+              onMouseLeave={() => setIsAutoScrolling(true)}
+            >
               {mainCategories.map((category, index) => (
                 <button
                   key={category}
                   onClick={() => handleCategorySelect(category)}
-                  className={`flex-1 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center ${activeCategory === category
+                  className={`flex-shrink-0 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap ${activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
                     }`}
                 >
-                  <span className="block leading-tight break-words">{category}</span>
+                  {category}
                 </button>
               ))}
             </div>
@@ -1234,63 +1314,39 @@ function PraiseNightPageContent() {
         </div>
       )}
 
-       {/* ✅ Fixed Bottom Bar with Categories and FAB */}
+       {/* ✅ Fixed Bottom Bar with Categories - Mobile Responsive */}
       {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
          <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
-             <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
-              {/* Category buttons with text - Take up most of the space */}
-              <div className="flex-1 flex gap-2">
+             <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
+              {/* Category buttons with horizontal overflow scroll - same as archive page */}
+              <div 
+                ref={categoryScrollRef}
+                className="w-full flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+                onScroll={(e) => {
+                  // Pause auto-scroll when user manually scrolls
+                  setIsAutoScrolling(false);
+                  // Resume auto-scroll after 3 seconds of no manual scrolling
+                  clearTimeout((e.target as any).scrollTimeout);
+                  (e.target as any).scrollTimeout = setTimeout(() => {
+                    setIsAutoScrolling(true);
+                  }, 3000);
+                }}
+                onMouseEnter={() => setIsAutoScrolling(false)}
+                onMouseLeave={() => setIsAutoScrolling(true)}
+              >
             {mainCategories.map((category, index) => (
                 <button
                     key={category}
                   onClick={() => handleCategorySelect(category)}
-                    className={`flex-1 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center ${activeCategory === category
+                    className={`flex-shrink-0 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap ${activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
                     }`}
                 >
-                    <span className="block leading-tight break-words">{category}</span>
+                    {category}
                 </button>
                 ))}
               </div>
-
-              {/* FAB positioned to the right with small gap */}
-              <div className="relative flex-shrink-0 ml-2">
-                {/* Others text positioned above FAB */}
-                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-purple-600 font-semibold text-center whitespace-nowrap z-10">
-                  Others
-              </div>
-              <button
-                onClick={() => setIsCategoryDrawerOpen(true)}
-                onMouseEnter={() => setHoveredCategory("Other Categories")}
-                onMouseLeave={() => setHoveredCategory(null)}
-                  className="w-12 h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
-              >
-                <Image
-                  src="/click-icon.png"
-                  alt="Click for more categories"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
-              </button>
-
-              {/* iOS-style Tooltip for FAB */}
-              {hoveredCategory === "Other Categories" && (
-                <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
-                    right: '16px',
-                    transform: 'translateX(0)'
-                }}>
-                  <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
-                    Other Categories
-                    {/* iOS-style arrow */}
-                      <div className="absolute top-full right-4">
-                      <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       )}

@@ -59,7 +59,7 @@ export class OfflineFallback {
     // You could show a toast notification here
   }
 
-  // Check if we should proceed with offline data
+  // Check if we should proceed with offline data (Instagram-style)
   static shouldProceedOffline(): boolean {
     // If we have cached session, proceed
     const cachedSession = this.getCachedSession()
@@ -68,8 +68,44 @@ export class OfflineFallback {
       return true
     }
 
-    // If no cached session, proceed anyway (user will be redirected to auth)
-    console.log('📱 No cached session, proceeding to auth')
+    // Check if user has auth indicators (like Instagram)
+    const hasAuthIndicators = typeof window !== 'undefined' && (
+      localStorage.getItem('userAuthenticated') === 'true' ||
+      localStorage.getItem('hasCompletedProfile') === 'true' ||
+      localStorage.getItem('bypassLogin') === 'true'
+    )
+
+    if (hasAuthIndicators) {
+      console.log('📱 Auth indicators found, proceeding offline')
+      return true
+    }
+
+    // If no cached session and no auth indicators, proceed anyway (user will be redirected to auth)
+    console.log('📱 No cached session or auth indicators, proceeding to auth')
     return true
+  }
+
+  // Create a mock user session for offline mode (Instagram-style)
+  static createOfflineUser(): any {
+    if (typeof window === 'undefined') return null
+
+    const cachedProfile = this.getCachedProfile()
+    if (cachedProfile) {
+      return {
+        uid: cachedProfile.id || 'offline-user',
+        email: cachedProfile.email || 'offline@example.com',
+        displayName: `${cachedProfile.first_name || ''} ${cachedProfile.last_name || ''}`.trim() || 'Offline User',
+        photoURL: cachedProfile.profile_image_url || null,
+        isOffline: true
+      }
+    }
+
+    return {
+      uid: 'offline-user',
+      email: 'offline@example.com',
+      displayName: 'Offline User',
+      photoURL: null,
+      isOffline: true
+    }
   }
 }

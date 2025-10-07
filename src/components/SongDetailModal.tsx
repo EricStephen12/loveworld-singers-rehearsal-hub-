@@ -76,10 +76,12 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     }
   }, [selectedSong, currentFilter, songs]);
 
-  // Handle audio ended event for repeat functionality
+  // Handle audio ended event for repeat functionality and auto-skip
   useEffect(() => {
     const handleAudioEnded = (event: CustomEvent) => {
       console.log('🔄 Audio ended, repeat mode:', isRepeating);
+      console.log('🔄 Current song index:', currentSongIndex, 'Total songs:', categorySongs.length);
+      
       if (isRepeating && event.detail.song?.title === selectedSong?.title) {
         console.log('🔄 Repeating song:', selectedSong?.title);
         // Restart the current song
@@ -89,6 +91,26 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
             console.error('Error repeating song:', error);
           });
         }
+      } else if (!isRepeating && event.detail.song?.title === selectedSong?.title) {
+        // Auto-skip to next song when not repeating
+        console.log('⏭️ Auto-skipping to next song (repeat disabled)');
+        if (currentSongIndex < categorySongs.length - 1 && categorySongs.length > 0) {
+          // Go to next song
+          const nextSong = categorySongs[currentSongIndex + 1];
+          console.log('⏭️ Auto-going to next song:', nextSong.title);
+          if (nextSong && onSongChange) {
+            setCurrentSongIndex(currentSongIndex + 1);
+            onSongChange(nextSong);
+            // Set the new song in audio context and auto-play
+            setCurrentSong(nextSong, true);
+          }
+        } else {
+          console.log('⏭️ No more songs to skip to, stopping playback');
+          // No more songs, just stop
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
+        }
       }
     };
 
@@ -96,7 +118,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     return () => {
       window.removeEventListener('audioEnded', handleAudioEnded as EventListener);
     };
-  }, [isRepeating, selectedSong?.title]);
+  }, [isRepeating, selectedSong?.title, currentSongIndex, categorySongs, onSongChange, setCurrentSong]);
 
   const handlePrevious = () => {
     console.log('⏮️ Previous clicked:', { currentSongIndex, categorySongsLength: categorySongs.length, onSongChange: !!onSongChange });
@@ -511,7 +533,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
                   <span><span className="font-semibold uppercase">DRUMMER:</span> {selectedSong?.drummer || ''}</span>
-                  <span><span className="font-semibold uppercase">BASE GUITARIST:</span> {selectedSong?.leadGuitarist || ''}</span>
+                  <span><span className="font-semibold uppercase">BASS GUITARIST:</span> {selectedSong?.leadGuitarist || ''}</span>
                 </div>
               </div>
             </div>
@@ -628,33 +650,43 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           )}
 
           {activeTab === 'comments' && (
-            <div className="space-y-3">
-              {selectedSong?.comments && Array.isArray(selectedSong.comments) && selectedSong.comments.length > 0 ? (
-                // Show only the latest pastor's comment in main Comments tab
-                selectedSong.comments
-                  .filter((comment: any) => comment.author === 'Pastor')
-                  .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .slice(0, 1) // Only show the latest one
-                  .map((comment: any) => (
-                    <div key={comment.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-gray-500 text-xs">
-                          {new Date(comment.date).toLocaleDateString()}
+            <div className="space-y-4 max-h-80 overflow-y-auto">
+              {(!selectedSong?.comments || !Array.isArray(selectedSong.comments) || selectedSong.comments.length === 0) ? (
+                <div className="text-center py-8 text-slate-500">
+                  <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+                    <span className="text-slate-400 text-xl">💬</span>
+                  </div>
+                  <p className="text-sm">No comments yet</p>
+                  <p className="text-xs text-slate-400">Comments will appear here when added</p>
+                </div>
+              ) : (
+                (Array.isArray(selectedSong.comments) ? selectedSong.comments : []).map((comment: any) => (
+                  <div key={comment.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-900 leading-relaxed">{comment.text}</p>
+                        <div className="flex items-center gap-3 mt-3">
+                          <div className="flex items-center gap-1">
+                            <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-purple-600">P</span>
+                            </span>
+                            <span className="text-xs text-slate-600 font-medium">{comment.author}</span>
+                          </div>
+                          <span className="text-xs text-slate-400">•</span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(comment.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
                         </div>
                       </div>
-                      <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <p className="text-xs text-gray-500">
-                          💡 <strong>Tip:</strong> View all pastor's comments in History &gt; Pastor's Comments
-                        </p>
-                      </div>
                     </div>
-                  ))
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-gray-500 text-sm mb-2">No Pastor's Comments Yet</div>
-                  <div className="text-gray-400 text-xs">Latest pastor's comments will appear here</div>
-                </div>
+                  </div>
+                ))
               )}
             </div>
           )}

@@ -97,7 +97,18 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
           solfas: (song as any).solfas || '',
           rehearsalCount: (song as any).rehearsalcount || (song as any).rehearsalCount || 0,
           audioFile: (song as any).audiofile || (song as any).audioFile || '',
-          comments: (song as any).comments || [],
+          comments: (() => {
+            const comments = (song as any).comments || [];
+            console.log('🔍 Comments Debug in useRealtimeData:', {
+              songTitle: (song as any).title,
+              hasComments: !!comments,
+              commentsType: typeof comments,
+              commentsIsArray: Array.isArray(comments),
+              commentsLength: comments?.length || 0,
+              commentsData: comments
+            });
+            return comments;
+          })(),
           history: (song as any).history || []
         };
         }).filter(song => song !== null) // Filter out null songs

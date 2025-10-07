@@ -62,8 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set logout flag immediately
     setIsLoggingOut(true)
     
-    // Clear session manager
-    SessionManager.clearSession()
+    // DISABLED: Clear session manager (Instagram-style - keep session for next login)
+    // SessionManager.clearSession()
     
     // Clear all state immediately - no async
     setUser(null)
@@ -75,6 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user?.uid) {
         cacheService.invalidateUserData(user.uid)
       }
+      
+      // Clear authentication flags
+      localStorage.removeItem('userAuthenticated')
+      localStorage.removeItem('lastAuthTime')
       
       localStorage.clear()
       sessionStorage.clear()
@@ -171,16 +175,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        // Handle app resume and offline scenarios (like Instagram)
+        if (!currentUser && typeof window !== 'undefined') {
+          const wasAuthenticated = localStorage.getItem('userAuthenticated') === 'true'
+          const hasCompletedProfile = localStorage.getItem('hasCompletedProfile') === 'true'
+          const bypassLogin = localStorage.getItem('bypassLogin') === 'true'
+          const lastAuthTime = localStorage.getItem('lastAuthTime')
+          const isOnline = navigator.onLine
+          
+          // Be more lenient - if user has any auth indicators, try to restore
+          if ((wasAuthenticated || hasCompletedProfile || bypassLogin) && lastAuthTime) {
+            const timeSinceAuth = Date.now() - parseInt(lastAuthTime)
+            const oneWeek = 7 * 24 * 60 * 60 * 1000 // Extend to 1 week like Instagram
+            
+            // If authenticated within last week, try to restore session
+            if (timeSinceAuth < oneWeek) {
+              console.log('🔄 App resumed - attempting to restore session...')
+              
+              if (isOnline) {
+                // Online: Try to restore from Firebase
+                try {
+                  currentUser = await FirebaseAuthService.getCurrentUser()
+                  if (currentUser) {
+                    console.log('✅ Session restored successfully from Firebase')
+                  } else {
+                    // If no Firebase user but we have auth indicators, use cached data
+                    console.log('🔄 Using cached auth data (Firebase unavailable)')
+                    currentUser = OfflineFallback.getCachedSession()
+                  }
+                } catch (error) {
+                  console.log('❌ Firebase session restoration failed, using cached data')
+                  currentUser = OfflineFallback.getCachedSession()
+                }
+              } else {
+                // Offline: Use cached session data or create offline user
+                console.log('📴 Offline mode - using cached session')
+                currentUser = OfflineFallback.getCachedSession() || OfflineFallback.createOfflineUser()
+              }
+              
+              // If we have any user data (from Firebase or cache), keep user logged in
+              if (currentUser) {
+                console.log('✅ User session maintained (online/offline)')
+              } else {
+                console.log('⚠️ No user data found, but keeping auth flags for next attempt')
+                // Don't clear auth data - keep user logged in for next attempt
+              }
+            } else {
+              console.log('⏰ Session expired (1 week), clearing auth data')
+              localStorage.removeItem('userAuthenticated')
+              localStorage.removeItem('lastAuthTime')
+            }
+          }
+        }
+
         if (isMounted) {
           if (currentUser) {
             console.log('✅ User is authenticated')
             setUser(currentUser)
 
-            // Create or validate session
+            // Set authentication flags for app resume (like Instagram)
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('userAuthenticated', 'true')
+              localStorage.setItem('lastAuthTime', Date.now().toString())
+              localStorage.setItem('hasCompletedProfile', 'true') // Assume profile is complete if user exists
+              localStorage.setItem('bypassLogin', 'true') // Additional flag for navigation
+            }
+
+            // Create or validate session (Instagram-style - very long duration)
             const existingSession = SessionManager.getCurrentSession()
             if (!existingSession) {
-              // Create new session (10 days by default)
-              SessionManager.createSession(currentUser.uid, currentUser.email || '')
+              // Create new session (30 days like Instagram)
+              SessionManager.createCustomSession(currentUser.uid, currentUser.email || '', 30, 'days')
             }
 
             // Load profile with timeout protection and offline fallback
@@ -204,8 +269,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
               }
 
-              if (isMounted && userProfile) {
-                setProfile(userProfile)
+                  if (isMounted && userProfile) {
+                    setProfile(userProfile)
               }
             } catch (error) {
               console.error('Profile load error:', error)
@@ -260,7 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             console.log('📋 Loading profile for user:', user.uid)
             const userProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid)
-            if (isMounted && userProfile) {
+              if (isMounted && userProfile) {
               console.log('✅ Profile loaded successfully')
               setProfile(userProfile as any)
             } else {
@@ -276,28 +341,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
-    // Start session monitoring
-    SessionManager.startSessionMonitoring()
+    // DISABLED: Session monitoring (Instagram-style - never log out)
+    // SessionManager.startSessionMonitoring()
 
-    // Listen for session expiration events
-    const handleSessionExpired = () => {
-      console.log('⏰ Session expired, logging out user...')
-      setIsLoggingOut(true)
-      setUser(null)
-      setProfile(null)
-      // Clear all caches
-      if (user?.uid) {
-        cacheService.invalidateUserData(user.uid)
-        invalidateUserCache(user.uid)
+    // DISABLED: Session expiration handling (Instagram-style - never log out)
+    // const handleSessionExpired = () => {
+    //   console.log('⏰ Session expired, logging out user...')
+    //   setIsLoggingOut(true)
+    //   setUser(null)
+    //   setProfile(null)
+    //   // Clear all caches
+    //   if (user?.uid) {
+    //     cacheService.invalidateUserData(user.uid)
+    //     invalidateUserCache(user.uid)
+    //   }
+    // }
+
+    // window.addEventListener('session-expired', handleSessionExpired)
+
+    // Listen for online/offline transitions (Instagram-style)
+    const handleOnline = () => {
+      console.log('🌐 Connection restored - attempting to sync auth state')
+      if (isMounted && !user) {
+        // Try to restore session when coming back online
+        const hasAuthIndicators = typeof window !== 'undefined' && (
+          localStorage.getItem('userAuthenticated') === 'true' ||
+          localStorage.getItem('hasCompletedProfile') === 'true' ||
+          localStorage.getItem('bypassLogin') === 'true'
+        )
+        
+        if (hasAuthIndicators) {
+          console.log('🔄 Online: Restoring session from auth indicators')
+          // Trigger a new auth check
+          setTimeout(() => {
+            checkAuth()
+          }, 1000)
+        }
       }
     }
 
-    window.addEventListener('session-expired', handleSessionExpired)
+    const handleOffline = () => {
+      console.log('📴 Connection lost - maintaining auth state')
+      // Don't clear auth state when going offline
+    }
+
+    // Add event listeners for connection changes
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline)
+      window.addEventListener('offline', handleOffline)
+    }
 
     return () => {
       isMounted = false
       unsubscribe()
-      window.removeEventListener('session-expired', handleSessionExpired)
+      // DISABLED: Session expiration listener (Instagram-style - never log out)
+      // window.removeEventListener('session-expired', handleSessionExpired)
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', handleOnline)
+        window.removeEventListener('offline', handleOffline)
+      }
     }
   }, [isLoggingOut])
 
@@ -312,7 +414,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // This prevents redirect loops between AuthContext and AuthGuard
 
   const isProfileComplete = profile?.profile_completed === true
-  
+
   // Debug logging
   console.log('AuthContext: Profile state:', {
     hasProfile: !!profile,

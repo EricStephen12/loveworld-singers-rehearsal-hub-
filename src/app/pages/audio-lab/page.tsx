@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { NavigationManager } from '@/utils/navigation';
 import Image from 'next/image';
 import {
   ArrowLeft,
@@ -34,7 +35,7 @@ export default function AudioLabPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const handleBack = () => {
-    router.back();
+    NavigationManager.safeBack(router);
   };
 
   const tabs = [

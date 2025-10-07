@@ -163,12 +163,28 @@ export class FirebaseDatabaseService {
       const querySnapshot = await getDocs(collection(db, collectionName))
       return querySnapshot.docs.map(doc => {
         const data = doc.data();
-        return {
+        const result = {
           id: doc.id, // Firebase document ID (string)
           firebaseId: doc.id, // Also store as firebaseId for clarity
           supabaseId: data.id, // Store the original Supabase ID if it exists
           ...data
         }
+        
+        // Debug comments specifically for songs collection
+        if (collectionName === 'songs' && data.comments) {
+          console.log('🔍 Firebase getCollection - Song comments debug:', {
+            songTitle: data.title,
+            docId: doc.id,
+            hasComments: !!data.comments,
+            commentsType: typeof data.comments,
+            commentsIsArray: Array.isArray(data.comments),
+            commentsLength: data.comments?.length || 0,
+            commentsData: data.comments,
+            commentsStringified: JSON.stringify(data.comments)
+          });
+        }
+        
+        return result;
       })
     } catch (error) {
       console.error(`Error getting collection ${collectionName}:`, error)
@@ -298,7 +314,9 @@ export class FirebaseDatabaseService {
         songIdType: typeof songId,
         dataKeys: Object.keys(data),
         hasId: !!data.id,
-        hasFirebaseId: !!data.firebaseId
+        hasFirebaseId: !!data.firebaseId,
+        hasComments: !!data.comments,
+        commentsCount: data.comments?.length || 0
       });
       
       // Filter out undefined values (Firebase doesn't allow them)
@@ -307,6 +325,13 @@ export class FirebaseDatabaseService {
       )
       
       console.log('🔥 Updating song with ID:', songId, 'clean data:', cleanData)
+      console.log('🔥 Comments being saved:', {
+        comments: data.comments,
+        commentsType: typeof data.comments,
+        commentsIsArray: Array.isArray(data.comments),
+        commentsLength: data.comments?.length || 0,
+        commentsStringified: JSON.stringify(data.comments)
+      })
       await updateDoc(doc(db, 'songs', songId.toString()), cleanData)
       console.log('✅ Firebase updateSong successful');
       return true

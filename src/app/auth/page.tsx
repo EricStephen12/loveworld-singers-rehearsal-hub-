@@ -99,6 +99,14 @@ function AuthPageContent() {
         
         setSuccess('Account created successfully! Redirecting...')
         
+        // Set auth flags immediately for AuthGuard
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('userAuthenticated', 'true')
+          localStorage.setItem('lastAuthTime', Date.now().toString())
+          localStorage.setItem('bypassLogin', 'true')
+          // Don't set hasCompletedProfile yet - they need to complete profile
+        }
+        
         // Always go directly to profile completion
         console.log('✅ Account created, redirecting to profile completion...')
         console.log('👤 User created with profile_completed: false')
@@ -134,6 +142,14 @@ function AuthPageContent() {
         
         setSuccess('Login successful! Welcome back!')
         console.log('Sign in successful:', result)
+
+        // Set auth flags immediately for AuthGuard
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('userAuthenticated', 'true')
+          localStorage.setItem('lastAuthTime', Date.now().toString())
+          localStorage.setItem('hasCompletedProfile', 'true')
+          localStorage.setItem('bypassLogin', 'true')
+        }
 
         // Instant redirect without reload
         setTimeout(() => {

@@ -893,7 +893,15 @@ export default function WhatsAppChat() {
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
           <header className="bg-purple-600 text-white px-4 py-3 flex items-center justify-between">
-            <h1 className="text-xl font-semibold">LoveWorld Chats</h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push('/home')}
+                className="p-1 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <h1 className="text-xl font-semibold">LWSRHP CHAT</h1>
+            </div>
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => setIsSearchOpen(true)}

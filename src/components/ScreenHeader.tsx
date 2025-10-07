@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Menu } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { NavigationManager } from '@/utils/navigation'
 // Removed auth context dependency for admin check
 
 type ScreenHeaderProps = {

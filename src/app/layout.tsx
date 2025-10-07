@@ -11,11 +11,18 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import OfflineIndicator from '@/components/OfflineIndicator'
 import { PerformanceOptimizer } from '@/lib/performance-optimizer'
 import { ViewportHeightFix } from '@/utils/viewport-height-fix'
+import { NavigationManager } from '@/utils/navigation'
+import FeatureUpdateChecker from '@/components/FeatureUpdateChecker'
+import '@/utils/auth-debug'
 
 // Auto-optimize for low data on app startup
 if (typeof window !== 'undefined') {
   PerformanceOptimizer.autoOptimize()
   ViewportHeightFix.init()
+  NavigationManager.init()
+  
+  // Make ViewportHeightFix globally available for debugging
+  ;(window as any).ViewportHeightFix = ViewportHeightFix
 }
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
@@ -169,6 +176,7 @@ export default function RootLayout({
               <PWAInstall />
               <RealtimeNotifications />
               <OfflineIndicator />
+              <FeatureUpdateChecker />
             </AudioProvider>
           </AuthProvider>
         </ErrorBoundary>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { NavigationManager } from '@/utils/navigation'
 import { ArrowLeft, Send, User, AlertCircle, MoreVertical, Check, Paperclip, Smile, Loader2 } from 'lucide-react'
 import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
@@ -72,7 +73,7 @@ export default function ChatPage() {
         <div className="px-3 sm:px-4 py-3 flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
         <button
-          onClick={() => router.back()}
+          onClick={() => NavigationManager.safeBack(router)}
               className="p-2 -ml-2 text-white hover:bg-white/20 rounded-full transition-all duration-200"
         >
           <ArrowLeft className="w-5 h-5" />
