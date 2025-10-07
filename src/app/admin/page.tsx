@@ -40,6 +40,7 @@ import { uploadBannerImage } from '@/utils/imageUpload';
 import EditSongModal from '../../components/EditSongModal';
 import MediaManager from '../../components/MediaManager';
 import Members from '../../components/Members';
+import CalendarManager from '../../components/CalendarManager';
 // Support components removed - will create proper support system later
 import { ToastContainer, Toast } from '../../components/Toast';
 
@@ -1274,6 +1275,7 @@ export default function AdminPage() {
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
     { icon: Users, label: 'Members', active: activeSection === 'Members' },
     { icon: Music, label: 'Media', active: activeSection === 'Media' },
+    { icon: Calendar, label: 'Calendar', active: activeSection === 'Calendar' },
   ];
 
   // Show loading state
@@ -1418,6 +1420,7 @@ export default function AdminPage() {
                 else if (item.label === 'Categories') setActiveSection('Categories');
                 else if (item.label === 'Members') setActiveSection('Members');
                 else if (item.label === 'Media') setActiveSection('Media');
+                else if (item.label === 'Calendar') setActiveSection('Calendar');
                 // Auto-close sidebar on mobile after clicking
                 setSidebarCollapsed(true);
               }}
@@ -1541,6 +1544,7 @@ export default function AdminPage() {
              activeSection === 'Categories' ? 'Categories' : 
              activeSection === 'Members' ? 'Members' :
              activeSection === 'Media' ? 'Media Library' :
+             activeSection === 'Calendar' ? 'Calendar Events' :
              activeSection === 'Pages' ? 'Pages' : 
              'Admin Dashboard'}
           </h1>
@@ -1608,7 +1612,13 @@ export default function AdminPage() {
             <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6 max-h-full overflow-y-auto">
               <MediaManager />
                 </div>
-              )}
+          )}
+
+          {activeSection === 'Calendar' && (
+            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6 max-h-full overflow-y-auto">
+              <CalendarManager />
+            </div>
+          )}
 
 
 
