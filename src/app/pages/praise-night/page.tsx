@@ -154,12 +154,14 @@ function PraiseNightPageContent() {
     }
   }, [songCategories]);
 
-  // ✅ Reset filter to 'heard' when switching pages
+  // ✅ Reset filter to 'heard' only when switching to a different page (not when just loading)
+  const [previousPageId, setPreviousPageId] = useState<number | null>(null);
   useEffect(() => {
-    if (currentPraiseNight) {
+    if (currentPraiseNight && currentPraiseNight.id !== previousPageId) {
       setActiveFilter('heard');
+      setPreviousPageId(currentPraiseNight.id);
     }
-  }, [currentPraiseNight]);
+  }, [currentPraiseNight, previousPageId]);
 
   // Song detail modal states
   const [selectedSong, setSelectedSong] = useState<any>(null);
@@ -538,7 +540,7 @@ function PraiseNightPageContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50">
+    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         
@@ -1201,6 +1203,7 @@ function PraiseNightPageContent() {
         )}
 
         {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
+        <div className="h-20"></div> {/* Spacer for fixed bottom elements */}
       </div>
       </div>
       {/* ✅ End of Scrollable Content */}
@@ -1209,7 +1212,7 @@ function PraiseNightPageContent() {
 
       {/* ✅ Category Bar for Individual Archive Pages */}
       {categoryFilter === 'archive' && pageParam && (
-        <div className="flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+        <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
           <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
             {/* Category buttons with text - Take up most of the space */}
             <div className="flex-1 flex gap-2">
@@ -1232,7 +1235,7 @@ function PraiseNightPageContent() {
 
        {/* ✅ Fixed Bottom Bar with Categories and FAB */}
       {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
-         <div className="flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+         <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
              <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
               {/* Category buttons with text - Take up most of the space */}
               <div className="flex-1 flex gap-2">

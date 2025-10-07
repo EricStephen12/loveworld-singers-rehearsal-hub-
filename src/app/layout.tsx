@@ -10,10 +10,12 @@ import SuperFastServiceWorker from '@/components/SuperFastServiceWorker'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import OfflineIndicator from '@/components/OfflineIndicator'
 import { PerformanceOptimizer } from '@/lib/performance-optimizer'
+import { ViewportHeightFix } from '@/utils/viewport-height-fix'
 
 // Auto-optimize for low data on app startup
 if (typeof window !== 'undefined') {
   PerformanceOptimizer.autoOptimize()
+  ViewportHeightFix.init()
 }
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
@@ -110,17 +112,48 @@ export default function RootLayout({
         <meta name="msapplication-config" content="/browserconfig.xml" />
       </head>
       <body className="font-sans">
-        {/* <SuperFastServiceWorker /> */}
         <script dangerouslySetInnerHTML={{
           __html: `
+            // Register Service Worker for instant loading
+            if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+              window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                  .then((registration) => {
+                    console.log('🚀 Service Worker registered:', registration);
+                  })
+                  .catch((error) => {
+                    console.log('Service Worker registration failed:', error);
+                  });
+              });
+            }
+
             // Optimize performance on load
             if (typeof window !== 'undefined') {
               window.addEventListener('load', () => {
                 console.log('🚀 Optimizing PWA performance...');
-                // Disable heavy features for speed
-                localStorage.setItem('disable_realtime', 'true');
-                localStorage.setItem('disable_chat', 'true');
-                localStorage.setItem('disable_notifications', 'true');
+                
+                // Preload critical data
+                const preloadData = () => {
+                  const cachedData = localStorage.getItem('app_cache');
+                  if (cachedData) {
+                    console.log('📦 Found cached data, app will load instantly');
+                  }
+                };
+                
+                preloadData();
+                
+                // Cache current page
+                const cacheCurrentPage = () => {
+                  const currentPage = window.location.pathname;
+                  const pageData = {
+                    url: currentPage,
+                    timestamp: Date.now(),
+                    title: document.title
+                  };
+                  localStorage.setItem('last_page', JSON.stringify(pageData));
+                };
+                
+                cacheCurrentPage();
                 console.log('✅ Performance optimized!');
               });
             }

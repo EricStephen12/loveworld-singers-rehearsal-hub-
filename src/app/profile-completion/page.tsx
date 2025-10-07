@@ -347,7 +347,7 @@ export default function ProfileCompletionPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white overflow-hidden">
+    <div className="mobile-vh flex flex-col bg-white overflow-hidden">
       {/* Header - Big Company Style */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between">
         <button
@@ -378,7 +378,7 @@ export default function ProfileCompletionPage() {
       </div>
 
       {/* Bottom Actions - Big Company Style */}
-      <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-4">
+      <div className="fixed-bottom-safe flex-shrink-0 bg-white border-t border-gray-200 px-4 py-4">
             <button
           type="button"
           onClick={handleComplete}

@@ -5,6 +5,7 @@ import { User } from 'firebase/auth'
 import { FirebaseAuthService } from '@/lib/firebase-auth'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
 import { userCache, profileCache, invalidateUserCache } from '@/lib/smart-cache'
+import { cacheService, CACHE_KEYS } from '@/lib/cache-service'
 import { OfflineFallback } from '@/lib/offline-fallback'
 import type { UserProfile } from '@/types/supabase'
 
@@ -30,13 +31,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user?.uid) return
     
     try {
-      // Check cache first
-      const cacheKey = `profile_${user.uid}`
-      const cachedProfile = profileCache.get(cacheKey)
+      // Check cache first with new cache service
+      const cacheKey = `${CACHE_KEYS.USER_PROFILE}_${user.uid}`
+      const cachedProfile = cacheService.get(cacheKey)
       
       if (cachedProfile) {
-        console.log('🚀 Using cached profile')
-        setProfile(cachedProfile)
+        console.log('🚀 Using cached profile - instant load!')
+        setProfile(cachedProfile as any)
         return
       }
       
@@ -44,7 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid)
       if (userProfile) {
         setProfile(userProfile as any)
-        // Cache the profile
+        // Cache the profile with long TTL
+        cacheService.setUserData(cacheKey, userProfile)
+        // Also cache in old system for compatibility
         profileCache.set(cacheKey, userProfile)
       }
     } catch (error) {
@@ -64,6 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Clear ALL possible storage
     try {
+      // Clear new cache service first
+      if (user?.uid) {
+        cacheService.invalidateUserData(user.uid)
+      }
+      
       localStorage.clear()
       sessionStorage.clear()
       // Clear specific keys that might persist

@@ -19,7 +19,8 @@ import {
   Play,
   Pause,
   Check,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 import { uploadAudioToSupabase, deleteAudioFromSupabase } from '@/lib/supabase-storage';
 import { getAllMedia, createMediaFile, deleteMediaFile, MediaFile as DatabaseMediaFile, clearMediaCache } from '@/lib/database';
@@ -54,6 +55,8 @@ export default function MediaManager({
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedType, setSelectedType] = useState<'all' | 'image' | 'audio' | 'video' | 'document'>(filterType);
@@ -72,9 +75,9 @@ export default function MediaManager({
     loadFilesFromDatabase();
   }, []);
 
-  const loadFilesFromDatabase = async () => {
+  const loadFilesFromDatabase = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       console.log('🚀 Loading media files...');
       const startTime = performance.now();
       
@@ -82,6 +85,14 @@ export default function MediaManager({
       
       const loadTime = performance.now() - startTime;
       console.log(`⚡ Media loaded in ${loadTime.toFixed(2)}ms`);
+      
+      // Show success message for slow loads
+      if (loadTime > 1000) {
+        addToast({
+          type: 'info',
+          message: `Media loaded in ${(loadTime/1000).toFixed(1)}s - caching for faster future loads`
+        });
+      }
       
       // Convert database format to component format
       const convertedFiles: MediaFile[] = mediaFiles.map(dbFile => ({
@@ -152,10 +163,12 @@ export default function MediaManager({
 
   const handleFileUpload = async (fileList: FileList) => {
     setUploading(true);
+    setUploadProgress(0);
     
     try {
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
+        setUploadingFile(file.name);
         
         // Determine file type
         let fileType: 'image' | 'audio' | 'video' | 'document' = 'document';
@@ -163,8 +176,10 @@ export default function MediaManager({
         else if (file.type.startsWith('audio/')) fileType = 'audio';
         else if (file.type.startsWith('video/')) fileType = 'video';
 
-        // Upload to Supabase Storage (like Spotify does)
-        const uploadResult = await uploadAudioToSupabase(file);
+        // Upload to Supabase Storage with progress tracking
+        const uploadResult = await uploadAudioToSupabase(file, (progress) => {
+          setUploadProgress(progress);
+        });
         
         if (uploadResult) {
           // Save to database with Supabase Storage info
@@ -217,6 +232,8 @@ export default function MediaManager({
       });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
+      setUploadingFile(null);
     }
   };
 
@@ -383,6 +400,16 @@ export default function MediaManager({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {!selectionMode && (
+              <button
+                onClick={() => loadFilesFromDatabase(true)}
+                disabled={loading}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            )}
             {selectionMode && selectedFile && (
               <button
                 onClick={handleConfirmSelection}
@@ -518,8 +545,21 @@ export default function MediaManager({
       {/* Files Grid/List */}
       <div className="p-4">
         {uploading && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-blue-700 text-sm">Uploading files...</p>
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-blue-700 text-sm font-medium">
+                Uploading {uploadingFile}...
+              </p>
+              <span className="text-blue-600 text-sm font-medium">
+                {Math.round(uploadProgress)}%
+              </span>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
           </div>
         )}
 

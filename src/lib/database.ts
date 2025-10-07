@@ -1054,14 +1054,31 @@ export interface MediaFile {
 
 // Cache for media files
 let mediaCache: { data: MediaFile[]; timestamp: number } | null = null;
-const MEDIA_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const MEDIA_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes (longer cache for better performance)
 
 export async function getAllMedia(): Promise<MediaFile[]> {
   try {
-    // Check cache first
+    // Check memory cache first
     if (mediaCache && (Date.now() - mediaCache.timestamp) < MEDIA_CACHE_DURATION) {
-      console.log('⚡ Using cached media data');
+      console.log('⚡ Using memory cached media data');
       return mediaCache.data;
+    }
+
+    // Check localStorage cache for instant loading
+    if (typeof window !== 'undefined') {
+      const cachedData = localStorage.getItem('media_cache');
+      const cacheTimestamp = localStorage.getItem('media_cache_timestamp');
+      
+      if (cachedData && cacheTimestamp) {
+        const age = Date.now() - parseInt(cacheTimestamp);
+        if (age < MEDIA_CACHE_DURATION) {
+          console.log('⚡ Using localStorage cached media data');
+          const parsedData = JSON.parse(cachedData);
+          // Update memory cache
+          mediaCache = { data: parsedData, timestamp: parseInt(cacheTimestamp) };
+          return parsedData;
+        }
+      }
     }
 
     console.log('🚀 Fetching media data from database...');
@@ -1098,11 +1115,22 @@ export async function getAllMedia(): Promise<MediaFile[]> {
       updatedAt: media.updatedat
     }));
 
-    // Cache the result
+    // Cache the result in memory
     mediaCache = {
       data: mediaFiles,
       timestamp: Date.now()
     };
+
+    // Also cache in localStorage for persistence
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('media_cache', JSON.stringify(mediaFiles));
+        localStorage.setItem('media_cache_timestamp', Date.now().toString());
+        console.log('💾 Media data cached to localStorage');
+      } catch (error) {
+        console.warn('Failed to cache media data to localStorage:', error);
+      }
+    }
 
     return mediaFiles;
   } catch (error) {

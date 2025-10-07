@@ -2,12 +2,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  Home, 
   Search, 
   Calendar, 
   FileText, 
   ShoppingCart, 
-  MessageCircle, 
   Settings,
   Bookmark,
   ChevronRight,
@@ -29,9 +27,8 @@ import {
   Save,
   ExternalLink,
   RefreshCw,
-  Users,
   Send,
-  Bell
+  Users
 } from "lucide-react";
 import { PraiseNightSong, Comment, PraiseNight, Category } from '../../types/supabase';
 import { useRealtimeData } from '../../hooks/useRealtimeData';
@@ -42,8 +39,8 @@ import { versionManager } from '@/utils/versionManager';
 import { uploadBannerImage } from '@/utils/imageUpload';
 import EditSongModal from '../../components/EditSongModal';
 import MediaManager from '../../components/MediaManager';
-import SimpleAdminSupport from '../../components/SimpleAdminSupport';
-import WhatsAppAdminSupport from '../../components/WhatsAppAdminSupport';
+import Members from '../../components/Members';
+// Support components removed - will create proper support system later
 import { ToastContainer, Toast } from '../../components/Toast';
 
 // Admin users database (in production, this should be in Supabase)
@@ -295,32 +292,12 @@ export default function AdminPage() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // User management state
-  const [users, setUsers] = useState<any[]>([]);
-  const [userGroups, setUserGroups] = useState<{[key: string]: string[]}>({});
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const [userSearchTerm, setUserSearchTerm] = useState('');
+  // Users section removed
 
-  // Notifications admin state
-  const [adminNotifications, setAdminNotifications] = useState<any[]>([]);
-  const [isLoadingAdminNotifications, setIsLoadingAdminNotifications] = useState(false);
-  const [notificationForm, setNotificationForm] = useState({
-    title: '',
-    message: '',
-    type: 'info',
-    category: 'system',
-    priority: 'medium',
-    targetAudience: 'all',
-    targetGroup: '',
-    actionUrl: '',
-    expiresAt: ''
-  });
+  // Notifications and Users sections removed
 
-  // Support messages state
-  const [supportMessages, setSupportMessages] = useState<any[]>([]);
-  const [supportLoading, setSupportLoading] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<any>(null);
-  const [replyText, setReplyText] = useState('');
-  const [replying, setReplying] = useState(false);
+  // Support section removed - will create proper support system later
+  // Reply functionality removed with support section
 
   // Toast helper functions
   const addToast = (toast: Omit<Toast, 'id'>) => {
@@ -788,33 +765,33 @@ export default function AdminPage() {
       const firebaseId = songToDelete.firebaseId || songToDelete.id?.toString() || '';
       console.log('🗑️ Using Firebase ID for deletion:', firebaseId);
       const success = await FirebaseDatabaseService.deleteSong(firebaseId);
-      
-      if (success) {
+        
+        if (success) {
         console.log('✅ Song deleted successfully');
         
         // Simple refresh without aggressive cache clearing
-        await refreshData();
+          await refreshData();
         console.log('🔄 Data refreshed after deletion');
-        
-        // Show success toast
-        addToast({
-          type: 'success',
+          
+          // Show success toast
+          addToast({
+            type: 'success',
           message: `Song "${songToDelete.title}" deleted successfully!`
-        });
+          });
         
         // Close dialog
         setShowDeleteSongDialog(false);
         setSongToDelete(null);
-      } else {
+        } else {
         console.log('❌ Song deletion failed in Firebase');
-        throw new Error('Failed to delete song from database');
-      }
-    } catch (error) {
-      console.error('Error deleting song:', error);
-      addToast({
-        type: 'error',
-        message: `Failed to delete song: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
+          throw new Error('Failed to delete song from database');
+        }
+      } catch (error) {
+        console.error('Error deleting song:', error);
+        addToast({
+          type: 'error',
+          message: `Failed to delete song: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
     }
   };
 
@@ -1287,336 +1264,15 @@ export default function AdminPage() {
     });
   };
 
-  // User management functions
-  const loadUsers = async () => {
-    setIsLoadingUsers(true);
-    try {
-      // Use DIRECT approach
-      console.log('🔄 Using DIRECT approach...');
-      await versionManager.checkForUpdates();
-      
-      console.log('🔄 Loading users with DIRECT query (no complex logic)...');
-      
-      // Check if current user is admin
-      const user = await FirebaseAuthService.getCurrentUser();
-      let currentUserProfile = null;
-      if (user) {
-        currentUserProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid);
-      }
+  // User management functions - REMOVED
 
-      if (!currentUserProfile || (currentUserProfile as any).role !== 'admin') {
-        console.error('❌ Admin access denied: Not admin');
-        addToast({
-          type: 'error',
-          message: 'Admin access required to view users'
-        });
-        return;
-      }
-      
-      // DIRECT QUERY - Simple and direct
-      console.log('📋 Direct profiles query...');
-      const profilesData = await FirebaseDatabaseService.getCollection('profiles');
-      
-      console.log('📊 Raw query result:', { data: profilesData });
-      
-      if (!profilesData) {
-        console.error('❌ Profiles query failed');
-        addToast({
-          type: 'error',
-          message: `Database error: Failed to fetch profiles`
-        });
-        return;
-      }
-      
-      const profiles = profilesData || [];
-      console.log('✅ Found profiles:', profiles.length);
-      console.log('📋 Profile details:', profiles);
-      
-      // Use the profiles directly - no complex merging logic
-      const allUsers = profiles;
-      console.log('📊 Using profiles directly:', allUsers.length, 'users');
-      
-      // Fetch user groups for all users
-      const groups = await FirebaseDatabaseService.getCollection('user_groups');
-      
-      if (!groups) {
-        console.error('❌ Error loading user groups');
-        // Don't return here, just log the error and continue
-      } else {
-        console.log('🏷️ User groups data:', groups);
-        
-        // Organize groups by user ID
-        const groupsByUser: {[key: string]: string[]} = {};
-        groups?.forEach((group: any) => {
-          if (!groupsByUser[group.user_id]) {
-            groupsByUser[group.user_id] = [];
-          }
-          groupsByUser[group.user_id].push(group.group_name);
-        });
-        
-        setUserGroups(groupsByUser);
-      }
-      
-      setUsers(allUsers);
-      
-      if (allUsers.length === 0) {
-        addToast({
-          type: 'warning',
-          message: 'No users found. Check console for debugging info.'
-        });
-      } else {
-        addToast({
-          type: 'success',
-          message: `Loaded ${allUsers.length} users successfully`
-        });
-      }
-      
-    } catch (error) {
-      console.error('❌ Error loading users:', error);
-      addToast({
-        type: 'error',
-        message: `Failed to load users: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  };
-
-  // Support message functions
-  const loadSupportMessages = async () => {
-    setSupportLoading(true);
-    try {
-      const data = await FirebaseDatabaseService.getCollection('support_messages');
-
-      setSupportMessages(data || []);
-    } catch (error) {
-      console.error('Error loading support messages:', error);
-      addToast({
-        type: 'error',
-        message: 'Failed to load support messages'
-      });
-    } finally {
-      setSupportLoading(false);
-    }
-  };
-
-  const handleReplyToMessage = async (messageId: string) => {
-    if (!replyText.trim()) return;
-    
-    setReplying(true);
-    try {
-      await FirebaseDatabaseService.updateDocument('support_messages', messageId, {
-          admin_response: replyText.trim(),
-          admin_responded_at: new Date().toISOString(),
-          status: 'resolved'
-      });
-
-      addToast({
-        type: 'success',
-        message: 'Reply sent successfully'
-      });
-
-      setReplyText('');
-      setSelectedMessage(null);
-      await loadSupportMessages();
-    } catch (error) {
-      console.error('Error sending reply:', error);
-      addToast({
-        type: 'error',
-        message: 'Failed to send reply'
-      });
-    } finally {
-      setReplying(false);
-    }
-  };
-
-  const updateMessageStatus = async (messageId: string, status: string) => {
-    try {
-      await FirebaseDatabaseService.updateDocument('support_messages', messageId, { status });
-
-      addToast({
-        type: 'success',
-        message: `Message status updated to ${status}`
-      });
-
-      await loadSupportMessages();
-    } catch (error) {
-      console.error('Error updating message status:', error);
-      addToast({
-        type: 'error',
-        message: 'Failed to update message status'
-      });
-    }
-  };
-
-  // Load support messages when Support section is active
-  useEffect(() => {
-    if (activeSection === 'Support') {
-      loadSupportMessages();
-    }
-  }, [activeSection]);
-
-  // Set up real-time subscription for support messages
-  useEffect(() => {
-    if (activeSection !== 'Support') return;
-
-    // Firebase doesn't have real-time subscriptions like Supabase
-    // We'll use polling instead for support messages
-    const interval = setInterval(() => {
-      loadSupportMessages();
-    }, 5000); // Poll every 5 seconds
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [activeSection]);
-
-  // Load users when Users section is active (ALWAYS refresh)
-  useEffect(() => {
-    if (activeSection === 'Users') {
-      console.log('🔄 Users section activated - loading users...');
-      loadUsers();
-    }
-  }, [activeSection]);
-
-  // Load admin notifications
-  const loadAdminNotifications = async () => {
-    setIsLoadingAdminNotifications(true);
-    try {
-      console.log('🔔 Loading admin notifications...');
-
-      const data = await FirebaseDatabaseService.getCollection('notifications');
-
-      setAdminNotifications(data || []);
-      console.log(`✅ Loaded ${data?.length || 0} notifications`);
-    } catch (err) {
-      console.error('❌ Unexpected error loading admin notifications:', err);
-      addToast({
-        type: 'error',
-        message: 'Failed to load notifications'
-      });
-    } finally {
-      setIsLoadingAdminNotifications(false);
-    }
-  };
-
-  // Create notification
-  const createNotification = async () => {
-    if (!notificationForm.title.trim() || !notificationForm.message.trim()) {
-      addToast({
-        type: 'error',
-        message: 'Please fill in title and message'
-      });
-      return;
-    }
-
-    try {
-      let result;
-
-      if (notificationForm.targetAudience === 'all') {
-        // Create notification for all users in Firebase
-        result = await FirebaseDatabaseService.createDocument('notifications', Date.now().toString(), {
-          title: notificationForm.title,
-          message: notificationForm.message,
-          type: notificationForm.type,
-          category: notificationForm.category,
-          priority: notificationForm.priority,
-          action_url: notificationForm.actionUrl || null,
-          expires_at: notificationForm.expiresAt || null,
-          target_audience: 'all',
-          created_at: new Date().toISOString()
-        });
-      } else if (notificationForm.targetAudience === 'group' && notificationForm.targetGroup) {
-        // Create notification for specific group in Firebase
-        result = await FirebaseDatabaseService.createDocument('notifications', Date.now().toString(), {
-          title: notificationForm.title,
-          message: notificationForm.message,
-          target_group: notificationForm.targetGroup,
-          type: notificationForm.type,
-          category: notificationForm.category,
-          priority: notificationForm.priority,
-          action_url: notificationForm.actionUrl || null,
-          expires_at: notificationForm.expiresAt || null,
-          target_audience: 'group',
-          created_at: new Date().toISOString()
-        });
-      } else {
-        addToast({
-          type: 'error',
-          message: 'Please select target audience and group (if applicable)'
-        });
-        return;
-      }
-
-      if (result.error) {
-        console.error('❌ Error creating notification:', result.error);
-        addToast({
-          type: 'error',
-          message: `Failed to send notification: ${result.error.message}`
-        });
-        return;
-      }
-
-      addToast({
-        type: 'success',
-        message: 'Notification sent successfully!'
-      });
-
-      // Reset form
-      setNotificationForm({
-        title: '',
-        message: '',
-        type: 'info',
-        category: 'system',
-        priority: 'medium',
-        targetAudience: 'all',
-        targetGroup: '',
-        actionUrl: '',
-        expiresAt: ''
-      });
-
-      // Reload notifications
-      loadAdminNotifications();
-
-    } catch (err) {
-      console.error('❌ Unexpected error creating notification:', err);
-      addToast({
-        type: 'error',
-        message: 'Failed to send notification'
-      });
-    }
-  };
-
-  // Delete notification
-  const deleteAdminNotification = async (notificationId: string) => {
-    try {
-      await FirebaseDatabaseService.deleteDocument('notifications', notificationId);
-
-      addToast({
-        type: 'success',
-        message: 'Notification deleted successfully'
-      });
-
-      // Reload notifications
-      loadAdminNotifications();
-
-    } catch (err) {
-      console.error('❌ Unexpected error deleting notification:', err);
-      addToast({
-        type: 'error',
-        message: 'Failed to delete notification'
-      });
-    }
-  };
+ 
 
 
   const sidebarItems = [
-    { icon: Home, label: 'Home', active: false },
     { icon: FileText, label: 'Pages', active: activeSection === 'Pages' },
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
-    { icon: Users, label: 'Users', active: activeSection === 'Users' },
-    { icon: Bell, label: 'Notifications', active: activeSection === 'Notifications' },
-    { icon: MessageCircle, label: 'Support', active: activeSection === 'Support' },
+    { icon: Users, label: 'Members', active: activeSection === 'Members' },
     { icon: Music, label: 'Media', active: activeSection === 'Media' },
   ];
 
@@ -1719,7 +1375,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex flex-col lg:flex-row">
+    <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex flex-col lg:flex-row">
       {/* Mobile Menu Button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
@@ -1760,8 +1416,7 @@ export default function AdminPage() {
               onClick={() => {
                 if (item.label === 'Pages') setActiveSection('Pages');
                 else if (item.label === 'Categories') setActiveSection('Categories');
-                else if (item.label === 'Users') setActiveSection('Users');
-                else if (item.label === 'Support') setActiveSection('Support');
+                else if (item.label === 'Members') setActiveSection('Members');
                 else if (item.label === 'Media') setActiveSection('Media');
                 // Auto-close sidebar on mobile after clicking
                 setSidebarCollapsed(true);
@@ -1810,7 +1465,7 @@ export default function AdminPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen lg:min-h-0 lg:ml-0 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:ml-0 overflow-hidden">
         {/* Top Header */}
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 sm:px-6 py-4 mt-16 lg:mt-0">
           <div className="flex items-center justify-between">
@@ -1884,18 +1539,17 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold text-slate-900 mt-4">
             {selectedPage ? (selectedCategory ? selectedCategory : selectedPage.name) : 
              activeSection === 'Categories' ? 'Categories' : 
+             activeSection === 'Members' ? 'Members' :
              activeSection === 'Media' ? 'Media Library' :
-             activeSection === 'Users' ? 'User Management' :
-             activeSection === 'Support' ? 'Support Messages' :
              activeSection === 'Pages' ? 'Pages' : 
              'Admin Dashboard'}
           </h1>
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-x-auto overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 pb-20 overflow-x-auto overflow-y-auto min-h-0">
           {activeSection === 'Categories' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-4 sm:p-6 max-h-full overflow-y-auto">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                 <h2 className="text-lg font-semibold text-slate-900">Manage Categories</h2>
                 <button
@@ -1944,451 +1598,22 @@ export default function AdminPage() {
             </div>
           )}
 
+          {activeSection === 'Members' && (
+            <div className="h-full">
+              <Members />
+            </div>
+          )}
+
           {activeSection === 'Media' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
+            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6 max-h-full overflow-y-auto">
               <MediaManager />
             </div>
           )}
 
-          {activeSection === 'Users' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">User Management</h2>
-                  <p className="text-slate-600 mt-1">
-                    View and manage all user profiles 
-                    {users.length > 0 && (
-                      <span className="ml-2 text-purple-600 font-medium">
-                        ({users.length} users found)
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={loadUsers}
-                    disabled={isLoadingUsers}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </button>
-                  <button
-                    onClick={async () => {
-                      console.log('🔍 DEBUG: Current users state:', users);
-                      console.log('🔍 DEBUG: User groups state:', userGroups);
-                      console.log('🔍 DEBUG: Loading state:', isLoadingUsers);
-                      
-                      // Test direct query
-                      console.log('🔍 DEBUG: Testing direct query...');
-                      const data = await FirebaseDatabaseService.getCollection('profiles');
-                      
-                      console.log('🔍 DEBUG: Direct query result:', { data });
-                      console.log('🔍 DEBUG: Data length:', data?.length || 0);
-                      
-                      if (data && data.length > 0) {
-                        console.log('🔍 DEBUG: First user:', data[0]);
-                      }
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Debug
-                  </button>
-                </div>
-              </div>
 
-              {/* Search */}
-              <div className="mb-6">
-                <input
-                  type="text"
-                  placeholder="Search users by name, email, or phone..."
-                  value={userSearchTerm}
-                  onChange={(e) => setUserSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Debug Info */}
-              {users.length === 0 && !isLoadingUsers && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                  <h3 className="text-yellow-800 font-medium mb-2">Debug Information</h3>
-                  <p className="text-yellow-700 text-sm mb-2">
-                    No users found. This could mean:
-                  </p>
-                  <ul className="text-yellow-700 text-sm list-disc list-inside space-y-1">
-                    <li>No users have signed up yet</li>
-                    <li>Users exist in auth.users but haven't completed profiles</li>
-                    <li>Database connection issue</li>
-                    <li>RLS policies blocking access</li>
-                    <li>Admin permissions not configured for auth.users access</li>
-                  </ul>
-                  <div className="mt-3 space-x-3">
-                    <button
-                      onClick={loadUsers}
-                      className="text-yellow-800 underline hover:text-yellow-900"
-                    >
-                      Retry loading users
-                    </button>
-                    <span className="text-yellow-600">|</span>
-                    <span className="text-yellow-600 text-sm">
-                      Check browser console for detailed logs
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Users List */}
-              {isLoadingUsers ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                  <p className="text-slate-600">Loading users...</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {users
-                    .filter(user => {
-                      const matchesSearch = !userSearchTerm || 
-                        user.first_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                        user.last_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                        user.email?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                        user.phone_number?.toLowerCase().includes(userSearchTerm.toLowerCase());
-                      
-                      return matchesSearch;
-                    })
-                    .map((user) => (
-                      <div key={user.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                                <Users className="w-5 h-5 text-purple-600" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-gray-900">
-                                  {user.first_name} {user.middle_name} {user.last_name}
-                                </h3>
-                                <p className="text-sm text-gray-600">{user.email}</p>
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Phone</p>
-                                <p className="text-sm font-medium">{user.phone_number || 'Not provided'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Gender</p>
-                                <p className="text-sm font-medium">{user.gender || 'Not specified'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Birthday</p>
-                                <p className="text-sm font-medium">{user.birthday || 'Not provided'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Region</p>
-                                <p className="text-sm font-medium">{user.region || 'Not provided'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Zone</p>
-                                <p className="text-sm font-medium">{user.zone || 'Not provided'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Church</p>
-                                <p className="text-sm font-medium">{user.church || 'Not provided'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Designation</p>
-                                <p className="text-sm font-medium">{user.designation || 'Not specified'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Administration</p>
-                                <p className="text-sm font-medium">{user.administration || 'Not specified'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Groups</p>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {userGroups[user.id]?.length > 0 ? (
-                                    userGroups[user.id].map((group, index) => (
-                                      <span key={index} className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full">
-                                        {group}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="text-sm text-gray-500">No groups</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-block w-2 h-2 rounded-full ${user.profile_completed ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
-                                <span className="text-sm text-gray-600">
-                                  {user.profile_completed ? 'Profile Completed' : 'Profile Incomplete'}
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                Joined: {new Date(user.created_at).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  
-                  {users.filter(user => {
-                    const matchesSearch = !userSearchTerm || 
-                      user.first_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                      user.last_name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                      user.email?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                      user.phone_number?.toLowerCase().includes(userSearchTerm.toLowerCase());
-                    
-                    return matchesSearch;
-                  }).length === 0 && (
-                    <div className="text-center py-8">
-                      <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">No users found</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeSection === 'Notifications' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">Notifications Management</h2>
-                  <p className="text-slate-600 mt-1">
-                    Create and manage notifications for all users or specific groups
-                    {adminNotifications.length > 0 && (
-                      <span className="ml-2 text-purple-600 font-medium">
-                        ({adminNotifications.length} notifications)
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <button
-                  onClick={loadAdminNotifications}
-                  disabled={isLoadingAdminNotifications}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoadingAdminNotifications ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
-              </div>
-
-              {/* Create Notification Form */}
-              <div className="mb-8 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Send Notification</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
-                    <input
-                      type="text"
-                      value={notificationForm.title}
-                      onChange={(e) => setNotificationForm(prev => ({ ...prev, title: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Enter notification title"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                    <select
-                      value={notificationForm.type}
-                      onChange={(e) => setNotificationForm(prev => ({ ...prev, type: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
-                      <option value="info">Info</option>
-                      <option value="success">Success</option>
-                      <option value="warning">Warning</option>
-                      <option value="error">Error</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                    <select
-                      value={notificationForm.category}
-                      onChange={(e) => setNotificationForm(prev => ({ ...prev, category: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
-                      <option value="system">System</option>
-                      <option value="rehearsal">Rehearsal</option>
-                      <option value="announcement">Announcement</option>
-                      <option value="reminder">Reminder</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-                    <select
-                      value={notificationForm.priority}
-                      onChange={(e) => setNotificationForm(prev => ({ ...prev, priority: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                  <textarea
-                    value={notificationForm.message}
-                    onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter notification message"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Target Audience</label>
-                    <select
-                      value={notificationForm.targetAudience}
-                      onChange={(e) => setNotificationForm(prev => ({ ...prev, targetAudience: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    >
-                      <option value="all">All Users</option>
-                      <option value="group">Specific Group</option>
-                    </select>
-                  </div>
-                  {notificationForm.targetAudience === 'group' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Group Name</label>
-                      <input
-                        type="text"
-                        value={notificationForm.targetGroup}
-                        onChange={(e) => setNotificationForm(prev => ({ ...prev, targetGroup: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        placeholder="Enter group name"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Action URL (Optional)</label>
-                    <input
-                      type="url"
-                      value={notificationForm.actionUrl}
-                      onChange={(e) => setNotificationForm(prev => ({ ...prev, actionUrl: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="https://example.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Expires At (Optional)</label>
-                    <input
-                      type="datetime-local"
-                      value={notificationForm.expiresAt}
-                      onChange={(e) => setNotificationForm(prev => ({ ...prev, expiresAt: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={createNotification}
-                  className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium"
-                >
-                  Send Notification
-                </button>
-              </div>
-
-              {/* Notifications List */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Notifications</h3>
-
-                {isLoadingAdminNotifications ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading notifications...</p>
-                  </div>
-                ) : adminNotifications.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No notifications sent yet</p>
-                  </div>
-                ) : (
-                  adminNotifications.map((notification) => (
-                    <div key={notification.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-medium text-gray-900">{notification.title}</h4>
-                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                              notification.priority === 'high' ? 'bg-red-100 text-red-700' :
-                              notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {notification.priority}
-                            </span>
-                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                              notification.category === 'admin' ? 'bg-purple-100 text-purple-700' :
-                              notification.category === 'system' ? 'bg-blue-100 text-blue-700' :
-                              'bg-green-100 text-green-700'
-                            }`}>
-                              {notification.category}
-                            </span>
-                          </div>
-                          <p className="text-gray-600 text-sm mb-2">{notification.message}</p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span>Target: {notification.target_audience === 'all' ? 'All Users' : notification.target_group || 'Individual'}</span>
-                            <span>{new Date(notification.created_at).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => deleteAdminNotification(notification.id)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete notification"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'Support' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">Support Messages</h2>
-                  <p className="text-slate-600 mt-1">
-                    Manage customer support messages and responses
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={loadSupportMessages}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Refresh
-                  </button>
-                </div>
-              </div>
-
-              {/* Support Messages List */}
-              <WhatsAppAdminSupport />
-            </div>
-          )}
 
           {activeSection === 'Pages' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6">
+            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6 max-h-full overflow-y-auto">
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -3233,97 +2458,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Support Message Reply Modal */}
-      {selectedMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">Reply to Support Message</h3>
-                <p className="text-sm text-gray-600 mt-1">From: {selectedMessage.user_name}</p>
-              </div>
-              <button
-                onClick={() => {
-                  setSelectedMessage(null);
-                  setReplyText('');
-                }}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto">
-              <div className="mb-6">
-                <h4 className="font-medium text-gray-900 mb-2">Original Message:</h4>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <p className="font-medium text-gray-900 mb-2">{selectedMessage.subject}</p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedMessage.message}</p>
-                  <div className="flex gap-4 mt-3 text-xs text-gray-500">
-                    <span>Category: {selectedMessage.category}</span>
-                    <span>Priority: {selectedMessage.priority}</span>
-                    <span>Date: {new Date(selectedMessage.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              {selectedMessage.admin_response && (
-                <div className="mb-6">
-                  <h4 className="font-medium text-gray-900 mb-2">Previous Response:</h4>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-sm text-green-700 whitespace-pre-wrap">{selectedMessage.admin_response}</p>
-                    <p className="text-xs text-green-600 mt-2">
-                      Sent on {new Date(selectedMessage.admin_responded_at || '').toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {selectedMessage.admin_response ? 'Update Response:' : 'Your Response:'}
-                </label>
-                <textarea
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="Type your response here..."
-                  rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 p-6 border-t border-gray-200">
-              <button
-                onClick={() => {
-                  setSelectedMessage(null);
-                  setReplyText('');
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleReplyToMessage(selectedMessage.id)}
-                disabled={replying || !replyText.trim()}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {replying ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    Send Reply
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Support Message Reply Modal - REMOVED */}
 
 
       {/* Song Edit Modal */}
@@ -3389,14 +2524,14 @@ export default function AdminPage() {
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                 <Trash2 className="w-5 h-5 text-red-600" />
-              </div>
+                  </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Delete Song</h3>
                 <p className="text-sm text-gray-500">This action cannot be undone</p>
+                </div>
               </div>
-            </div>
-            
-            <div className="mb-6">
+
+                <div className="mb-6">
               <p className="text-gray-700 mb-2">
                 Are you sure you want to delete the song:
               </p>
@@ -3421,9 +2556,9 @@ export default function AdminPage() {
                 Delete Song
               </button>
             </div>
-          </div>
-        </div>
-      )}
+                  </div>
+                </div>
+              )}
 
       {/* Delete Category Confirmation Dialog */}
       {showDeleteCategoryDialog && categoryToDelete && (
@@ -3438,7 +2573,7 @@ export default function AdminPage() {
                 <p className="text-sm text-gray-500">This action cannot be undone</p>
               </div>
             </div>
-            
+
             <div className="mb-6">
               <p className="text-gray-700 mb-2">
                 Are you sure you want to delete the category:

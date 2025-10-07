@@ -219,7 +219,7 @@ export default function WhatsAppAdminSupport() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-200px)] bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="flex h-[calc(100vh-200px)] bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden max-h-screen">
       {/* Conversations List */}
       <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 border-r border-gray-200 bg-white`}>
         {/* Search Header */}

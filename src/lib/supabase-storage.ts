@@ -1,7 +1,10 @@
 import { supabase } from './supabase-client';
 
-// Upload audio file to Supabase Storage
-export async function uploadAudioToSupabase(file: File): Promise<{ url: string; path: string } | null> {
+// Upload audio file to Supabase Storage with progress tracking
+export async function uploadAudioToSupabase(
+  file: File, 
+  onProgress?: (progress: number) => void
+): Promise<{ url: string; path: string } | null> {
   try {
     // Generate unique filename
     const fileExt = file.name.split('.').pop();
@@ -10,30 +13,69 @@ export async function uploadAudioToSupabase(file: File): Promise<{ url: string; 
 
     console.log('📤 Uploading to Supabase Storage:', fileName);
 
-    // Upload file to Supabase Storage
-    const { data, error } = await supabase.storage
+    // Create a custom upload with progress tracking
+    const uploadPromise = supabase.storage
       .from('media-files')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false
       });
 
-    if (error) {
-      console.error('❌ Supabase upload error:', error);
-      throw error;
+    // Simulate progress for better UX (Supabase doesn't provide real progress)
+    if (onProgress) {
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90;
+        onProgress(Math.min(progress, 90));
+      }, 200);
+
+      try {
+        const { data, error } = await uploadPromise;
+        clearInterval(progressInterval);
+        onProgress(100);
+
+        if (error) {
+          console.error('❌ Supabase upload error:', error);
+          throw error;
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('media-files')
+          .getPublicUrl(filePath);
+
+        console.log('✅ Uploaded successfully:', publicUrl);
+
+        return {
+          url: publicUrl,
+          path: filePath
+        };
+      } catch (error) {
+        clearInterval(progressInterval);
+        throw error;
+      }
+    } else {
+      // No progress callback, just upload
+      const { data, error } = await uploadPromise;
+
+      if (error) {
+        console.error('❌ Supabase upload error:', error);
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('media-files')
+        .getPublicUrl(filePath);
+
+      console.log('✅ Uploaded successfully:', publicUrl);
+
+      return {
+        url: publicUrl,
+        path: filePath
+      };
     }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('media-files')
-      .getPublicUrl(filePath);
-
-    console.log('✅ Uploaded successfully:', publicUrl);
-
-    return {
-      url: publicUrl,
-      path: filePath
-    };
   } catch (error) {
     console.error('❌ Error uploading to Supabase:', error);
     return null;
