@@ -132,8 +132,8 @@ export default function WhatsAppChat() {
             .map(async (groupName: string) => {
               const mapping = groupMappings[groupName]
               
-              // Get all members from Firebase users collection who have this group
-              const allUsers = await FirebaseDatabaseService.getCollection('users')
+              // Get all members from Firebase profiles collection who have this group
+              const allUsers = await FirebaseDatabaseService.getCollection('profiles')
               const groupMembers = allUsers
                 .filter((u: any) => u.groups && u.groups.includes(groupName))
                 .map((u: any) => ({
@@ -216,8 +216,8 @@ export default function WhatsAppChat() {
             .map(async (groupName: string) => {
               const mapping = groupMappings[groupName]
               
-              // Get all members from Firebase users collection who have this group
-              const allUsers = await FirebaseDatabaseService.getCollection('users')
+              // Get all members from Firebase profiles collection who have this group
+              const allUsers = await FirebaseDatabaseService.getCollection('profiles')
               const groupMembers = allUsers
                 .filter((u: any) => u.groups && u.groups.includes(groupName))
                 .map((u: any) => ({
