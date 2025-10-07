@@ -24,11 +24,16 @@ import {
 
 export default function FeaturesSupportPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
-    router.push('/auth');
+    try {
+      await signOut();
+      // Don't use router.push - signOut already handles redirect
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const menuItems = getMenuItems(handleLogout);

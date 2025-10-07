@@ -89,7 +89,7 @@ const faqData: FAQ[] = [
 
 export default function FAQPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
@@ -100,8 +100,12 @@ export default function FAQPage() {
   );
 
   const handleLogout = async () => {
-    // Handle logout logic here if needed
-    router.push('/auth');
+    try {
+      await signOut();
+      // Don't use router.push - signOut already handles redirect
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const menuItems = getMenuItems(handleLogout);

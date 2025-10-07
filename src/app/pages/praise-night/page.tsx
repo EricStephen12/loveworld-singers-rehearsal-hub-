@@ -20,6 +20,7 @@ import { useAudio } from "@/contexts/AudioContext";
 import { usePageSearch, PageSearchResult } from "@/hooks/usePageSearch";
 import GlobalMiniPlayer from "@/components/GlobalMiniPlayer";
 import AudioWave from "@/components/AudioWave";
+import { useAuth } from "@/contexts/AuthContext";
 
 function PraiseNightPageContent() {
   const searchParams = useSearchParams();
@@ -30,6 +31,7 @@ function PraiseNightPageContent() {
 
   // Use real-time Supabase data for instant updates
   const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, preloadData, refreshData } = useRealtimeData();
+  const { signOut } = useAuth();
   const [currentPraiseNight, setCurrentPraiseNightState] = useState<PraiseNight | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -222,14 +224,13 @@ function PraiseNightPageContent() {
     setIsMenuOpen(!isMenuOpen)
   }
 
-  const handleLogout = () => {
-    // Clear localStorage
-    localStorage.removeItem('isAuthenticated')
-    localStorage.removeItem('hasCompletedProfile')
-    localStorage.removeItem('hasSubscribed')
-
-    // Redirect to auth screen - using window.location for full page refresh
-    window.location.href = '/auth'
+  const handleLogout = async () => {
+    try {
+      await signOut()
+      // Don't use router.push - signOut already handles redirect
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   const menuItems = getMenuItems(handleLogout)

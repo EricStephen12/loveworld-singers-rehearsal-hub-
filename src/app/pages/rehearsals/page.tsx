@@ -8,10 +8,12 @@ import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function RehearsalsPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const router = useRouter()
+  const { signOut } = useAuth()
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -21,14 +23,13 @@ export default function RehearsalsPage() {
     router.push('/home')
   }
 
-  const handleLogout = () => {
-    // Clear localStorage
-    localStorage.removeItem('isAuthenticated')
-    localStorage.removeItem('hasCompletedProfile')
-    localStorage.removeItem('hasSubscribed')
-    
-    // Redirect to auth screen
-    router.push('/auth')
+  const handleLogout = async () => {
+    try {
+      await signOut()
+      // Don't use router.push - signOut already handles redirect
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   // Carousel for rehearsal images

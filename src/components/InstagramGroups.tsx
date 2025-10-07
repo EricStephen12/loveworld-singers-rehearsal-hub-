@@ -1,10 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { MessageCircle, Send, Search, MoreVertical, Camera, Paperclip, Mic, Phone, Video, ChevronLeft, Check, CheckCheck, Users, UserPlus, Info } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { MessageCircle, Send, Search, MoreVertical, Camera, Paperclip, Mic, Phone, Video, ChevronLeft, Check, CheckCheck, Users, UserPlus, Info, Heart, Reply, Share, ArrowUpRight, X, Play, Pause, Volume2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
 import { cacheService, CACHE_KEYS } from '@/lib/cache-service'
+import { WebRTCService } from '@/lib/webrtc-service'
+import { VoiceRecordingService } from '@/lib/voice-recording-service'
+import { MessageInteractionService } from '@/lib/message-interaction-service'
 import { useRouter } from 'next/navigation'
 
 interface Group {
@@ -38,6 +41,11 @@ interface Message {
   content: string
   timestamp: string
   read: boolean
+  isVoiceMessage?: boolean
+  voiceData?: Blob
+  isShared?: boolean
+  isForwarded?: boolean
+  originalMessageId?: string
 }
 
 interface Friend {
@@ -66,7 +74,52 @@ export default function WhatsAppChat() {
   const [newMessage, setNewMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
+  const [showMessageMenu, setShowMessageMenu] = useState(false)
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null)
+  const [showMessageActions, setShowMessageActions] = useState(false)
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
+  const [showCallInterface, setShowCallInterface] = useState(false)
+  const [callState, setCallState] = useState<any>(null)
+  const [recordingState, setRecordingState] = useState<any>(null)
+  const [messageReactions, setMessageReactions] = useState<Map<string, any>>(new Map())
+  
+  // Services
+  const webrtcService = useRef(WebRTCService.getInstance())
+  const voiceService = useRef(VoiceRecordingService.getInstance())
+  const interactionService = useRef(MessageInteractionService.getInstance())
+  const localVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement>(null)
+
+  // Set up local video stream when call state changes
+  useEffect(() => {
+    if (callState?.localStream && localVideoRef.current) {
+      localVideoRef.current.srcObject = callState.localStream
+    }
+  }, [callState?.localStream])
+
+  // Handle keyboard shortcuts for call interface, search modal, and message actions
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (showCallInterface && event.key === 'Escape') {
+        webrtcService.current.endCall()
+        setShowCallInterface(false)
+      } else if (isSearchOpen && event.key === 'Escape') {
+        setIsSearchOpen(false)
+        setSearchQuery('')
+      } else if (showMessageActions && event.key === 'Escape') {
+        setShowMessageActions(false)
+        setSelectedMessage(null)
+      }
+    }
+
+    if (showCallInterface || isSearchOpen || showMessageActions) {
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showCallInterface, isSearchOpen, showMessageActions])
 
   // Load user groups based on profile (keeping original logic)
   useEffect(() => {
@@ -405,17 +458,17 @@ export default function WhatsAppChat() {
       setFriends(prev => [...prev, {
         id: member.id,
         user_id: member.user_id,
-        first_name: member.first_name,
-        last_name: member.last_name,
-        profile_image_url: member.profile_image_url,
-        designation: member.designation,
-        administration: member.administration,
+        first_name: member.first_name || 'Unknown',
+        last_name: member.last_name || '',
+        profile_image_url: member.profile_image_url || '',
+        designation: member.designation || '',
+        administration: member.administration || '',
         unread_count: 0,
         last_message: 'Tap to chat',
         last_message_time: new Date().toISOString()
       }])
 
-      alert(`Added ${member.first_name} ${member.last_name} as friend!`)
+      alert(`Added ${member.first_name || 'Unknown'} ${member.last_name || ''} as friend!`)
       setShowGroupInfo(false)
     } catch (error) {
       console.error('Error adding friend:', error)
@@ -423,31 +476,212 @@ export default function WhatsAppChat() {
     }
   }
 
-  const handleVideoCall = () => {
+  const handleVideoCall = async () => {
     const targetName = selectedGroup ? selectedGroup.name : `${selectedFriend?.first_name} ${selectedFriend?.last_name}`
+    const targetUserId = selectedGroup ? selectedGroup.id : selectedFriend?.user_id
+    
+    if (!targetUserId) return
+    
     console.log(`Starting video call with ${targetName}`)
-    // For now, show an alert. In a real app, this would integrate with WebRTC
-    alert(`Video call with ${targetName} - Feature coming soon!`)
+    
+    // Check WebRTC support
+    if (!WebRTCService.isSupported()) {
+      alert('Video calls are not supported on this device')
+      return
+    }
+    
+    // Set up call callbacks
+    webrtcService.current.setCallbacks({
+      onCallStateChange: (state) => {
+        setCallState(state)
+        if (state.isInCall) {
+          setShowCallInterface(true)
+        }
+      },
+      onRemoteStream: (stream) => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = stream
+        }
+      },
+      onCallEnded: () => {
+        setShowCallInterface(false)
+        setCallState(null)
+      }
+    })
+    
+    // Start the call
+    const success = await webrtcService.current.startCall('video', targetUserId)
+    if (!success) {
+      alert('Failed to start video call')
+    }
   }
 
-  const handleVoiceCall = () => {
+  const handleVoiceCall = async () => {
     const targetName = selectedGroup ? selectedGroup.name : `${selectedFriend?.first_name} ${selectedFriend?.last_name}`
+    const targetUserId = selectedGroup ? selectedGroup.id : selectedFriend?.user_id
+    
+    if (!targetUserId) return
+    
     console.log(`Starting voice call with ${targetName}`)
-    // For now, show an alert. In a real app, this would integrate with WebRTC
-    alert(`Voice call with ${targetName} - Feature coming soon!`)
+    
+    // Check WebRTC support
+    if (!WebRTCService.isSupported()) {
+      alert('Voice calls are not supported on this device')
+      return
+    }
+    
+    // Set up call callbacks
+    webrtcService.current.setCallbacks({
+      onCallStateChange: (state) => {
+        setCallState(state)
+        if (state.isInCall) {
+          setShowCallInterface(true)
+        }
+      },
+      onCallEnded: () => {
+        setShowCallInterface(false)
+        setCallState(null)
+      }
+    })
+    
+    // Start the call
+    const success = await webrtcService.current.startCall('voice', targetUserId)
+    if (!success) {
+      alert('Failed to start voice call')
+    }
   }
 
-  const handleVoiceRecording = () => {
+  const handleVoiceRecording = async () => {
     if (isRecording) {
       // Stop recording
+      voiceService.current.stopRecording()
       setIsRecording(false)
-      console.log('Voice recording stopped')
-      alert('Voice message recorded! (Feature coming soon)')
     } else {
+      // Check voice recording support
+      if (!VoiceRecordingService.isSupported()) {
+        alert('Voice recording is not supported on this device')
+        return
+      }
+      
+      // Set up voice recording callbacks
+      voiceService.current.setCallbacks({
+        onRecordingStateChange: (state) => {
+          setRecordingState(state)
+          setIsRecording(state.isRecording)
+        },
+        onRecordingComplete: async (voiceMessage) => {
+          // Send voice message
+          if (user?.uid && profile) {
+            const message: Message = {
+              id: voiceMessage.id,
+              group_id: selectedGroup ? selectedGroup.id : `dm_${selectedFriend?.user_id}`,
+              sender_id: user.uid,
+              sender_name: `${profile.first_name} ${profile.last_name}`,
+              content: `🎤 Voice message (${voiceService.current.formatDuration(voiceMessage.duration)})`,
+              timestamp: voiceMessage.timestamp,
+              read: false,
+              isVoiceMessage: true,
+              voiceData: voiceMessage.audioBlob
+            }
+            
+            try {
+              await FirebaseDatabaseService.createDocument('group_messages', message.id, message as any)
+              setMessages(prev => [...prev, message])
+            } catch (error) {
+              console.error('Error sending voice message:', error)
+            }
+          }
+        },
+        onRecordingError: (error) => {
+          console.error('Voice recording error:', error)
+          alert('Voice recording failed')
+        }
+      })
+      
       // Start recording
-      setIsRecording(true)
-      console.log('Voice recording started')
-      // In a real app, this would start actual voice recording
+      const success = await voiceService.current.startRecording()
+      if (!success) {
+        alert('Failed to start voice recording')
+      }
+    }
+  }
+
+  // Message interaction handlers
+  const handleLikeMessage = async (messageId: string) => {
+    if (!user?.uid) return
+    await interactionService.current.likeMessage(messageId, user.uid)
+    // Refresh reactions
+    const reactions = await interactionService.current.getMessageReactions(messageId)
+    setMessageReactions(prev => new Map(prev.set(messageId, reactions)))
+  }
+
+  const handleReplyToMessage = async (messageId: string) => {
+    const message = messages.find(m => m.id === messageId)
+    if (message) {
+      setReplyingTo(message)
+    }
+  }
+
+  const handleShareMessage = async (messageId: string) => {
+    if (!user?.uid) return
+    const targetGroupId = selectedGroup?.id
+    const targetFriendId = selectedFriend?.user_id
+    await interactionService.current.shareMessage(messageId, user.uid, targetGroupId, targetFriendId)
+  }
+
+  const handleForwardMessage = async (messageId: string) => {
+    if (!user?.uid) return
+    const targetGroupId = selectedGroup?.id
+    const targetFriendId = selectedFriend?.user_id
+    await interactionService.current.forwardMessage(messageId, user.uid, targetGroupId, targetFriendId)
+  }
+
+  const handleSendReply = async () => {
+    if (!user?.uid || !profile || !replyingTo || !newMessage.trim()) return
+    
+    await interactionService.current.replyToMessage(
+      replyingTo.id,
+      user.uid,
+      `${profile.first_name} ${profile.last_name}`,
+      newMessage.trim()
+    )
+    
+    setNewMessage('')
+    setReplyingTo(null)
+  }
+
+  const handlePlayVoiceMessage = (message: Message) => {
+    if (message.isVoiceMessage && message.voiceData) {
+      const audioUrl = URL.createObjectURL(message.voiceData)
+      const audio = new Audio(audioUrl)
+      audio.play()
+    }
+  }
+
+  // Long press handlers for message actions
+  const handleMessageLongPress = (message: Message) => {
+    setSelectedMessage(message)
+    setShowMessageActions(true)
+  }
+
+  const handleMessagePressStart = (message: Message) => {
+    const timer = setTimeout(() => {
+      handleMessageLongPress(message)
+    }, 500) // 500ms for long press
+    setLongPressTimer(timer)
+  }
+
+  const handleMessagePressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer)
+      setLongPressTimer(null)
+    }
+  }
+
+  const handleMessagePressCancel = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer)
+      setLongPressTimer(null)
     }
   }
 
@@ -471,7 +705,7 @@ export default function WhatsAppChat() {
   const filteredChats = activeTab === 'chats' 
     ? groups.filter(group => group.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : friends.filter(friend => 
-        `${friend.first_name} ${friend.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+        `${friend.first_name || ''} ${friend.last_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase())
       )
 
   if (isLoading) {
@@ -525,13 +759,13 @@ export default function WhatsAppChat() {
                     <div key={member.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-300 to-purple-500 flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-semibold">
-                          {member.first_name[0]}{member.last_name[0]}
+                          {(member.first_name || 'U')[0]}{(member.last_name || '')[0]}
                         </span>
                       </div>
                       
                       <div className="flex-1 min-w-0">
                         <h5 className="font-medium text-gray-900">
-                          {member.first_name} {member.last_name}
+                          {member.first_name || 'Unknown'} {member.last_name || ''}
                           {isCurrentUser && <span className="text-gray-500 text-sm ml-1">(You)</span>}
                         </h5>
                         <p className="text-sm text-gray-500">{member.designation}</p>
@@ -559,6 +793,101 @@ export default function WhatsAppChat() {
         </div>
       )}
 
+      {/* Search Modal */}
+      {isSearchOpen && (
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-start justify-center pt-16">
+          <div className="bg-white w-full max-w-md mx-4 rounded-lg shadow-lg">
+            {/* Search Header */}
+            <div className="bg-purple-600 text-white p-4 flex items-center gap-3 rounded-t-lg">
+              <button 
+                onClick={() => setIsSearchOpen(false)} 
+                className="hover:bg-purple-700 p-1 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-lg font-semibold">Search</h2>
+            </div>
+
+            {/* Search Input */}
+            <div className="p-4 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder={activeTab === 'chats' ? 'Search groups...' : 'Search friends...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Search Results */}
+            <div className="max-h-96 overflow-y-auto">
+              {searchQuery ? (
+                filteredChats.length > 0 ? (
+                  <div className="p-2">
+                    {filteredChats.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          if (activeTab === 'chats') {
+                            setSelectedGroup(item as Group)
+                          } else {
+                            setSelectedFriend(item as Friend)
+                          }
+                          setIsSearchOpen(false)
+                          setSearchQuery('')
+                        }}
+                        className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                          {activeTab === 'chats' ? (
+                            <Users className="w-6 h-6 text-purple-600" />
+                          ) : (
+                            <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                              <span className="text-white text-xs font-medium">
+                                {((item as Friend).first_name || 'U')[0]}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-900">
+                            {activeTab === 'chats' 
+                              ? (item as Group).name 
+                              : `${(item as Friend).first_name || 'Unknown'} ${(item as Friend).last_name || ''}`
+                            }
+                          </h3>
+                          {activeTab === 'chats' && (
+                            <p className="text-sm text-gray-500">
+                              {(item as Group).members.length} members
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-gray-500">
+                    <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>No {activeTab === 'chats' ? 'groups' : 'friends'} found</p>
+                    <p className="text-sm">Try a different search term</p>
+                  </div>
+                )
+              ) : (
+                <div className="p-8 text-center text-gray-500">
+                  <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>Search for {activeTab === 'chats' ? 'groups' : 'friends'}</p>
+                  <p className="text-sm">Type to start searching</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chat List View */}
       {!selectedGroup && !selectedFriend && (
         <div className="flex flex-col h-full bg-white">
@@ -566,6 +895,13 @@ export default function WhatsAppChat() {
           <header className="bg-purple-600 text-white px-4 py-3 flex items-center justify-between">
             <h1 className="text-xl font-semibold">LoveWorld Chats</h1>
             <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsSearchOpen(true)}
+                className="hover:bg-purple-700 p-2 rounded-full transition-colors"
+                title="Search"
+              >
+                <Search className="w-5 h-5" />
+              </button>
               <button className="hover:bg-purple-700 p-2 rounded-full transition-colors">
                 <Camera className="w-5 h-5" />
               </button>
@@ -599,19 +935,6 @@ export default function WhatsAppChat() {
             </button>
           </div>
 
-          {/* Search Bar */}
-          <div className="px-3 py-2 bg-white border-b">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input
-                type="text"
-                placeholder={activeTab === 'chats' ? 'Search groups' : 'Search friends'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none"
-              />
-            </div>
-          </div>
 
           {/* Chats/Friends List */}
           <div className="flex-1 overflow-y-auto">
@@ -681,14 +1004,14 @@ export default function WhatsAppChat() {
                 >
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-300 to-purple-500 flex items-center justify-center flex-shrink-0">
                     <span className="text-white font-semibold text-lg">
-                      {friend.first_name[0]}{friend.last_name[0]}
+                      {(friend.first_name || 'U')[0]}{(friend.last_name || '')[0]}
                     </span>
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-semibold text-gray-900 truncate">
-                        {friend.first_name} {friend.last_name}
+                        {friend.first_name || 'Unknown'} {friend.last_name || ''}
                       </h3>
                       <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
                         {formatLastMessageTime(friend.last_message_time || new Date().toISOString())}
@@ -782,21 +1105,50 @@ export default function WhatsAppChat() {
             ) : (
               messages.map((message) => {
                 const isMe = message.sender_id === user?.uid
+                const reactions = messageReactions.get(message.id)
                 return (
                   <div key={message.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                     <div
-                      className={`max-w-[75%] rounded-lg px-3 py-2 ${
+                      className={`max-w-[75%] rounded-lg px-3 py-2 relative transition-all duration-200 hover:shadow-md ${
                         isMe
                           ? 'bg-[#dcf8c6] rounded-br-none'
                           : 'bg-white rounded-bl-none'
                       }`}
+                      onMouseDown={() => handleMessagePressStart(message)}
+                      onMouseUp={handleMessagePressEnd}
+                      onMouseLeave={handleMessagePressCancel}
+                      onTouchStart={() => handleMessagePressStart(message)}
+                      onTouchEnd={handleMessagePressEnd}
+                      onTouchCancel={handleMessagePressCancel}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        handleMessageLongPress(message)
+                      }}
+                      style={{ userSelect: 'none' }}
                     >
                       {!isMe && selectedGroup && (
                         <p className="text-xs font-semibold text-purple-700 mb-1">
                           {message.sender_name}
                         </p>
                       )}
-                      <p className="text-sm text-gray-900 break-words">{message.content}</p>
+                      
+                      {/* Message Content */}
+                      {message.isVoiceMessage ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handlePlayVoiceMessage(message)}
+                            className="flex items-center gap-2 bg-purple-100 hover:bg-purple-200 rounded-full px-3 py-2 transition-colors"
+                          >
+                            <Volume2 className="w-4 h-4 text-purple-600" />
+                            <span className="text-sm text-purple-700">{message.content}</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-900 break-words">{message.content}</p>
+                      )}
+                      
+                      
+                      {/* Message Footer */}
                       <div className="flex items-center justify-end gap-1 mt-1">
                         <span className="text-[10px] text-gray-500">
                           {formatTime(message.timestamp)}
@@ -805,6 +1157,24 @@ export default function WhatsAppChat() {
                           <CheckCheck className="w-3 h-3 text-blue-500" />
                         )}
                       </div>
+                      
+                      {/* Reactions */}
+                      {reactions && (reactions.likes.length > 0 || reactions.shares.length > 0) && (
+                        <div className="flex items-center gap-2 mt-1">
+                          {reactions.likes.length > 0 && (
+                            <span className="text-xs text-red-500 flex items-center gap-1">
+                              <Heart className="w-3 h-3" />
+                              {reactions.likes.length}
+                            </span>
+                          )}
+                          {reactions.shares.length > 0 && (
+                            <span className="text-xs text-green-500 flex items-center gap-1">
+                              <Share className="w-3 h-3" />
+                              {reactions.shares.length}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -812,33 +1182,49 @@ export default function WhatsAppChat() {
             )}
           </div>
 
+          {/* Reply Context */}
+          {replyingTo && (
+            <div className="bg-blue-50 border-t border-blue-200 px-3 py-2">
+              <div className="flex items-center gap-2">
+                <Reply className="w-4 h-4 text-blue-600" />
+                <span className="text-sm text-blue-800">Replying to {replyingTo.sender_name}</span>
+                <button
+                  onClick={() => setReplyingTo(null)}
+                  className="ml-auto text-blue-600 hover:text-blue-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Message Input */}
-          <div className="bg-gray-100 px-3 py-2 flex items-end gap-2">
-            <div className="flex-1 bg-white rounded-full flex items-center px-4 py-2">
-              <button className="text-gray-500 hover:text-gray-700 mr-2">
+          <div className="bg-gray-100 px-3 py-2 flex items-end gap-2 min-w-0">
+            <div className="flex-1 bg-white rounded-full flex items-center px-4 py-2 min-w-0">
+              <button className="text-gray-500 hover:text-gray-700 mr-2 flex-shrink-0">
                 <Paperclip className="w-5 h-5" />
               </button>
               <input
                 type="text"
-                placeholder="Type a message"
+                placeholder={replyingTo ? "Type your reply..." : "Type a message"}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="flex-1 outline-none text-sm"
+                onKeyPress={(e) => e.key === 'Enter' && (replyingTo ? handleSendReply() : handleSendMessage())}
+                className="flex-1 outline-none text-sm min-w-0 w-full"
               />
             </div>
             
             {newMessage.trim() ? (
               <button
-                onClick={handleSendMessage}
-                className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 transition-colors"
+                onClick={replyingTo ? handleSendReply : handleSendMessage}
+                className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 transition-colors flex-shrink-0"
               >
                 <Send className="w-5 h-5" />
               </button>
             ) : (
               <button 
                 onClick={handleVoiceRecording}
-                className={`p-3 rounded-full transition-colors ${
+                className={`p-3 rounded-full transition-colors flex-shrink-0 ${
                   isRecording 
                     ? 'bg-red-600 text-white hover:bg-red-700' 
                     : 'bg-purple-600 text-white hover:bg-purple-700'
@@ -848,6 +1234,241 @@ export default function WhatsAppChat() {
                 <Mic className="w-5 h-5" />
               </button>
             )}
+          </div>
+
+        </div>
+      )}
+
+      {/* Call Interface */}
+      {showCallInterface && callState && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
+          onClick={(e) => {
+            // Close call if clicking on backdrop
+            if (e.target === e.currentTarget) {
+              webrtcService.current.endCall()
+              setShowCallInterface(false)
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md mx-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                webrtcService.current.endCall()
+                setShowCallInterface(false)
+              }}
+              className="absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              title="Close Call"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                {callState.callType === 'video' ? 'Video Call' : 'Voice Call'}
+              </h3>
+              <p className="text-gray-600">
+                {selectedGroup ? selectedGroup.name : `${selectedFriend?.first_name} ${selectedFriend?.last_name}`}
+              </p>
+            </div>
+
+            {/* Video Display */}
+            {callState.callType === 'video' && (
+              <div className="mb-6">
+                <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video">
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2 right-2 w-24 h-32 bg-gray-800 rounded-lg overflow-hidden">
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Call Controls */}
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => webrtcService.current.toggleMute()}
+                className={`p-3 rounded-full ${
+                  callState.isMuted ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
+                title={callState.isMuted ? 'Unmute' : 'Mute'}
+              >
+                <Mic className="w-6 h-6" />
+              </button>
+
+              {callState.callType === 'video' && (
+                <button
+                  onClick={() => webrtcService.current.toggleVideo()}
+                  className={`p-3 rounded-full ${
+                    callState.isVideoEnabled ? 'bg-gray-200 text-gray-700' : 'bg-red-600 text-white'
+                  }`}
+                  title={callState.isVideoEnabled ? 'Turn off video' : 'Turn on video'}
+                >
+                  <Video className="w-6 h-6" />
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  webrtcService.current.endCall()
+                  setShowCallInterface(false)
+                }}
+                className="p-3 bg-red-600 text-white rounded-full hover:bg-red-700"
+                title="End Call"
+              >
+                <Phone className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Call Status */}
+            <div className="text-center mt-4">
+              <p className="text-sm text-gray-600">
+                {callState.isCallActive ? 'Connected' : 'Connecting...'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Press ESC or click outside to end call
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Message Actions Bottom Sheet (iOS Style) */}
+      {showMessageActions && selectedMessage && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => {
+              setShowMessageActions(false)
+              setSelectedMessage(null)
+            }}
+          />
+          
+          {/* Bottom Sheet */}
+          <div className="relative bg-white rounded-t-3xl w-full max-w-md mx-4 transform transition-transform duration-300 ease-out">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Message Preview */}
+            <div className="px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <span className="text-purple-600 font-medium text-sm">
+                    {selectedMessage.sender_name[0]}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">
+                    {selectedMessage.sender_name}
+                  </p>
+                  <p className="text-sm text-gray-500 truncate">
+                    {selectedMessage.content.length > 50 
+                      ? `${selectedMessage.content.substring(0, 50)}...` 
+                      : selectedMessage.content
+                    }
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                💡 Tip: Long press on mobile or right-click on desktop to access message actions
+              </p>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="px-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Like */}
+                <button
+                  onClick={() => {
+                    handleLikeMessage(selectedMessage.id)
+                    setShowMessageActions(false)
+                    setSelectedMessage(null)
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors"
+                >
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <Heart className="w-6 h-6 text-red-600" />
+                  </div>
+                  <span className="text-sm font-medium text-red-700">Like</span>
+                </button>
+                
+                {/* Reply */}
+                <button
+                  onClick={() => {
+                    handleReplyToMessage(selectedMessage.id)
+                    setShowMessageActions(false)
+                    setSelectedMessage(null)
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors"
+                >
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Reply className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-medium text-blue-700">Reply</span>
+                </button>
+                
+                {/* Share */}
+                <button
+                  onClick={() => {
+                    handleShareMessage(selectedMessage.id)
+                    setShowMessageActions(false)
+                    setSelectedMessage(null)
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-green-50 rounded-2xl hover:bg-green-100 transition-colors"
+                >
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <Share className="w-6 h-6 text-green-600" />
+                  </div>
+                  <span className="text-sm font-medium text-green-700">Share</span>
+                </button>
+                
+                {/* Forward */}
+                <button
+                  onClick={() => {
+                    handleForwardMessage(selectedMessage.id)
+                    setShowMessageActions(false)
+                    setSelectedMessage(null)
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-purple-50 rounded-2xl hover:bg-purple-100 transition-colors"
+                >
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <ArrowUpRight className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <span className="text-sm font-medium text-purple-700">Forward</span>
+                </button>
+              </div>
+            </div>
+            
+            {/* Cancel Button */}
+            <div className="px-6 pb-6">
+              <button
+                onClick={() => {
+                  setShowMessageActions(false)
+                  setSelectedMessage(null)
+                }}
+                className="w-full py-4 bg-gray-100 rounded-2xl text-gray-700 font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
