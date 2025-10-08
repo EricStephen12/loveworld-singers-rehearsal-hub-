@@ -23,6 +23,16 @@ export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const storage = getStorage(app)
 
+// Debug Firebase connection
+console.log('🔥 Firebase initialized:', {
+  app: !!app,
+  auth: !!auth,
+  db: !!db,
+  storage: !!storage,
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain
+});
+
 // Set auth persistence to local storage
 setPersistence(auth, browserLocalPersistence)
 

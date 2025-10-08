@@ -372,6 +372,12 @@ export default function AdminPage() {
     if (loading || !allPraiseNights) return [];
     console.log('📄 Admin pages loaded:', allPraiseNights.length, 'pages');
     console.log('📄 All pages data:', allPraiseNights);
+    console.log('📄 Admin pages with IDs:', allPraiseNights.map(page => ({
+      id: page.id,
+      firebaseId: (page as any).firebaseId,
+      supabaseId: (page as any).supabaseId,
+      name: page.name
+    })));
     allPraiseNights.forEach((page, index) => {
       console.log(`📄 Page ${index}:`, {
         id: page.id,
@@ -711,7 +717,8 @@ export default function AdminPage() {
           title: songData.title,
           praiseNightId: songData.praiseNightId,
           selectedPageId: selectedPage?.id,
-          selectedPageName: selectedPage?.name
+          selectedPageName: selectedPage?.name,
+          selectedPageFullData: selectedPage
         });
         const createdSong = await FirebaseDatabaseService.createSong(songData);
         console.log('🎵 Song creation result:', createdSong);
@@ -2481,6 +2488,7 @@ export default function AdminPage() {
         song={editingSong}
         categories={allCategories}
          praiseNightCategories={pages.map(page => ({ id: page.id, name: page.name, description: 'Praise Night Event', date: page.date, location: page.location, icon: 'Music', color: '#8B5CF6', isActive: true, createdAt: new Date(), updatedAt: new Date(), countdown: page.countdown }))}
+        defaultPraiseNightId={selectedPage?.id} // Pass the currently selected page ID
         onUpdate={handleSaveSong}
       />
 

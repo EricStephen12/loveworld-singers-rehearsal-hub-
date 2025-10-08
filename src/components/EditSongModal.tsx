@@ -26,6 +26,7 @@ interface EditSongModalProps {
   song: PraiseNightSong | null;
   categories: Category[];
   praiseNightCategories: Array<{id: number, name: string, description: string, date: string, location: string, icon: string, color: string, isActive: boolean, createdAt: Date, updatedAt: Date, countdown: {days: number, hours: number, minutes: number, seconds: number}}>;
+  defaultPraiseNightId?: number; // Add default praise night ID
   onUpdate: (updatedSong: PraiseNightSong) => void;
 }
 
@@ -35,6 +36,7 @@ export default function EditSongModal({
   song, 
   categories, 
   praiseNightCategories,
+  defaultPraiseNightId,
   onUpdate 
 }: EditSongModalProps) {
   // Form state
@@ -421,8 +423,11 @@ export default function EditSongModal({
       // Adding new song - reset all form fields to empty/default values
       setSongTitle('');
       setSongCategory('');
-      // Set default praise night to the first available one
-      setSongPraiseNight(praiseNightCategories.length > 0 ? praiseNightCategories[0].name : '');
+      // Set default praise night to the specified one or first available one
+      const defaultPraiseNight = defaultPraiseNightId 
+        ? praiseNightCategories.find(pn => pn.id === defaultPraiseNightId)
+        : praiseNightCategories[0];
+      setSongPraiseNight(defaultPraiseNight?.name || '');
       setSongStatus('unheard');
       setSongLeadSinger('');
       setSongWriter('');
@@ -475,6 +480,13 @@ export default function EditSongModal({
       // Find the selected Praise Night ID
       const selectedPraiseNight = praiseNightCategories.find(pn => pn.name === songPraiseNight);
       
+      console.log('🔍 EditSongModal - Finding Praise Night:', {
+        songPraiseNight,
+        praiseNightCategories: praiseNightCategories.map(pn => ({ id: pn.id, name: pn.name })),
+        selectedPraiseNight,
+        selectedPraiseNightId: selectedPraiseNight?.id
+      });
+      
       if (!selectedPraiseNight) {
         alert('Please select a valid Praise Night');
         return;
@@ -515,6 +527,11 @@ export default function EditSongModal({
 
       console.log('🎵 Final songData being saved:', {
         title: songData.title,
+        praiseNightId: songData.praiseNightId,
+        category: songData.category,
+        status: songData.status,
+        selectedPraiseNightId: selectedPraiseNight?.id,
+        songPraiseNight: songPraiseNight,
         writer: songData.writer,
         leadSinger: songData.leadSinger,
         conductor: songData.conductor,

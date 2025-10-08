@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2, Flag, Archive } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2, Flag, Archive, RefreshCw } from "lucide-react";
 import SongDetailModal from "@/components/SongDetailModal";
 import { PraiseNightSong, PraiseNight } from "@/types/supabase";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
@@ -52,18 +52,22 @@ function PraiseNightPageContent() {
     preloadData();
   }, [preloadData]);
 
-  // Refresh data when page becomes visible (after admin updates)
+  // Immediate refresh when page becomes visible (after admin updates)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log('🔄 Page became visible, refreshing data...');
+        console.log('🔄 Page became visible, refreshing data immediately...');
         refreshData();
+        // Also refresh again after a short delay to catch any missed updates
+        setTimeout(() => refreshData(), 1000);
       }
     };
 
     const handleFocus = () => {
-      console.log('🔄 Page focused, refreshing data...');
+      console.log('🔄 Page focused, refreshing data immediately...');
       refreshData();
+      // Also refresh again after a short delay to catch any missed updates
+      setTimeout(() => refreshData(), 1000);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -75,12 +79,12 @@ function PraiseNightPageContent() {
     };
   }, [refreshData]);
 
-  // Periodic refresh to ensure data stays up to date
+  // Very frequent refresh to ensure data stays up to date (immediate updates)
   useEffect(() => {
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Periodic refresh...');
+      console.log('🔄 Very frequent refresh for immediate updates...');
       refreshData();
-    }, 30000); // Refresh every 30 seconds
+    }, 3000); // Refresh every 3 seconds for immediate updates
 
     return () => {
       clearInterval(refreshInterval);
@@ -132,32 +136,12 @@ function PraiseNightPageContent() {
   const [activeTab, setActiveTab] = useState('lyrics');
 
 
-  // Song categories - get from Supabase data
-  const songCategories = useMemo(() => {
-    if (!currentPraiseNight?.songs) return [];
-    const uniqueCategories = [...new Set(currentPraiseNight.songs.map(song => song.category))];
-    return uniqueCategories;
-  }, [currentPraiseNight?.songs]);
-
-  // Show all categories in horizontal bar (no FAB needed)
-  const mainCategories = songCategories;
-  // No categories in FAB - all are visible
-  const otherCategories: string[] = [];
-
   // Filter states
   const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard');
-  const [activeCategory, setActiveCategory] = useState<string>(songCategories[0] || ''); // ✅ Set first category immediately
+  const [activeCategory, setActiveCategory] = useState<string>('');
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
   
   // Removed auto-scroll states - now using CSS animation like pills above
-
-  // ✅ Update active category when categories change (e.g., switching pages)
-  useEffect(() => {
-    if (songCategories.length > 0) {
-      // Always set to first category when categories change
-      setActiveCategory(songCategories[0]);
-    }
-  }, [songCategories]);
 
   // ✅ Reset filter to 'heard' only when switching to a different page (not when just loading)
   const [previousPageId, setPreviousPageId] = useState<number | null>(null);
@@ -363,6 +347,14 @@ function PraiseNightPageContent() {
 
   // Handle category selection and close drawer
   const handleCategorySelect = (category: string) => {
+    console.log('🎯 Category selected:', {
+      selectedCategory: category,
+      currentPageId: currentPraiseNight?.id,
+      currentPageName: currentPraiseNight?.name,
+      totalSongs: finalSongData.length,
+      songsInThisCategory: finalSongData.filter(song => song.category === category).length,
+      allCategories: [...new Set(finalSongData.map(song => song.category))]
+    });
     setActiveCategory(category);
     setIsCategoryDrawerOpen(false);
   };
@@ -476,6 +468,18 @@ function PraiseNightPageContent() {
   // Use songs directly from currentPraiseNight (Supabase data)
   const songData = currentPraiseNight?.songs || [];
   const isDataLoaded = !loading && currentPraiseNight !== null;
+  
+  // Debug: Log if songs are missing from page
+  useEffect(() => {
+    if (currentPraiseNight && songData.length === 0) {
+      console.log('⚠️ WARNING: No songs found for page:', {
+        pageId: currentPraiseNight.id,
+        pageName: currentPraiseNight.name,
+        pageSongs: currentPraiseNight.songs,
+        allPraiseNightsCount: allPraiseNights.length
+      });
+    }
+  }, [currentPraiseNight, songData.length, allPraiseNights.length]);
 
   // Fallback data if no centralized songs available
   const fallbackSongData = [
@@ -501,6 +505,102 @@ function PraiseNightPageContent() {
 
   // Use centralized data if available, otherwise show empty state
   const finalSongData = (isDataLoaded && songData.length > 0) ? songData : [];
+  
+  // Song categories - get from Supabase data (moved after finalSongData)
+  const songCategories = useMemo(() => {
+    // First try to get categories from currentPraiseNight.songs
+    if (currentPraiseNight?.songs && currentPraiseNight.songs.length > 0) {
+      const uniqueCategories = [...new Set(currentPraiseNight.songs.map(song => song.category))];
+      console.log('🔍 DEBUG - Song categories from page songs:', {
+        currentPraiseNightId: currentPraiseNight?.id,
+        songsCount: currentPraiseNight.songs.length,
+        uniqueCategories,
+        allSongsWithCategories: currentPraiseNight.songs.map(song => ({
+          title: song.title,
+          category: song.category,
+          status: song.status
+        }))
+      });
+      return uniqueCategories;
+    }
+    
+    // Fallback: get categories from finalSongData if page songs are empty
+    if (finalSongData && finalSongData.length > 0) {
+      const uniqueCategories = [...new Set(finalSongData.map(song => song.category))];
+      console.log('🔍 DEBUG - Song categories from finalSongData (fallback):', {
+        currentPraiseNightId: currentPraiseNight?.id,
+        finalSongDataCount: finalSongData.length,
+        uniqueCategories,
+        allSongsWithCategories: finalSongData.map(song => ({
+          title: song.title,
+          category: song.category,
+          status: song.status,
+          praiseNightId: song.praiseNightId
+        }))
+      });
+      return uniqueCategories;
+    }
+    
+    console.log('🔍 DEBUG - No song categories found:', {
+      currentPraiseNightId: currentPraiseNight?.id,
+      hasPageSongs: !!currentPraiseNight?.songs,
+      pageSongsCount: currentPraiseNight?.songs?.length || 0,
+      finalSongDataCount: finalSongData?.length || 0
+    });
+    
+    return [];
+  }, [currentPraiseNight?.songs, finalSongData]);
+
+  // Show all categories in horizontal bar (no FAB needed) - filter out empty categories
+  const mainCategories = songCategories.filter(category => category && category.trim() !== '');
+  // No categories in FAB - all are visible
+  const otherCategories: string[] = [];
+  
+  // Debug category bar
+  useEffect(() => {
+    console.log('🎯 Category Bar Debug:', {
+      currentPraiseNightId: currentPraiseNight?.id,
+      currentPraiseNightName: currentPraiseNight?.name,
+      songsCount: currentPraiseNight?.songs?.length || 0,
+      songCategories: songCategories,
+      songCategoriesWithDetails: songCategories.map((cat, index) => ({
+        index,
+        category: cat,
+        isEmpty: !cat || cat.trim() === '',
+        length: cat?.length || 0
+      })),
+      mainCategories: mainCategories,
+      otherCategories: otherCategories,
+      activeCategory: activeCategory,
+      categoryBarEmpty: mainCategories.length === 0
+    });
+  }, [currentPraiseNight, songCategories, mainCategories, activeCategory]);
+
+  // ✅ Update active category when categories change (e.g., switching pages)
+  useEffect(() => {
+    if (songCategories.length > 0 && !activeCategory) {
+      // Set to first category when categories are available and no category is selected
+      setActiveCategory(songCategories[0]);
+    }
+  }, [songCategories, activeCategory]);
+  
+  // Debug: Log song data to see what's being fetched
+  useEffect(() => {
+    console.log('🔍 DEBUG - Song data for current page:', {
+      currentPraiseNightId: currentPraiseNight?.id,
+      currentPraiseNightName: currentPraiseNight?.name,
+      songDataLength: songData.length,
+      finalSongDataLength: finalSongData.length,
+      isDataLoaded,
+      allSongs: songData.map(song => ({
+        id: song.id,
+        title: song.title,
+        category: song.category,
+        status: song.status,
+        praiseNightId: song.praiseNightId
+      }))
+    });
+  }, [currentPraiseNight, songData, finalSongData, isDataLoaded]);
 
   // Update data when praise night changes
   useEffect(() => {
@@ -512,6 +612,31 @@ function PraiseNightPageContent() {
   const filteredSongs = finalSongData.filter(song =>
     song.category === activeCategory && song.status === activeFilter
   );
+
+  // Debug logging for song filtering
+  useEffect(() => {
+    if (finalSongData.length > 0) {
+      console.log('🔍 Song Filtering Debug:', {
+        currentPageId: currentPraiseNight?.id,
+        currentPageName: currentPraiseNight?.name,
+        totalSongs: finalSongData.length,
+        activeCategory,
+        activeFilter,
+        filteredSongsCount: filteredSongs.length,
+        allSongsInCategory: finalSongData.filter(song => song.category === activeCategory),
+        heardSongsInCategory: finalSongData.filter(song => song.category === activeCategory && song.status === 'heard'),
+        unheardSongsInCategory: finalSongData.filter(song => song.category === activeCategory && song.status === 'unheard'),
+        songStatuses: finalSongData.map(song => ({ 
+          title: song.title, 
+          status: song.status, 
+          category: song.category,
+          praiseNightId: song.praiseNightId,
+          categoryMatch: song.category === activeCategory
+        })),
+        allUniqueCategories: [...new Set(finalSongData.map(song => song.category))]
+      });
+    }
+  }, [finalSongData, activeCategory, activeFilter, filteredSongs.length, currentPraiseNight]);
 
   // Get counts for current category
   const categoryHeardCount = finalSongData.filter(song => song.category === activeCategory && song.status === 'heard').length;
@@ -692,11 +817,13 @@ function PraiseNightPageContent() {
 
               {/* Center - Title and Timer */}
               <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center">
-                <h1 className="text-base sm:text-lg font-outfit-semibold text-gray-800">
-                  {categoryFilter === 'archive' ? 'Archives' : 
-                   categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0 ? 'Pre-Rehearsal' :
-                   (currentPraiseNight?.name || '')}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base sm:text-lg font-outfit-semibold text-gray-800">
+                    {categoryFilter === 'archive' ? 'Archives' : 
+                     categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0 ? 'Pre-Rehearsal' :
+                     (currentPraiseNight?.name || '')}
+                  </h1>
+                </div>
                 {categoryFilter !== 'archive' && currentPraiseNight && !(categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0) && (
                   <div className="flex items-center gap-0.5 text-xs mt-0.5">
                     <span className="font-bold text-gray-700">{formatNumber(timeLeft.days)}d</span>
@@ -1252,7 +1379,7 @@ function PraiseNightPageContent() {
 
       {/* ✅ Category Bar for Individual Archive Pages */}
       {categoryFilter === 'archive' && pageParam && (
-        <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full safe-area-bottom">
+        <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full pb-safe">
           <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
             {/* Category buttons - no scrolling */}
             <div className="w-full flex gap-2 flex-wrap justify-center">
@@ -1275,8 +1402,8 @@ function PraiseNightPageContent() {
 
        {/* ✅ Fixed Bottom Bar with Categories - Mobile Responsive */}
       {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
-         <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full safe-area-bottom">
-             <div className="w-full px-2 sm:px-4 lg:px-6 py-3 sm:py-4">
+         <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', minHeight: 'fit-content' }}>
+             <div className="w-full px-2 sm:px-4 lg:px-6 py-3 sm:py-4 max-w-full">
               {/* Category buttons with CSS animation scroll - same as pills above */}
               <div 
                 className="w-full overflow-x-auto scrollbar-hide"
