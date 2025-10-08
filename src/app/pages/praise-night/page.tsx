@@ -1276,7 +1276,7 @@ function PraiseNightPageContent() {
        {/* ✅ Fixed Bottom Bar with Categories - Mobile Responsive */}
       {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
          <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full safe-area-bottom">
-             <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
+             <div className="w-full px-2 sm:px-4 lg:px-6 py-3 sm:py-4">
               {/* Category buttons with CSS animation scroll - same as pills above */}
               <div 
                 className="w-full overflow-x-auto scrollbar-hide"
@@ -1289,18 +1289,20 @@ function PraiseNightPageContent() {
                   }, 2000);
                 }}
               >
-                <div className="flex items-center gap-2 animate-scroll">
+                <div className="flex items-center gap-1 sm:gap-1.5 animate-scroll">
                   {/* First set of categories */}
                   {mainCategories.map((category, index) => (
                     <button
                       key={`first-${category}`}
                       onClick={() => handleCategorySelect(category)}
-                      className={`flex-shrink-0 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap min-w-[150px] ${activeCategory === category
+                      className={`flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap min-w-[80px] sm:min-w-[100px] max-w-[140px] sm:max-w-[160px] ${activeCategory === category
                         ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                         : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
                         }`}
                     >
-                      {category}
+                      <span className="truncate block" title={category}>
+                        {category.length > 15 ? `${category.substring(0, 15)}...` : category}
+                      </span>
                     </button>
                   ))}
                   
@@ -1309,12 +1311,14 @@ function PraiseNightPageContent() {
                     <button
                       key={`second-${category}`}
                       onClick={() => handleCategorySelect(category)}
-                      className={`flex-shrink-0 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap min-w-[150px] ${activeCategory === category
+                      className={`flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap min-w-[80px] sm:min-w-[100px] max-w-[140px] sm:max-w-[160px] ${activeCategory === category
                         ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                         : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
                         }`}
                     >
-                      {category}
+                      <span className="truncate block" title={category}>
+                        {category.length > 15 ? `${category.substring(0, 15)}...` : category}
+                      </span>
                     </button>
                   ))}
                 </div>
