@@ -170,17 +170,19 @@ export class FirebaseDatabaseService {
           ...data
         }
         
-        // Debug comments specifically for songs collection
-        if (collectionName === 'songs' && data.comments) {
-          console.log('🔍 Firebase getCollection - Song comments debug:', {
+        // Debug comments and solfas specifically for songs collection
+        if (collectionName === 'songs') {
+          console.log('🔍 Firebase getCollection - Song debug:', {
             songTitle: data.title,
             docId: doc.id,
             hasComments: !!data.comments,
             commentsType: typeof data.comments,
             commentsIsArray: Array.isArray(data.comments),
             commentsLength: data.comments?.length || 0,
-            commentsData: data.comments,
-            commentsStringified: JSON.stringify(data.comments)
+            hasSolfas: !!data.solfas,
+            solfasType: typeof data.solfas,
+            solfasLength: data.solfas?.length || 0,
+            solfasPreview: data.solfas ? data.solfas.substring(0, 100) + '...' : 'none'
           });
         }
         

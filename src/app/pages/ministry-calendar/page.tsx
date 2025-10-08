@@ -16,7 +16,8 @@ import {
   X,
   Save,
   User,
-  Cake
+  Cake,
+  Menu
 } from 'lucide-react';
 import ScreenHeader from '@/components/ScreenHeader';
 import SharedDrawer from '@/components/SharedDrawer';
@@ -324,78 +325,190 @@ export default function MinistryCalendarPage() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col">
-      {/* Responsive Container with Max Width */}
-      <div className="w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto flex flex-col h-full">
-        {/* Header */}
-        <ScreenHeader
-          title="Ministry Calendar"
-          onMenuClick={() => setIsMenuOpen(true)}
-          onTitleClick={() => router.push('/home')}
-        />
+    <div className="h-screen w-screen overflow-hidden flex">
+      {/* Left Sidebar - Google Calendar Style */}
+      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Ministry Calendar</h2>
+              <p className="text-sm text-gray-500">General events & birthdays</p>
+            </div>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
 
-        {/* Mobile-First Calendar Layout */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Mobile Calendar Controls */}
-          <div className="px-4 py-3 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => navigateMonth('prev')}
-                  className="p-2 hover:bg-gray-100/70 rounded-full transition-all duration-200 active:scale-95"
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <h2 className="text-lg font-semibold text-gray-900">{monthName}</h2>
-                <button
-                  onClick={() => navigateMonth('next')}
-                  className="p-2 hover:bg-gray-100/70 rounded-full transition-all duration-200 active:scale-95"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-              
-              {/* Create Button - Mobile */}
+
+        {/* Calendar Navigation */}
+        <div className="px-4 pb-4">
+          <div className="space-y-2">
+            <button
+              onClick={() => setView('month')}
+              className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-200 ${
+                view === 'month' ? 'bg-purple-100 text-purple-700' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setView('week')}
+              className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-200 ${
+                view === 'week' ? 'bg-purple-100 text-purple-700' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => setView('day')}
+              className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-200 ${
+                view === 'day' ? 'bg-purple-100 text-purple-700' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Day
+            </button>
+          </div>
+        </div>
+
+        {/* Today Button */}
+        <div className="px-4 pb-4">
+          <button
+            onClick={() => setCurrentDate(new Date())}
+            className="w-full text-left px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+          >
+            Today
+          </button>
+        </div>
+
+        {/* Calendar Legend */}
+        <div className="px-4 pb-4 flex-1">
+          <h3 className="text-sm font-medium text-gray-900 mb-3">Event Types</h3>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+              <span className="text-sm text-gray-600">General Events</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+              <span className="text-sm text-gray-600">Birthdays</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span className="text-sm text-gray-600">Ministry Events</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500">
+            All events are visible to everyone in the ministry
+          </p>
+        </div>
+      </div>
+
+      {/* Main Calendar Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Mobile Header */}
+        <div className="md:hidden bg-white border-b border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowEventForm(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 active:scale-95"
+                onClick={() => setIsMenuOpen(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
               >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Create</span>
+                <Menu className="w-5 h-5" />
+              </button>
+              <h1 className="text-lg font-semibold text-gray-900">Ministry Calendar</h1>
+            </div>
+          </div>
+        </div>
+
+        {/* Calendar Header */}
+        <div className="bg-white border-b border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            {/* Month Navigation */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => {
+                  const newDate = new Date(currentDate);
+                  if (view === 'month') {
+                    newDate.setMonth(newDate.getMonth() - 1);
+                  } else if (view === 'week') {
+                    newDate.setDate(newDate.getDate() - 7);
+                  } else {
+                    newDate.setDate(newDate.getDate() - 1);
+                  }
+                  setCurrentDate(newDate);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              
+              <h1 className="text-xl font-semibold text-gray-900">
+                {view === 'month' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                {view === 'week' && `Week of ${currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                {view === 'day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </h1>
+              
+              <button
+                onClick={() => {
+                  const newDate = new Date(currentDate);
+                  if (view === 'month') {
+                    newDate.setMonth(newDate.getMonth() + 1);
+                  } else if (view === 'week') {
+                    newDate.setDate(newDate.getDate() + 7);
+                  } else {
+                    newDate.setDate(newDate.getDate() + 1);
+                  }
+                  setCurrentDate(newDate);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              >
+                <ChevronRight className="w-5 h-5" />
               </button>
             </div>
 
-            {/* View Toggle */}
-            <div className="flex gap-1 bg-gray-100/70 rounded-lg p-1">
-              {(['month', 'week', 'day'] as CalendarView[]).map((viewType) => (
-                <button
-                  key={viewType}
-                  onClick={() => setView(viewType)}
-                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                    view === viewType
-                      ? 'bg-white text-purple-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {viewType.charAt(0).toUpperCase() + viewType.slice(1)}
-                </button>
-              ))}
+            {/* View Toggle - Hidden on mobile since it's in sidebar */}
+            <div className="hidden md:flex gap-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setView('month')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${
+                  view === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Month
+              </button>
+              <button
+                onClick={() => setView('week')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${
+                  view === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Week
+              </button>
+              <button
+                onClick={() => setView('day')}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${
+                  view === 'day' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Day
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Calendar Legend - Mobile */}
-          <div className="px-4 py-2 bg-white/60 backdrop-blur-sm border-b border-gray-100/30">
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                <span className="text-gray-600">Ministry Events</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-pink-500"></div>
-                <span className="text-gray-600">Birthdays</span>
-              </div>
-            </div>
-          </div>
+        {/* Calendar Content */}
+        <div className="flex-1 overflow-hidden">
+          {/* Calendar Content Area */}
 
           {/* Calendar Grid */}
           <div className="flex-1 p-4 overflow-y-auto">

@@ -149,10 +149,7 @@ function PraiseNightPageContent() {
   const [activeCategory, setActiveCategory] = useState<string>(songCategories[0] || ''); // ✅ Set first category immediately
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
   
-  // Auto-scroll states
-  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
-  const [scrollDirection, setScrollDirection] = useState<'left' | 'right'>('right');
-  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  // Removed auto-scroll states - now using CSS animation like pills above
 
   // ✅ Update active category when categories change (e.g., switching pages)
   useEffect(() => {
@@ -161,30 +158,6 @@ function PraiseNightPageContent() {
       setActiveCategory(songCategories[0]);
     }
   }, [songCategories]);
-
-  // Auto-scroll effect
-  useEffect(() => {
-    if (!isAutoScrolling || !categoryScrollRef.current) return;
-
-    const scrollContainer = categoryScrollRef.current;
-    const scrollInterval = setInterval(() => {
-      if (scrollDirection === 'right') {
-        scrollContainer.scrollLeft += 1;
-        // If we've scrolled to the end, reverse direction
-        if (scrollContainer.scrollLeft >= scrollContainer.scrollWidth - scrollContainer.clientWidth) {
-          setScrollDirection('left');
-        }
-      } else {
-        scrollContainer.scrollLeft -= 1;
-        // If we've scrolled to the beginning, reverse direction
-        if (scrollContainer.scrollLeft <= 0) {
-          setScrollDirection('right');
-        }
-      }
-    }, 30); // Smooth scrolling speed
-
-    return () => clearInterval(scrollInterval);
-  }, [isAutoScrolling, scrollDirection]);
 
   // ✅ Reset filter to 'heard' only when switching to a different page (not when just loading)
   const [previousPageId, setPreviousPageId] = useState<number | null>(null);
@@ -1281,22 +1254,8 @@ function PraiseNightPageContent() {
       {categoryFilter === 'archive' && pageParam && (
         <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full safe-area-bottom">
           <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
-            {/* Category buttons with auto-scroll and manual scroll - full width horizontal scroll */}
-            <div 
-              ref={categoryScrollRef}
-              className="w-full flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
-              onScroll={(e) => {
-                // Pause auto-scroll when user manually scrolls
-                setIsAutoScrolling(false);
-                // Resume auto-scroll after 3 seconds of no manual scrolling
-                clearTimeout((e.target as any).scrollTimeout);
-                (e.target as any).scrollTimeout = setTimeout(() => {
-                  setIsAutoScrolling(true);
-                }, 3000);
-              }}
-              onMouseEnter={() => setIsAutoScrolling(false)}
-              onMouseLeave={() => setIsAutoScrolling(true)}
-            >
+            {/* Category buttons - no scrolling */}
+            <div className="w-full flex gap-2 flex-wrap justify-center">
               {mainCategories.map((category, index) => (
                 <button
                   key={category}
@@ -1318,34 +1277,47 @@ function PraiseNightPageContent() {
       {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
          <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full safe-area-bottom">
              <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
-              {/* Category buttons with horizontal overflow scroll - same as archive page */}
+              {/* Category buttons with CSS animation scroll - same as pills above */}
               <div 
-                ref={categoryScrollRef}
-                className="w-full flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+                className="w-full overflow-x-auto scrollbar-hide"
                 onScroll={(e) => {
-                  // Pause auto-scroll when user manually scrolls
-                  setIsAutoScrolling(false);
-                  // Resume auto-scroll after 3 seconds of no manual scrolling
-                  clearTimeout((e.target as any).scrollTimeout);
-                  (e.target as any).scrollTimeout = setTimeout(() => {
-                    setIsAutoScrolling(true);
-                  }, 3000);
+                  const target = e.target as HTMLDivElement;
+                  target.style.animationPlayState = 'paused';
+                  clearTimeout((target as any).scrollTimeout);
+                  (target as any).scrollTimeout = setTimeout(() => {
+                    target.style.animationPlayState = 'running';
+                  }, 2000);
                 }}
-                onMouseEnter={() => setIsAutoScrolling(false)}
-                onMouseLeave={() => setIsAutoScrolling(true)}
               >
-            {mainCategories.map((category, index) => (
-                <button
-                    key={category}
-                  onClick={() => handleCategorySelect(category)}
-                    className={`flex-shrink-0 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap ${activeCategory === category
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                    }`}
-                >
-                    {category}
-                </button>
-                ))}
+                <div className="flex items-center gap-2 animate-scroll">
+                  {/* First set of categories */}
+                  {mainCategories.map((category, index) => (
+                    <button
+                      key={`first-${category}`}
+                      onClick={() => handleCategorySelect(category)}
+                      className={`flex-shrink-0 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap min-w-[150px] ${activeCategory === category
+                        ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                        : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                        }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                  
+                  {/* Second set of categories (duplicated for seamless loop) */}
+                  {mainCategories.map((category, index) => (
+                    <button
+                      key={`second-${category}`}
+                      onClick={() => handleCategorySelect(category)}
+                      className={`flex-shrink-0 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap min-w-[150px] ${activeCategory === category
+                        ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                        : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                        }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
               </div>
           </div>
         </div>
