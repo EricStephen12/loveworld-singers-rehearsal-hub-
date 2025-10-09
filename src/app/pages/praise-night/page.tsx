@@ -312,11 +312,17 @@ function PraiseNightPageContent() {
 
     const handleTouchStart = (e: Event) => {
       const touchEvent = e as TouchEvent;
-      // Only activate if at the very top of the page
-      if (window.scrollY === 0 && window.pageYOffset === 0) {
+      // Only activate if at the very top of the page AND not in a scrollable container
+      const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
+      const isAtTop = window.scrollY === 0 && window.pageYOffset === 0;
+      const isInScrollContainer = scrollContainer && scrollContainer.scrollTop === 0;
+      
+      // Only activate if we're at the very top AND not in a scrollable content area
+      if (isAtTop && !isInScrollContainer) {
         startY = touchEvent.touches[0].clientY;
         isPulling = true;
         pullDistance = 0;
+        console.log('🔄 Pull-to-refresh activated at top of page');
       }
     };
 
@@ -345,8 +351,11 @@ function PraiseNightPageContent() {
     };
 
     const handleTouchEnd = () => {
-      if (isPulling && pullDistance > 80) {
+      if (isPulling && pullDistance > 120) { // Increased threshold from 80 to 120
+        console.log('🔄 Pull-to-refresh threshold reached, triggering refresh');
         handleRefresh();
+      } else if (isPulling) {
+        console.log('🔄 Pull-to-refresh cancelled - not enough distance');
       }
       
       // Reset pull-to-refresh state
@@ -354,7 +363,7 @@ function PraiseNightPageContent() {
         isPulling: false,
         startY: 0,
         currentY: 0,
-        threshold: 80
+        threshold: 120 // Increased threshold
       });
       
       isPulling = false;
@@ -890,10 +899,10 @@ function PraiseNightPageContent() {
              ) : (
                <>
                  <div className={`w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full transition-transform duration-200 ${
-                   (pullToRefresh.currentY - pullToRefresh.startY) > pullToRefresh.threshold ? 'rotate-180' : ''
+                   (pullToRefresh.currentY - pullToRefresh.startY) > 120 ? 'rotate-180' : ''
                  }`}></div>
                  <span className="text-sm font-medium">
-                   {(pullToRefresh.currentY - pullToRefresh.startY) > pullToRefresh.threshold ? 'Release to refresh' : 'Pull to refresh'}
+                   {(pullToRefresh.currentY - pullToRefresh.startY) > 120 ? 'Release to refresh' : 'Pull to refresh'}
                  </span>
                </>
              )}

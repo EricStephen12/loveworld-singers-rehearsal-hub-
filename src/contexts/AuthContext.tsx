@@ -314,10 +314,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log('🔥 Firebase Auth state changed:', user ? `User signed in: ${user.email}` : 'User signed out')
         console.log('🔥 Auth persistence working:', user ? 'YES' : 'NO')
+        console.log('🔥 User UID:', user?.uid || 'No UID')
+        console.log('🔥 Auth timestamp:', new Date().toISOString())
 
         // ✅ ALWAYS update user state, even on auth page
         // This allows redirect to work when user logs in
         setUser(user)
+        
+        // Track authentication state in localStorage for persistence
+        if (user) {
+          localStorage.setItem('userAuthenticated', 'true')
+          localStorage.setItem('lastAuthTime', Date.now().toString())
+          localStorage.setItem('userEmail', user.email || '')
+          console.log('✅ Auth state saved to localStorage')
+        } else {
+          // Only clear if we're actually logging out
+          if (!isLoggingOut) {
+            console.log('⚠️ User signed out unexpectedly - keeping localStorage for potential restore')
+          } else {
+            localStorage.removeItem('userAuthenticated')
+            localStorage.removeItem('lastAuthTime')
+            localStorage.removeItem('userEmail')
+            console.log('✅ Auth state cleared from localStorage (logout)')
+          }
+        }
 
         if (user) {
           // Load profile

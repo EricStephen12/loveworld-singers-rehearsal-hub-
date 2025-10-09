@@ -81,9 +81,20 @@ export class FirebaseAuthService {
       if (currentUser) {
         console.log('✅ User is already signed in:', currentUser.email)
         console.log('✅ Auth persistence working - user will stay signed in across sessions')
+        console.log('✅ User UID:', currentUser.uid)
+        console.log('✅ Auth state:', currentUser ? 'AUTHENTICATED' : 'NOT AUTHENTICATED')
       } else {
         console.log('ℹ️ No user currently signed in')
       }
+      
+      // Force auth state check
+      return new Promise((resolve) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+          console.log('🔐 Auth state check on startup:', user ? `User: ${user.email}` : 'No user')
+          unsubscribe()
+          resolve(user)
+        })
+      })
     } catch (error) {
       console.error('❌ Failed to set auth persistence:', error)
     }
