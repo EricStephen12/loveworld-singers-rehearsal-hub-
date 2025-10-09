@@ -204,7 +204,7 @@ export function useRealtimeData() {
   useEffect(() => {
     console.log('🔄 Setting up periodic data refresh...');
 
-    // Refresh data every 30 seconds to get updates
+    // Refresh data every 5 seconds to get updates quickly
     const refreshInterval = setInterval(async () => {
       try {
         console.log('🔄 Refreshing data from Firebase...');
@@ -214,7 +214,7 @@ export function useRealtimeData() {
       } catch (error) {
         console.error('Error refreshing data:', error);
       }
-    }, 30000); // 30 seconds
+    }, 5000); // 5 seconds
 
     // Cleanup interval on unmount
     return () => {

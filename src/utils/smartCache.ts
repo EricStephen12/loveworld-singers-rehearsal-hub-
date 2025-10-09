@@ -217,10 +217,10 @@ export const createCacheConfig = (
 // Cache durations
 export const CACHE_DURATIONS = {
   INSTANT: 0, // No cache
-  SHORT: 30 * 1000, // 30 seconds
-  MEDIUM: 5 * 60 * 1000, // 5 minutes
-  LONG: 30 * 60 * 1000, // 30 minutes
-  VERY_LONG: 2 * 60 * 60 * 1000, // 2 hours
+  SHORT: 2 * 1000, // 2 seconds
+  MEDIUM: 5 * 1000, // 5 seconds
+  LONG: 10 * 1000, // 10 seconds
+  VERY_LONG: 30 * 1000, // 30 seconds
 } as const;
 
 // High priority cache keys (won't be evicted easily)

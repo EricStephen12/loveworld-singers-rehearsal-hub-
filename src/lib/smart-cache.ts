@@ -25,8 +25,8 @@ class SmartCache<T = any> {
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = {
       maxSize: 1000,
-      defaultTTL: 5 * 60 * 1000, // 5 minutes
-      cleanupInterval: 60 * 1000, // 1 minute
+      defaultTTL: 3 * 1000, // 3 seconds
+      cleanupInterval: 10 * 1000, // 10 seconds
       ...config
     }
     
@@ -75,15 +75,15 @@ class SmartCache<T = any> {
   // Smart TTL based on data type and size
   private getSmartTTL(data: any): number {
     if (typeof data === 'string' && data.length > 10000) {
-      return 10 * 60 * 1000 // 10 minutes for large strings
+      return 5 * 1000 // 5 seconds for large strings
     }
     
     if (Array.isArray(data) && data.length > 100) {
-      return 15 * 60 * 1000 // 15 minutes for large arrays
+      return 8 * 1000 // 8 seconds for large arrays
     }
     
     if (typeof data === 'object' && data.id) {
-      return 30 * 60 * 1000 // 30 minutes for entities with ID
+      return 10 * 1000 // 10 seconds for entities with ID
     }
     
     return this.config.defaultTTL
@@ -140,8 +140,8 @@ class SmartCache<T = any> {
 // Global cache instances for different data types
 export const userCache = new SmartCache({ maxSize: 100, defaultTTL: 10 * 60 * 1000 })
 export const profileCache = new SmartCache({ maxSize: 50, defaultTTL: 15 * 60 * 1000 })
-export const groupsCache = new SmartCache({ maxSize: 200, defaultTTL: 5 * 60 * 1000 })
-export const messagesCache = new SmartCache({ maxSize: 500, defaultTTL: 2 * 60 * 1000 })
+export const groupsCache = new SmartCache({ maxSize: 200, defaultTTL: 3 * 1000 })
+export const messagesCache = new SmartCache({ maxSize: 500, defaultTTL: 2 * 1000 })
 
 // Smart cache decorator for functions
 export function withCache<T extends any[], R>(
