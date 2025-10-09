@@ -73,6 +73,13 @@ class DataPrefetcher {
     this.lastPrefetchTime = 0; // Reset timer
     return await this.prefetchData();
   }
+
+  // Clear cached data
+  async clearCache(): Promise<void> {
+    await offlineManager.clearCache();
+    this.lastPrefetchTime = 0; // Reset timer
+    console.log('🧹 Cache cleared');
+  }
 }
 
 // Export singleton instance

@@ -35,9 +35,9 @@ export const forceRefreshCache = (): void => {
 export const shouldForceRefresh = (): boolean => {
   const lastRefresh = localStorage.getItem('lastForceRefresh');
   const now = Date.now();
-  const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds (reduced for development)
+  const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
   
-  if (!lastRefresh || (now - parseInt(lastRefresh)) > fiveMinutes) {
+  if (!lastRefresh || (now - parseInt(lastRefresh)) > oneHour) {
     localStorage.setItem('lastForceRefresh', now.toString());
     return true;
   }
@@ -86,13 +86,4 @@ export const clearAllCaches = async (): Promise<void> => {
   await clearPWACache();
   forceRefreshCache();
 };
-
-// Development helper - expose to window for easy access
-if (typeof window !== 'undefined') {
-  (window as any).clearAppCache = clearAllCaches;
-  (window as any).forceRefresh = forceRefreshCache;
-  console.log('🛠️ Development helpers available:');
-  console.log('  - clearAppCache() - Clear all caches and reload');
-  console.log('  - forceRefresh() - Force refresh current page');
-}
 

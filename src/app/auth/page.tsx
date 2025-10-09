@@ -110,15 +110,6 @@ function AuthPageContent() {
         // Always go directly to profile completion
         console.log('✅ Account created, redirecting to profile completion...')
         console.log('👤 User created with profile_completed: false')
-        
-        // Store signup data for profile completion
-        const signupData = {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email
-        }
-        localStorage.setItem('signupData', JSON.stringify(signupData))
-        
         setTimeout(() => {
           console.log('🔄 Redirecting to /profile-completion')
         router.push('/profile-completion')
@@ -167,36 +158,7 @@ function AuthPageContent() {
       }
     } catch (error: any) {
       console.error('Auth error:', error)
-      
-      // User-friendly error messages
-      let userFriendlyError = 'An error occurred during authentication'
-      
-      if (error.code === 'auth/network-request-failed') {
-        userFriendlyError = 'Network connection failed. Please check your internet connection and try again.'
-      } else if (error.code === 'auth/too-many-requests') {
-        userFriendlyError = 'Too many failed attempts. Please try again later.'
-      } else if (error.code === 'auth/user-disabled') {
-        userFriendlyError = 'This account has been disabled. Please contact support.'
-      } else if (error.code === 'auth/operation-not-allowed') {
-        userFriendlyError = 'This sign-in method is not allowed. Please try a different method.'
-      } else if (error.code === 'auth/weak-password') {
-        userFriendlyError = 'Password is too weak. Please choose a stronger password.'
-      } else if (error.code === 'auth/email-already-in-use') {
-        userFriendlyError = 'This email is already registered. Please sign in instead.'
-      } else if (error.code === 'auth/invalid-email') {
-        userFriendlyError = 'Please enter a valid email address.'
-      } else if (error.code === 'auth/user-not-found') {
-        userFriendlyError = 'No account found with this email. Please sign up first.'
-      } else if (error.code === 'auth/wrong-password') {
-        userFriendlyError = 'Incorrect password. Please try again.'
-      } else if (error.code === 'auth/invalid-credential') {
-        userFriendlyError = 'Invalid email or password. Please check your credentials.'
-      } else if (error.message) {
-        // If it's a custom error message, use it
-        userFriendlyError = error.message
-      }
-      
-      setError(userFriendlyError)
+      setError(error.message || 'An error occurred during authentication')
       setIsLoading(false)
       setIsCheckingAccount(false)
     } finally {
@@ -257,20 +219,7 @@ function AuthPageContent() {
       setForgotPasswordSuccess(true)
     } catch (error: any) {
       console.error('Forgot password error:', error)
-      
-      let userFriendlyError = 'Failed to send reset email'
-      
-      if (error.code === 'auth/user-not-found') {
-        userFriendlyError = 'No account found with this email address.'
-      } else if (error.code === 'auth/invalid-email') {
-        userFriendlyError = 'Please enter a valid email address.'
-      } else if (error.code === 'auth/too-many-requests') {
-        userFriendlyError = 'Too many requests. Please try again later.'
-      } else if (error.code === 'auth/network-request-failed') {
-        userFriendlyError = 'Network connection failed. Please check your internet connection.'
-      }
-      
-      setError(userFriendlyError)
+      setError(error.message || 'Failed to send reset email')
     } finally {
       setIsLoading(false)
     }

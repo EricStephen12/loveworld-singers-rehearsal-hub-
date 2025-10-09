@@ -59,6 +59,46 @@ body {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
 }
 
+/* Enhanced safe area support for different screen sizes */
+.safe-area-bottom-enhanced {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--enhanced-safe-area-bottom, 24px));
+}
+
+/* For content that needs extra bottom spacing on mobile */
+.content-bottom-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 80px);
+}
+
+/* For modals and overlays */
+.modal-bottom-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--enhanced-safe-area-bottom, 32px));
+}
+
+/* Responsive safe area adjustments */
+@media (max-height: 600px) {
+  .safe-area-bottom-enhanced {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 28px);
+  }
+  
+  .modal-bottom-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 36px);
+  }
+}
+
+@media (max-height: 500px) {
+  .safe-area-bottom-enhanced {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 32px);
+  }
+  
+  .modal-bottom-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 40px);
+  }
+  
+  .content-bottom-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 100px);
+  }
+}
+
 /* Mobile-optimized container */
 .mobile-container {
   min-height: 100vh;

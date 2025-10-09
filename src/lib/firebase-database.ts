@@ -160,17 +160,7 @@ export class FirebaseDatabaseService {
   // Generic methods for migration
   static async getCollection(collectionName: string) {
     try {
-      console.log(`🔥 Firebase getCollection called for: ${collectionName}`);
-      console.log(`🔥 Firebase db object:`, db);
-      console.log(`🔥 Firebase collection reference:`, collection(db, collectionName));
-      
       const querySnapshot = await getDocs(collection(db, collectionName))
-      console.log(`🔥 Firebase querySnapshot for ${collectionName}:`, {
-        size: querySnapshot.size,
-        empty: querySnapshot.empty,
-        docs: querySnapshot.docs.length
-      });
-      
       return querySnapshot.docs.map(doc => {
         const data = doc.data();
         const result = {
@@ -180,32 +170,24 @@ export class FirebaseDatabaseService {
           ...data
         }
         
-        // Debug comments and solfas specifically for songs collection
-        if (collectionName === 'songs') {
-          console.log('🔍 Firebase getCollection - Song debug:', {
+        // Debug comments specifically for songs collection
+        if (collectionName === 'songs' && data.comments) {
+          console.log('🔍 Firebase getCollection - Song comments debug:', {
             songTitle: data.title,
             docId: doc.id,
             hasComments: !!data.comments,
             commentsType: typeof data.comments,
             commentsIsArray: Array.isArray(data.comments),
             commentsLength: data.comments?.length || 0,
-            hasSolfas: !!data.solfas,
-            solfasType: typeof data.solfas,
-            solfasLength: data.solfas?.length || 0,
-            solfasPreview: data.solfas ? data.solfas.substring(0, 100) + '...' : 'none'
+            commentsData: data.comments,
+            commentsStringified: JSON.stringify(data.comments)
           });
         }
         
         return result;
       })
-    } catch (error: any) {
-      console.error(`❌ Error getting collection ${collectionName}:`, error);
-      console.error(`❌ Error details:`, {
-        name: error?.name,
-        message: error?.message,
-        code: error?.code,
-        stack: error?.stack
-      });
+    } catch (error) {
+      console.error(`Error getting collection ${collectionName}:`, error)
       return []
     }
   }
@@ -317,12 +299,8 @@ export class FirebaseDatabaseService {
       )
       
       console.log('🔥 Creating song with clean data:', cleanData)
-      console.log('🔥 Song data fields:', Object.keys(cleanData))
-      console.log('🔥 PraiseNightId field:', cleanData.praiseNightId, 'Type:', typeof cleanData.praiseNightId)
       const docRef = await addDoc(collection(db, 'songs'), cleanData)
-      const result = { id: docRef.id, ...cleanData }
-      console.log('🔥 Song created with result:', result)
-      return result
+      return { id: docRef.id, ...cleanData }
     } catch (error) {
       console.error('Error creating song:', error)
       return null

@@ -12,6 +12,7 @@ import OfflineIndicator from '@/components/OfflineIndicator'
 import { PerformanceOptimizer } from '@/lib/performance-optimizer'
 import { ViewportHeightFix } from '@/utils/viewport-height-fix'
 import { NavigationManager } from '@/utils/navigation'
+import { SafeAreaUtils } from '@/utils/safe-area-utils'
 import FeatureUpdateChecker from '@/components/FeatureUpdateChecker'
 import '@/utils/auth-debug'
 
@@ -20,10 +21,11 @@ if (typeof window !== 'undefined') {
   PerformanceOptimizer.autoOptimize()
   ViewportHeightFix.init()
   NavigationManager.init()
+  SafeAreaUtils.init()
   
-  // Make ViewportHeightFix globally available for debugging
+  // Make utilities globally available for debugging
   ;(window as any).ViewportHeightFix = ViewportHeightFix
-  ;(window as any).fixViewport = ViewportHeightFix.forceRefresh
+  ;(window as any).SafeAreaUtils = SafeAreaUtils
 }
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
@@ -80,6 +82,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: '#ffffff',
+  viewportFit: 'cover', // Enable safe area support for notched devices
 }
 
 export default function RootLayout({

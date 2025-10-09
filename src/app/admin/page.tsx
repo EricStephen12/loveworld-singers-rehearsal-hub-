@@ -40,7 +40,6 @@ import { uploadBannerImage } from '@/utils/imageUpload';
 import EditSongModal from '../../components/EditSongModal';
 import MediaManager from '../../components/MediaManager';
 import Members from '../../components/Members';
-import CalendarManager from '../../components/CalendarManager';
 // Support components removed - will create proper support system later
 import { ToastContainer, Toast } from '../../components/Toast';
 
@@ -372,12 +371,6 @@ export default function AdminPage() {
     if (loading || !allPraiseNights) return [];
     console.log('📄 Admin pages loaded:', allPraiseNights.length, 'pages');
     console.log('📄 All pages data:', allPraiseNights);
-    console.log('📄 Admin pages with IDs:', allPraiseNights.map(page => ({
-      id: page.id,
-      firebaseId: (page as any).firebaseId,
-      supabaseId: (page as any).supabaseId,
-      name: page.name
-    })));
     allPraiseNights.forEach((page, index) => {
       console.log(`📄 Page ${index}:`, {
         id: page.id,
@@ -717,8 +710,7 @@ export default function AdminPage() {
           title: songData.title,
           praiseNightId: songData.praiseNightId,
           selectedPageId: selectedPage?.id,
-          selectedPageName: selectedPage?.name,
-          selectedPageFullData: selectedPage
+          selectedPageName: selectedPage?.name
         });
         const createdSong = await FirebaseDatabaseService.createSong(songData);
         console.log('🎵 Song creation result:', createdSong);
@@ -1282,7 +1274,6 @@ export default function AdminPage() {
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
     { icon: Users, label: 'Members', active: activeSection === 'Members' },
     { icon: Music, label: 'Media', active: activeSection === 'Media' },
-    { icon: Calendar, label: 'Calendar', active: activeSection === 'Calendar' },
   ];
 
   // Show loading state
@@ -1427,7 +1418,6 @@ export default function AdminPage() {
                 else if (item.label === 'Categories') setActiveSection('Categories');
                 else if (item.label === 'Members') setActiveSection('Members');
                 else if (item.label === 'Media') setActiveSection('Media');
-                else if (item.label === 'Calendar') setActiveSection('Calendar');
                 // Auto-close sidebar on mobile after clicking
                 setSidebarCollapsed(true);
               }}
@@ -1551,7 +1541,6 @@ export default function AdminPage() {
              activeSection === 'Categories' ? 'Categories' : 
              activeSection === 'Members' ? 'Members' :
              activeSection === 'Media' ? 'Media Library' :
-             activeSection === 'Calendar' ? 'Calendar Events' :
              activeSection === 'Pages' ? 'Pages' : 
              'Admin Dashboard'}
           </h1>
@@ -1619,13 +1608,7 @@ export default function AdminPage() {
             <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6 max-h-full overflow-y-auto">
               <MediaManager />
                 </div>
-          )}
-
-          {activeSection === 'Calendar' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6 max-h-full overflow-y-auto">
-              <CalendarManager />
-            </div>
-          )}
+              )}
 
 
 
@@ -2488,7 +2471,6 @@ export default function AdminPage() {
         song={editingSong}
         categories={allCategories}
          praiseNightCategories={pages.map(page => ({ id: page.id, name: page.name, description: 'Praise Night Event', date: page.date, location: page.location, icon: 'Music', color: '#8B5CF6', isActive: true, createdAt: new Date(), updatedAt: new Date(), countdown: page.countdown }))}
-        defaultPraiseNightId={selectedPage?.id} // Pass the currently selected page ID
         onUpdate={handleSaveSong}
       />
 

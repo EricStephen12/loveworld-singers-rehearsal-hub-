@@ -29,44 +29,23 @@ export default function ProfileCompletionPage() {
     group: '' as 'yourloveworldsingers' | 'pmc' | '24worship' | 'lmaorchestra' | 'nationalzonalchoir' | 'internationalzonalchoir' | ''
   })
 
-  // Pre-populate first name and last name from user metadata and signup data
+  // Pre-populate first name and last name from user metadata
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        // First, try to get data from signup
-        const signupDataStr = localStorage.getItem('signupData')
-        if (signupDataStr) {
-          try {
-            const signupData = JSON.parse(signupDataStr)
-            console.log('📝 Found signup data:', signupData)
-            setFormData(prev => ({
-              ...prev,
-              firstName: signupData.firstName || '',
-              lastName: signupData.lastName || '',
-              email: signupData.email || ''
-            }))
-            // Clear the signup data after using it
-            localStorage.removeItem('signupData')
-            return
-          } catch (parseError) {
-            console.error('Error parsing signup data:', parseError)
-          }
-        }
-        
-        // Fallback to Firebase Auth user data
         const user = await FirebaseAuthService.getCurrentUser()
-        if (user) {
-          // Firebase Auth users don't have user_metadata like Supabase
-          // We'll get the name from displayName or email
-          const displayName = user.displayName || ''
-          const nameParts = displayName.split(' ')
-          setFormData(prev => ({
-            ...prev,
-            firstName: nameParts[0] || '',
-            lastName: nameParts.slice(1).join(' ') || '',
-            email: user.email || '' // Prefill email from Firebase Auth
-          }))
-        }
+      if (user) {
+        // Firebase Auth users don't have user_metadata like Supabase
+        // We'll get the name from displayName or email
+        const displayName = user.displayName || ''
+        const nameParts = displayName.split(' ')
+        setFormData(prev => ({
+          ...prev,
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          email: user.email || '' // Prefill email from Firebase Auth
+        }))
+      }
       } catch (error) {
         console.error('Error loading user data:', error)
       }
@@ -185,27 +164,14 @@ export default function ProfileCompletionPage() {
     } catch (error: any) {
       console.error('Profile completion error:', error)
       
-      let userFriendlyError = 'An error occurred while completing your profile'
-      
       if (error.message.includes('No authenticated user')) {
-        userFriendlyError = 'Your session has expired. Please sign in again.'
+        setError('Your session has expired. Please sign in again.')
         setTimeout(() => {
           router.push('/auth')
         }, 2000)
-      } else if (error.code === 'permission-denied') {
-        userFriendlyError = 'Permission denied. Please make sure you are signed in.'
-      } else if (error.code === 'unavailable') {
-        userFriendlyError = 'Service temporarily unavailable. Please try again in a moment.'
-      } else if (error.code === 'network-request-failed') {
-        userFriendlyError = 'Network connection failed. Please check your internet connection and try again.'
-      } else if (error.message.includes('Firebase')) {
-        userFriendlyError = 'Unable to save your profile. Please try again.'
-      } else if (error.message) {
-        // If it's a custom error message, use it
-        userFriendlyError = error.message
+      } else {
+        setError(error.message || 'An error occurred while completing your profile')
       }
-      
-      setError(userFriendlyError)
     } finally {
       setIsLoading(false)
     }

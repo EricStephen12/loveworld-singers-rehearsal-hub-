@@ -31,7 +31,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [hasError, setHasError] = useState(false);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
-
   const [isToggling, setIsToggling] = useState(false);
 
   // Audio persistence keys
@@ -271,22 +270,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       });
       console.error('❌ Audio error code:', audioRef.current?.error?.code);
       console.error('❌ Audio error message:', audioRef.current?.error?.message);
-    }
-
-    // Test if the URL is accessible
-    if (currentSong?.audioFile) {
-      console.log('🔍 Testing audio URL accessibility:', currentSong.audioFile);
-      fetch(currentSong.audioFile, { method: 'HEAD' })
-        .then(response => {
-          console.log('🔍 URL test result:', {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries())
-          });
-        })
-        .catch(fetchError => {
-          console.error('🔍 URL fetch failed:', fetchError);
-        });
     }
 
     setIsPlaying(false);

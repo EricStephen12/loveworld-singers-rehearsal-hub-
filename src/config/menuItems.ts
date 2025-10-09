@@ -55,7 +55,7 @@ export const getMenuItems = (onLogout?: () => void): MenuItem[] => [
   {
     icon: Calendar,
     title: 'Ministry Calendar',
-    href: '/pages/ministry-calendar',
+    href: '#',
     badge: null,
   },
   {

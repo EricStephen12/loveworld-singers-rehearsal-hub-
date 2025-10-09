@@ -79,8 +79,7 @@ export default function WhatsAppChat() {
   const [showMessageMenu, setShowMessageMenu] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
-  const [showMessageActions, setShowMessageActions] = useState(false)
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null)
+  const [replyText, setReplyText] = useState('')
   const [showCallInterface, setShowCallInterface] = useState(false)
   const [callState, setCallState] = useState<any>(null)
   const [recordingState, setRecordingState] = useState<any>(null)
@@ -100,7 +99,7 @@ export default function WhatsAppChat() {
     }
   }, [callState?.localStream])
 
-  // Handle keyboard shortcuts for call interface, search modal, and message actions
+  // Handle keyboard shortcuts for call interface and search modal
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (showCallInterface && event.key === 'Escape') {
@@ -109,17 +108,14 @@ export default function WhatsAppChat() {
       } else if (isSearchOpen && event.key === 'Escape') {
         setIsSearchOpen(false)
         setSearchQuery('')
-      } else if (showMessageActions && event.key === 'Escape') {
-        setShowMessageActions(false)
-        setSelectedMessage(null)
       }
     }
 
-    if (showCallInterface || isSearchOpen || showMessageActions) {
+    if (showCallInterface || isSearchOpen) {
       document.addEventListener('keydown', handleKeyDown)
       return () => document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [showCallInterface, isSearchOpen, showMessageActions])
+  }, [showCallInterface, isSearchOpen])
 
   // Load user groups based on profile (keeping original logic)
   useEffect(() => {
@@ -384,9 +380,9 @@ export default function WhatsAppChat() {
         )
         
         if (msgs && msgs.length > 0) {
-          setMessages((msgs as Message[]).sort((a, b) => 
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-          ))
+        setMessages((msgs as Message[]).sort((a, b) => 
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        ))
         } else {
           // If no messages found, create some sample messages for demo
           const sampleMessages: Message[] = [
@@ -619,6 +615,7 @@ export default function WhatsAppChat() {
     const message = messages.find(m => m.id === messageId)
     if (message) {
       setReplyingTo(message)
+      setReplyText('')
     }
   }
 
@@ -637,17 +634,17 @@ export default function WhatsAppChat() {
   }
 
   const handleSendReply = async () => {
-    if (!user?.uid || !profile || !replyingTo || !newMessage.trim()) return
+    if (!user?.uid || !profile || !replyingTo || !replyText.trim()) return
     
     await interactionService.current.replyToMessage(
       replyingTo.id,
       user.uid,
       `${profile.first_name} ${profile.last_name}`,
-      newMessage.trim()
+      replyText.trim()
     )
     
-    setNewMessage('')
     setReplyingTo(null)
+    setReplyText('')
   }
 
   const handlePlayVoiceMessage = (message: Message) => {
@@ -655,33 +652,6 @@ export default function WhatsAppChat() {
       const audioUrl = URL.createObjectURL(message.voiceData)
       const audio = new Audio(audioUrl)
       audio.play()
-    }
-  }
-
-  // Long press handlers for message actions
-  const handleMessageLongPress = (message: Message) => {
-    setSelectedMessage(message)
-    setShowMessageActions(true)
-  }
-
-  const handleMessagePressStart = (message: Message) => {
-    const timer = setTimeout(() => {
-      handleMessageLongPress(message)
-    }, 500) // 500ms for long press
-    setLongPressTimer(timer)
-  }
-
-  const handleMessagePressEnd = () => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer)
-      setLongPressTimer(null)
-    }
-  }
-
-  const handleMessagePressCancel = () => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer)
-      setLongPressTimer(null)
     }
   }
 
@@ -893,15 +863,7 @@ export default function WhatsAppChat() {
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
           <header className="bg-purple-600 text-white px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push('/home')}
-                className="p-1 hover:bg-white/20 rounded-full transition-colors"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <h1 className="text-xl font-semibold">LWSRHP CHAT</h1>
-            </div>
+            <h1 className="text-xl font-semibold">LoveWorld Chats</h1>
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => setIsSearchOpen(true)}
@@ -1115,24 +1077,18 @@ export default function WhatsAppChat() {
                 const isMe = message.sender_id === user?.uid
                 const reactions = messageReactions.get(message.id)
                 return (
-                  <div key={message.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  <div key={message.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
                     <div
-                      className={`max-w-[75%] rounded-lg px-3 py-2 relative transition-all duration-200 hover:shadow-md ${
+                      className={`max-w-[75%] rounded-lg px-3 py-2 relative ${
                         isMe
                           ? 'bg-[#dcf8c6] rounded-br-none'
                           : 'bg-white rounded-bl-none'
                       }`}
-                      onMouseDown={() => handleMessagePressStart(message)}
-                      onMouseUp={handleMessagePressEnd}
-                      onMouseLeave={handleMessagePressCancel}
-                      onTouchStart={() => handleMessagePressStart(message)}
-                      onTouchEnd={handleMessagePressEnd}
-                      onTouchCancel={handleMessagePressCancel}
                       onContextMenu={(e) => {
                         e.preventDefault()
-                        handleMessageLongPress(message)
+                        setSelectedMessage(message)
+                        setShowMessageMenu(true)
                       }}
-                      style={{ userSelect: 'none' }}
                     >
                       {!isMe && selectedGroup && (
                         <p className="text-xs font-semibold text-purple-700 mb-1">
@@ -1152,9 +1108,40 @@ export default function WhatsAppChat() {
                           </button>
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-900 break-words">{message.content}</p>
+                      <p className="text-sm text-gray-900 break-words">{message.content}</p>
                       )}
                       
+                      {/* Message Actions (appear on hover) */}
+                      <div className="absolute -bottom-8 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleLikeMessage(message.id)}
+                          className="p-1 bg-white rounded-full shadow-md hover:bg-gray-50"
+                          title="Like"
+                        >
+                          <Heart className="w-3 h-3 text-red-500" />
+                        </button>
+                        <button
+                          onClick={() => handleReplyToMessage(message.id)}
+                          className="p-1 bg-white rounded-full shadow-md hover:bg-gray-50"
+                          title="Reply"
+                        >
+                          <Reply className="w-3 h-3 text-blue-500" />
+                        </button>
+                        <button
+                          onClick={() => handleShareMessage(message.id)}
+                          className="p-1 bg-white rounded-full shadow-md hover:bg-gray-50"
+                          title="Share"
+                        >
+                          <Share className="w-3 h-3 text-green-500" />
+                        </button>
+                        <button
+                          onClick={() => handleForwardMessage(message.id)}
+                          className="p-1 bg-white rounded-full shadow-md hover:bg-gray-50"
+                          title="Forward"
+                        >
+                          <ArrowUpRight className="w-3 h-3 text-purple-500" />
+                        </button>
+                      </div>
                       
                       {/* Message Footer */}
                       <div className="flex items-center justify-end gap-1 mt-1">
@@ -1190,22 +1177,6 @@ export default function WhatsAppChat() {
             )}
           </div>
 
-          {/* Reply Context */}
-          {replyingTo && (
-            <div className="bg-blue-50 border-t border-blue-200 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <Reply className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-blue-800">Replying to {replyingTo.sender_name}</span>
-                <button
-                  onClick={() => setReplyingTo(null)}
-                  className="ml-auto text-blue-600 hover:text-blue-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Message Input */}
           <div className="bg-gray-100 px-3 py-2 flex items-end gap-2 min-w-0">
             <div className="flex-1 bg-white rounded-full flex items-center px-4 py-2 min-w-0">
@@ -1214,17 +1185,17 @@ export default function WhatsAppChat() {
               </button>
               <input
                 type="text"
-                placeholder={replyingTo ? "Type your reply..." : "Type a message"}
+                placeholder="Type a message"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (replyingTo ? handleSendReply() : handleSendMessage())}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 className="flex-1 outline-none text-sm min-w-0 w-full"
               />
             </div>
             
             {newMessage.trim() ? (
               <button
-                onClick={replyingTo ? handleSendReply : handleSendMessage}
+                onClick={handleSendMessage}
                 className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 transition-colors flex-shrink-0"
               >
                 <Send className="w-5 h-5" />
@@ -1244,6 +1215,38 @@ export default function WhatsAppChat() {
             )}
           </div>
 
+          {/* Reply Input */}
+          {replyingTo && (
+            <div className="bg-blue-50 border-t border-blue-200 px-3 py-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Reply className="w-4 h-4 text-blue-600" />
+                <span className="text-sm text-blue-800">Replying to {replyingTo.sender_name}</span>
+                <button
+                  onClick={() => setReplyingTo(null)}
+                  className="ml-auto text-blue-600 hover:text-blue-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex gap-2 min-w-0">
+                <input
+                  type="text"
+                  placeholder="Type your reply..."
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendReply()}
+                  className="flex-1 px-3 py-2 border border-blue-300 rounded-lg text-sm outline-none focus:border-blue-500 min-w-0"
+                />
+                <button
+                  onClick={handleSendReply}
+                  disabled={!replyText.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex-shrink-0"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1351,131 +1354,6 @@ export default function WhatsAppChat() {
               <p className="text-xs text-gray-400 mt-1">
                 Press ESC or click outside to end call
               </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Message Actions Bottom Sheet (iOS Style) */}
-      {showMessageActions && selectedMessage && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50"
-            onClick={() => {
-              setShowMessageActions(false)
-              setSelectedMessage(null)
-            }}
-          />
-          
-          {/* Bottom Sheet */}
-          <div className="relative bg-white rounded-t-3xl w-full max-w-md mx-4 transform transition-transform duration-300 ease-out">
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
-            </div>
-            
-            {/* Message Preview */}
-            <div className="px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <span className="text-purple-600 font-medium text-sm">
-                    {selectedMessage.sender_name[0]}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
-                    {selectedMessage.sender_name}
-                  </p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {selectedMessage.content.length > 50 
-                      ? `${selectedMessage.content.substring(0, 50)}...` 
-                      : selectedMessage.content
-                    }
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                💡 Tip: Long press on mobile or right-click on desktop to access message actions
-              </p>
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="px-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Like */}
-                <button
-                  onClick={() => {
-                    handleLikeMessage(selectedMessage.id)
-                    setShowMessageActions(false)
-                    setSelectedMessage(null)
-                  }}
-                  className="flex flex-col items-center gap-2 p-4 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors"
-                >
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                    <Heart className="w-6 h-6 text-red-600" />
-                  </div>
-                  <span className="text-sm font-medium text-red-700">Like</span>
-                </button>
-                
-                {/* Reply */}
-                <button
-                  onClick={() => {
-                    handleReplyToMessage(selectedMessage.id)
-                    setShowMessageActions(false)
-                    setSelectedMessage(null)
-                  }}
-                  className="flex flex-col items-center gap-2 p-4 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors"
-                >
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Reply className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <span className="text-sm font-medium text-blue-700">Reply</span>
-                </button>
-                
-                {/* Share */}
-                <button
-                  onClick={() => {
-                    handleShareMessage(selectedMessage.id)
-                    setShowMessageActions(false)
-                    setSelectedMessage(null)
-                  }}
-                  className="flex flex-col items-center gap-2 p-4 bg-green-50 rounded-2xl hover:bg-green-100 transition-colors"
-                >
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <Share className="w-6 h-6 text-green-600" />
-                  </div>
-                  <span className="text-sm font-medium text-green-700">Share</span>
-                </button>
-                
-                {/* Forward */}
-                <button
-                  onClick={() => {
-                    handleForwardMessage(selectedMessage.id)
-                    setShowMessageActions(false)
-                    setSelectedMessage(null)
-                  }}
-                  className="flex flex-col items-center gap-2 p-4 bg-purple-50 rounded-2xl hover:bg-purple-100 transition-colors"
-                >
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <ArrowUpRight className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <span className="text-sm font-medium text-purple-700">Forward</span>
-                </button>
-              </div>
-            </div>
-            
-            {/* Cancel Button */}
-            <div className="px-6 pb-6">
-              <button
-                onClick={() => {
-                  setShowMessageActions(false)
-                  setSelectedMessage(null)
-                }}
-                className="w-full py-4 bg-gray-100 rounded-2xl text-gray-700 font-medium hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
             </div>
           </div>
         </div>

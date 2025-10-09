@@ -18,7 +18,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Helper function to get audio URL from media table
-async function getAudioFromMedia(mediaId: number): Promise<string | null> {
+export async function getAudioFromMedia(mediaId: number): Promise<string | null> {
   try {
     const { data: mediaFile, error } = await supabase
       .from('media')

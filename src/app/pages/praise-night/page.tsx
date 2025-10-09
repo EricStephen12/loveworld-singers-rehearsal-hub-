@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2, Flag, Archive, RefreshCw } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2, Flag, Archive } from "lucide-react";
 import SongDetailModal from "@/components/SongDetailModal";
 import { PraiseNightSong, PraiseNight } from "@/types/supabase";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
@@ -52,22 +52,18 @@ function PraiseNightPageContent() {
     preloadData();
   }, [preloadData]);
 
-  // Immediate refresh when page becomes visible (after admin updates)
+  // Refresh data when page becomes visible (after admin updates)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log('🔄 Page became visible, refreshing data immediately...');
+        console.log('🔄 Page became visible, refreshing data...');
         refreshData();
-        // Also refresh again after a short delay to catch any missed updates
-        setTimeout(() => refreshData(), 1000);
       }
     };
 
     const handleFocus = () => {
-      console.log('🔄 Page focused, refreshing data immediately...');
+      console.log('🔄 Page focused, refreshing data...');
       refreshData();
-      // Also refresh again after a short delay to catch any missed updates
-      setTimeout(() => refreshData(), 1000);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -79,12 +75,12 @@ function PraiseNightPageContent() {
     };
   }, [refreshData]);
 
-  // Very frequent refresh to ensure data stays up to date (immediate updates)
+  // Periodic refresh to ensure data stays up to date
   useEffect(() => {
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Very frequent refresh for immediate updates...');
+      console.log('🔄 Periodic refresh...');
       refreshData();
-    }, 3000); // Refresh every 3 seconds for immediate updates
+    }, 30000); // Refresh every 30 seconds
 
     return () => {
       clearInterval(refreshInterval);
@@ -130,18 +126,20 @@ function PraiseNightPageContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Audio context
-  const { currentSong, isPlaying, setCurrentSong, play } = useAudio();
+  const { currentSong, isPlaying, setCurrentSong, play, isLoading, hasError, audioRef } = useAudio();
 
   // Add missing state variables that are used but not defined
   const [activeTab, setActiveTab] = useState('lyrics');
-
 
   // Filter states
   const [activeFilter, setActiveFilter] = useState<'heard' | 'unheard'>('heard');
   const [activeCategory, setActiveCategory] = useState<string>('');
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
-  
-  // Removed auto-scroll states - now using CSS animation like pills above
+
+
+
+
+
 
   // ✅ Reset filter to 'heard' only when switching to a different page (not when just loading)
   const [previousPageId, setPreviousPageId] = useState<number | null>(null);
@@ -157,37 +155,7 @@ function PraiseNightPageContent() {
   const [isSongDetailOpen, setIsSongDetailOpen] = useState(false);
   const [selectedSongIndex, setSelectedSongIndex] = useState<number | null>(null);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
-
-  // Auto-skip functionality for mini player (when song detail modal is not open)
-  useEffect(() => {
-    const handleAudioEnded = (event: CustomEvent) => {
-      console.log('🔄 Audio ended in Praise Night page (mini player mode)');
-      
-      // Only handle auto-skip if song detail modal is not open
-      if (!isSongDetailOpen && currentSong && currentPraiseNight?.songs) {
-        const currentSongIndex = currentPraiseNight.songs.findIndex(song => song.id === currentSong.id);
-        console.log('🔄 Current song index:', currentSongIndex, 'Total songs:', currentPraiseNight.songs.length);
-        
-        if (currentSongIndex >= 0 && currentSongIndex < currentPraiseNight.songs.length - 1) {
-          // Go to next song
-          const nextSong = currentPraiseNight.songs[currentSongIndex + 1];
-          console.log('⏭️ Auto-going to next song (mini player):', nextSong.title);
-          
-          // Set the new song in audio context and auto-play
-          setCurrentSong(nextSong, true);
-        } else {
-          console.log('⏭️ No more songs to skip to (mini player), stopping playback');
-          // No more songs, just stop
-          setCurrentSong(null, false);
-        }
-      }
-    };
-
-    window.addEventListener('audioEnded', handleAudioEnded as EventListener);
-    return () => {
-      window.removeEventListener('audioEnded', handleAudioEnded as EventListener);
-    };
-  }, [currentSong, currentPraiseNight?.songs, isSongDetailOpen, setCurrentSong]);
+  
 
   // Listen for global mini player events
   React.useEffect(() => {
@@ -347,14 +315,6 @@ function PraiseNightPageContent() {
 
   // Handle category selection and close drawer
   const handleCategorySelect = (category: string) => {
-    console.log('🎯 Category selected:', {
-      selectedCategory: category,
-      currentPageId: currentPraiseNight?.id,
-      currentPageName: currentPraiseNight?.name,
-      totalSongs: finalSongData.length,
-      songsInThisCategory: finalSongData.filter(song => song.category === category).length,
-      allCategories: [...new Set(finalSongData.map(song => song.category))]
-    });
     setActiveCategory(category);
     setIsCategoryDrawerOpen(false);
   };
@@ -465,21 +425,88 @@ function PraiseNightPageContent() {
     return categoryIconMap[normalizedCategory] || Music; // Default icon
   };
 
-  // Use songs directly from currentPraiseNight (Supabase data)
-  const songData = currentPraiseNight?.songs || [];
-  const isDataLoaded = !loading && currentPraiseNight !== null;
+  // Use songs from the useRealtimeData hook instead of fetching separately
+  const allSongsFromFirebase = currentPraiseNight?.songs || [];
+  const songsLoading = false; // No separate loading since we use the hook data
   
-  // Debug: Log if songs are missing from page
-  useEffect(() => {
-    if (currentPraiseNight && songData.length === 0) {
-      console.log('⚠️ WARNING: No songs found for page:', {
-        pageId: currentPraiseNight.id,
-        pageName: currentPraiseNight.name,
-        pageSongs: currentPraiseNight.songs,
-        allPraiseNightsCount: allPraiseNights.length
-      });
+  // Use the songs directly since they're already filtered by page
+  const finalSongData = useMemo(() => {
+    console.log('🎵 Using songs for page:', {
+      pageName: currentPraiseNight?.name,
+      pageId: currentPraiseNight?.id,
+      songsCount: allSongsFromFirebase.length,
+      songsWithAudio: allSongsFromFirebase.filter(s => s.audioFile).length,
+      sampleSong: allSongsFromFirebase[0] ? {
+        title: allSongsFromFirebase[0].title,
+        leadSinger: allSongsFromFirebase[0].leadSinger,
+        writer: allSongsFromFirebase[0].writer,
+        audioFile: allSongsFromFirebase[0].audioFile ? 'Has audio' : 'No audio'
+      } : 'No songs'
+    });
+    
+    return allSongsFromFirebase;
+  }, [currentPraiseNight, allSongsFromFirebase]);
+  
+  const isDataLoaded = !loading && !songsLoading && currentPraiseNight !== null;
+  
+  // Debug logging for song data
+  console.log('🎵 Final song data (using debug page logic):', {
+    isDataLoaded,
+    finalSongDataLength: finalSongData.length,
+    currentPraiseNight: currentPraiseNight?.name,
+    currentPraiseNightId: currentPraiseNight?.id,
+    allSongsFromFirebaseCount: allSongsFromFirebase.length,
+    songs: finalSongData.map(song => ({
+      title: song.title,
+      category: song.category,
+      status: song.status
+    }))
+  });
+
+  // Song categories - get from Supabase data
+  const songCategories = useMemo(() => {
+    // Use finalSongData instead of currentPraiseNight.songs for more reliable data
+    const songsToUse = finalSongData.length > 0 ? finalSongData : (currentPraiseNight?.songs || []);
+    
+    if (songsToUse.length === 0) {
+      console.log('🎵 No songs available for categories');
+      return [];
     }
-  }, [currentPraiseNight, songData.length, allPraiseNights.length]);
+    
+    const uniqueCategories = [...new Set(songsToUse.map(song => song.category).filter(cat => cat && cat.trim()))];
+    
+    // Debug logging
+    console.log('🎵 Available categories from songs:', uniqueCategories);
+    console.log('🎵 Songs used for categories:', songsToUse.length);
+    console.log('🎵 All songs data:', songsToUse.map(song => ({
+      title: song.title,
+      category: song.category,
+      status: song.status
+    })));
+    
+    return uniqueCategories;
+  }, [finalSongData, currentPraiseNight?.songs]);
+
+  // Categories to show in horizontal bar (first 2)
+  const mainCategories = songCategories.slice(0, 2);
+  // Categories to keep in FAB (remaining ones)
+  const otherCategories = songCategories.slice(2);
+  
+  // Debug logging for categories
+  console.log('🎵 Category bar data:', {
+    songCategories: songCategories,
+    mainCategories: mainCategories,
+    otherCategories: otherCategories,
+    activeCategory: activeCategory
+  });
+
+  // ✅ Update active category when categories change (e.g., switching pages)
+  useEffect(() => {
+    if (songCategories.length > 0) {
+      // Always set to first category when categories change
+      setActiveCategory(songCategories[0]);
+    }
+  }, [songCategories]);
 
   // Fallback data if no centralized songs available
   const fallbackSongData = [
@@ -503,105 +530,6 @@ function PraiseNightPageContent() {
     }
   ];
 
-  // Use centralized data if available, otherwise show empty state
-  const finalSongData = (isDataLoaded && songData.length > 0) ? songData : [];
-  
-  // Song categories - get from Supabase data (moved after finalSongData)
-  const songCategories = useMemo(() => {
-    // First try to get categories from currentPraiseNight.songs
-    if (currentPraiseNight?.songs && currentPraiseNight.songs.length > 0) {
-      const uniqueCategories = [...new Set(currentPraiseNight.songs.map(song => song.category))];
-      console.log('🔍 DEBUG - Song categories from page songs:', {
-        currentPraiseNightId: currentPraiseNight?.id,
-        songsCount: currentPraiseNight.songs.length,
-        uniqueCategories,
-        allSongsWithCategories: currentPraiseNight.songs.map(song => ({
-          title: song.title,
-          category: song.category,
-          status: song.status
-        }))
-      });
-      return uniqueCategories;
-    }
-    
-    // Fallback: get categories from finalSongData if page songs are empty
-    if (finalSongData && finalSongData.length > 0) {
-      const uniqueCategories = [...new Set(finalSongData.map(song => song.category))];
-      console.log('🔍 DEBUG - Song categories from finalSongData (fallback):', {
-        currentPraiseNightId: currentPraiseNight?.id,
-        finalSongDataCount: finalSongData.length,
-        uniqueCategories,
-        allSongsWithCategories: finalSongData.map(song => ({
-          title: song.title,
-          category: song.category,
-          status: song.status,
-          praiseNightId: song.praiseNightId
-        }))
-      });
-      return uniqueCategories;
-    }
-    
-    console.log('🔍 DEBUG - No song categories found:', {
-      currentPraiseNightId: currentPraiseNight?.id,
-      hasPageSongs: !!currentPraiseNight?.songs,
-      pageSongsCount: currentPraiseNight?.songs?.length || 0,
-      finalSongDataCount: finalSongData?.length || 0
-    });
-    
-    return [];
-  }, [currentPraiseNight?.songs, finalSongData]);
-
-  // Show all categories in horizontal bar (no FAB needed) - filter out empty categories
-  const mainCategories = songCategories.filter(category => category && category.trim() !== '');
-  // No categories in FAB - all are visible
-  const otherCategories: string[] = [];
-  
-  // Debug category bar
-  useEffect(() => {
-    console.log('🎯 Category Bar Debug:', {
-      currentPraiseNightId: currentPraiseNight?.id,
-      currentPraiseNightName: currentPraiseNight?.name,
-      songsCount: currentPraiseNight?.songs?.length || 0,
-      songCategories: songCategories,
-      songCategoriesWithDetails: songCategories.map((cat, index) => ({
-        index,
-        category: cat,
-        isEmpty: !cat || cat.trim() === '',
-        length: cat?.length || 0
-      })),
-      mainCategories: mainCategories,
-      otherCategories: otherCategories,
-      activeCategory: activeCategory,
-      categoryBarEmpty: mainCategories.length === 0
-    });
-  }, [currentPraiseNight, songCategories, mainCategories, activeCategory]);
-
-  // ✅ Update active category when categories change (e.g., switching pages)
-  useEffect(() => {
-    if (songCategories.length > 0 && !activeCategory) {
-      // Set to first category when categories are available and no category is selected
-      setActiveCategory(songCategories[0]);
-    }
-  }, [songCategories, activeCategory]);
-  
-  // Debug: Log song data to see what's being fetched
-  useEffect(() => {
-    console.log('🔍 DEBUG - Song data for current page:', {
-      currentPraiseNightId: currentPraiseNight?.id,
-      currentPraiseNightName: currentPraiseNight?.name,
-      songDataLength: songData.length,
-      finalSongDataLength: finalSongData.length,
-      isDataLoaded,
-      allSongs: songData.map(song => ({
-        id: song.id,
-        title: song.title,
-        category: song.category,
-        status: song.status,
-        praiseNightId: song.praiseNightId
-      }))
-    });
-  }, [currentPraiseNight, songData, finalSongData, isDataLoaded]);
-
   // Update data when praise night changes
   useEffect(() => {
     // This will trigger a re-render when currentPraiseNight changes
@@ -609,38 +537,42 @@ function PraiseNightPageContent() {
   }, [currentPraiseNight]);
 
   // Filter songs based on selected category and status
-  const filteredSongs = finalSongData.filter(song =>
-    song.category === activeCategory && song.status === activeFilter
-  );
-
-  // Debug logging for song filtering
-  useEffect(() => {
-    if (finalSongData.length > 0) {
-      console.log('🔍 Song Filtering Debug:', {
-        currentPageId: currentPraiseNight?.id,
-        currentPageName: currentPraiseNight?.name,
-        totalSongs: finalSongData.length,
-        activeCategory,
-        activeFilter,
-        filteredSongsCount: filteredSongs.length,
-        allSongsInCategory: finalSongData.filter(song => song.category === activeCategory),
-        heardSongsInCategory: finalSongData.filter(song => song.category === activeCategory && song.status === 'heard'),
-        unheardSongsInCategory: finalSongData.filter(song => song.category === activeCategory && song.status === 'unheard'),
-        songStatuses: finalSongData.map(song => ({ 
-          title: song.title, 
-          status: song.status, 
-          category: song.category,
-          praiseNightId: song.praiseNightId,
-          categoryMatch: song.category === activeCategory
-        })),
-        allUniqueCategories: [...new Set(finalSongData.map(song => song.category))]
+  const filteredSongs = finalSongData.filter(song => {
+    // Normalize category names for comparison (trim whitespace, handle case)
+    const normalizedSongCategory = (song.category || '').trim();
+    const normalizedActiveCategory = (activeCategory || '').trim();
+    
+    const matchesCategory = normalizedSongCategory === normalizedActiveCategory;
+    const matchesStatus = song.status === activeFilter;
+    
+    // Debug logging
+    if (activeCategory && !matchesCategory) {
+      console.log('🎵 Song category mismatch:', {
+        songTitle: song.title,
+        songCategory: song.category,
+        normalizedSongCategory: normalizedSongCategory,
+        activeCategory: activeCategory,
+        normalizedActiveCategory: normalizedActiveCategory,
+        matches: matchesCategory
       });
     }
-  }, [finalSongData, activeCategory, activeFilter, filteredSongs.length, currentPraiseNight]);
+    
+    return matchesCategory && matchesStatus;
+  });
 
   // Get counts for current category
-  const categoryHeardCount = finalSongData.filter(song => song.category === activeCategory && song.status === 'heard').length;
-  const categoryUnheardCount = finalSongData.filter(song => song.category === activeCategory && song.status === 'unheard').length;
+  const categoryHeardCount = finalSongData.filter(song => {
+    const normalizedSongCategory = (song.category || '').trim();
+    const normalizedActiveCategory = (activeCategory || '').trim();
+    return normalizedSongCategory === normalizedActiveCategory && song.status === 'heard';
+  }).length;
+  
+  const categoryUnheardCount = finalSongData.filter(song => {
+    const normalizedSongCategory = (song.category || '').trim();
+    const normalizedActiveCategory = (activeCategory || '').trim();
+    return normalizedSongCategory === normalizedActiveCategory && song.status === 'unheard';
+  }).length;
+  
   const categoryTotalCount = categoryHeardCount + categoryUnheardCount;
 
   const switchPraiseNight = (praiseNight: PraiseNight) => {
@@ -700,7 +632,7 @@ function PraiseNightPageContent() {
   }
 
   return (
-    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         
@@ -817,13 +749,11 @@ function PraiseNightPageContent() {
 
               {/* Center - Title and Timer */}
               <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-base sm:text-lg font-outfit-semibold text-gray-800">
-                    {categoryFilter === 'archive' ? 'Archives' : 
-                     categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0 ? 'Pre-Rehearsal' :
-                     (currentPraiseNight?.name || '')}
-                  </h1>
-                </div>
+                <h1 className="text-base sm:text-lg font-outfit-semibold text-gray-800">
+                  {categoryFilter === 'archive' ? 'Archives' : 
+                   categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0 ? 'Pre-Rehearsal' :
+                   (currentPraiseNight?.name || '')}
+                </h1>
                 {categoryFilter !== 'archive' && currentPraiseNight && !(categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0) && (
                   <div className="flex items-center gap-0.5 text-xs mt-0.5">
                     <span className="font-bold text-gray-700">{formatNumber(timeLeft.days)}d</span>
@@ -1078,7 +1008,7 @@ function PraiseNightPageContent() {
 
        {/* ✅ Scrollable Content Container */}
        <div className="flex-1">
-         <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative pb-24">
+         <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative content-bottom-safe">
         {/* Offline Banner */}
         <OfflineIndicator />
 
@@ -1319,21 +1249,16 @@ function PraiseNightPageContent() {
                       // Open modal without auto-play
                       handleSongClick(song, index);
                     }}
-                    className={`backdrop-blur-sm border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer ${
-                      currentSong?.id === song.id
-                        ? isPlaying
-                          ? 'bg-white ring-2 ring-purple-500 shadow-lg shadow-purple-200/50' // Active and playing: white background
-                          : 'bg-purple-100 ring-2 ring-purple-500 shadow-lg shadow-purple-200/50' // Active but not playing: light purple background
-                        : selectedSongIndex === index
-                          ? 'bg-white/70 ring-2 ring-purple-500 shadow-lg shadow-purple-200/50 bg-purple-50/30'
-                          : 'bg-white/70 ring-1 ring-black/5 hover:bg-white/90'
+                    className={`bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer ${selectedSongIndex === index
+                      ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-200/50 bg-purple-50/30'
+                      : 'ring-1 ring-black/5'
                       }`}
                   >
                     {/* Song Header - Rehearsal Style */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 lg:gap-4">
                         <div className="w-10 h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm">
-                          {currentSong?.id === song.id && isPlaying ? (
+                          {currentSong?.id === song.id ? (
                             <AudioWave className="h-6 w-6" />
                           ) : (
                           <span className="text-sm lg:text-base font-semibold text-purple-600">
@@ -1370,7 +1295,7 @@ function PraiseNightPageContent() {
         )}
 
         {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
-        <div className="h-20 safe-area-bottom"></div> {/* Spacer for fixed bottom elements with safe area */}
+        <div className="h-20"></div> {/* Spacer for fixed bottom elements */}
       </div>
       </div>
       {/* ✅ End of Scrollable Content */}
@@ -1379,20 +1304,20 @@ function PraiseNightPageContent() {
 
       {/* ✅ Category Bar for Individual Archive Pages */}
       {categoryFilter === 'archive' && pageParam && (
-        <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full pb-safe">
-          <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
-            {/* Category buttons - no scrolling */}
-            <div className="w-full flex gap-2 flex-wrap justify-center">
+        <div className="fixed-bottom-safe safe-area-bottom-enhanced flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+          <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
+            {/* Category buttons with text - Take up most of the space */}
+            <div className="flex-1 flex gap-2">
               {mainCategories.map((category, index) => (
                 <button
                   key={category}
                   onClick={() => handleCategorySelect(category)}
-                  className={`flex-shrink-0 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap ${activeCategory === category
+                  className={`flex-1 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center ${activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
                     }`}
                 >
-                  {category}
+                  <span className="block leading-tight break-words">{category}</span>
                 </button>
               ))}
             </div>
@@ -1400,56 +1325,63 @@ function PraiseNightPageContent() {
         </div>
       )}
 
-       {/* ✅ Fixed Bottom Bar with Categories - Mobile Responsive */}
+       {/* ✅ Fixed Bottom Bar with Categories and FAB */}
       {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
-         <div className="fixed bottom-0 left-0 right-0 flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', minHeight: 'fit-content' }}>
-             <div className="w-full px-2 sm:px-4 lg:px-6 py-3 sm:py-4 max-w-full">
-              {/* Category buttons with CSS animation scroll - same as pills above */}
-              <div 
-                className="w-full overflow-x-auto scrollbar-hide"
-                onScroll={(e) => {
-                  const target = e.target as HTMLDivElement;
-                  target.style.animationPlayState = 'paused';
-                  clearTimeout((target as any).scrollTimeout);
-                  (target as any).scrollTimeout = setTimeout(() => {
-                    target.style.animationPlayState = 'running';
-                  }, 2000);
-                }}
-              >
-                <div className="flex items-center gap-1 sm:gap-1.5 animate-scroll">
-                  {/* First set of categories */}
-                  {mainCategories.map((category, index) => (
-                    <button
-                      key={`first-${category}`}
-                      onClick={() => handleCategorySelect(category)}
-                      className={`flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap min-w-[80px] sm:min-w-[100px] max-w-[140px] sm:max-w-[160px] ${activeCategory === category
-                        ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                        : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                        }`}
-                    >
-                      <span className="truncate block" title={category}>
-                        {category.length > 15 ? `${category.substring(0, 15)}...` : category}
-                      </span>
-                    </button>
-                  ))}
-                  
-                  {/* Second set of categories (duplicated for seamless loop) */}
-                  {mainCategories.map((category, index) => (
-                    <button
-                      key={`second-${category}`}
-                      onClick={() => handleCategorySelect(category)}
-                      className={`flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 text-center snap-start whitespace-nowrap min-w-[80px] sm:min-w-[100px] max-w-[140px] sm:max-w-[160px] ${activeCategory === category
-                        ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                        : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                        }`}
-                    >
-                      <span className="truncate block" title={category}>
-                        {category.length > 15 ? `${category.substring(0, 15)}...` : category}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+         <div className="fixed-bottom-safe safe-area-bottom-enhanced flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+             <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
+              {/* Category buttons with text - Take up most of the space */}
+              <div className="flex-1 flex gap-2">
+            {mainCategories.map((category, index) => (
+                <button
+                    key={category}
+                  onClick={() => handleCategorySelect(category)}
+                    className={`flex-1 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center ${activeCategory === category
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                    }`}
+                >
+                    <span className="block leading-tight break-words">{category}</span>
+                </button>
+                ))}
               </div>
+
+              {/* FAB positioned to the right with small gap */}
+              <div className="relative flex-shrink-0 ml-2">
+                {/* Others text positioned above FAB */}
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-purple-600 font-semibold text-center whitespace-nowrap z-10">
+                  Others
+              </div>
+              <button
+                onClick={() => setIsCategoryDrawerOpen(true)}
+                onMouseEnter={() => setHoveredCategory("Other Categories")}
+                onMouseLeave={() => setHoveredCategory(null)}
+                  className="w-12 h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
+              >
+                <Image
+                  src="/click-icon.png"
+                  alt="Click for more categories"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5"
+                />
+              </button>
+
+              {/* iOS-style Tooltip for FAB */}
+              {hoveredCategory === "Other Categories" && (
+                <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
+                    right: '16px',
+                    transform: 'translateX(0)'
+                }}>
+                  <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
+                    Other Categories
+                    {/* iOS-style arrow */}
+                      <div className="absolute top-full right-4">
+                      <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1464,7 +1396,7 @@ function PraiseNightPageContent() {
           />
 
           {/* Drawer */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 transform transition-transform duration-300 animate-in slide-in-from-bottom safe-area-bottom">
+          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 transform transition-transform duration-300 animate-in slide-in-from-bottom modal-bottom-safe">
             <div className="px-6 py-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
@@ -1512,7 +1444,7 @@ function PraiseNightPageContent() {
           isOpen={isSongDetailOpen}
           onClose={handleCloseSongDetail}
           currentFilter={activeFilter}
-          songs={songData}
+          songs={finalSongData}
           onSongChange={(newSong) => {
             setSelectedSong(newSong);
             // Don't auto-play here since the modal handles it
@@ -1520,8 +1452,8 @@ function PraiseNightPageContent() {
         />
       )}
       
-      {/* Mini Player - DISABLED for now */}
-      {/* <GlobalMiniPlayer /> */}
+      {/* Mini Player */}
+      <GlobalMiniPlayer />
     </div>
   );
 }

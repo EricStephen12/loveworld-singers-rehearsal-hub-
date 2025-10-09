@@ -670,7 +670,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
         </div>
 
         {/* Content Area - Scrollable */}
-        <div className="flex-1 px-6 py-4 pb-24 overflow-y-auto">
+        <div className="flex-1 px-6 py-4 content-bottom-safe overflow-y-auto">
           {activeTab === 'lyrics' && (
             <div className="max-w-none">
               <div className="text-gray-900 leading-relaxed space-y-6 text-sm text-left font-poppins">
@@ -1224,7 +1224,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
         </div>
 
         {/* Compact Music Player - Fixed at Bottom */}
-        <div className="fixed bottom-0 left-0 right-0 px-6 pb-4 bg-white border-t border-gray-100 z-50">
+        <div className="fixed bottom-0 left-0 right-0 px-6 modal-bottom-safe bg-white border-t border-gray-100 z-50">
 
           {/* Progress Bar */}
           <div className="mb-2">

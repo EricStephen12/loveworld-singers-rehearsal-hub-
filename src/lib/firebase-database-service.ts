@@ -170,6 +170,18 @@ export async function getSongsByPageId(pageId: number): Promise<PraiseNightSong[
         getHistoryBySongId(parseInt(song.id))
       ])
 
+      // Get audio file directly from song document fields
+      const audioFile = (song as any).audioFile || (song as any).audiofile || (song as any).audio_url || (song as any).media_url;
+      
+      // Debug: Log audio file mapping
+      console.log('🔍 Song audio mapping:', {
+        songTitle: (song as any).title,
+        audioFile: (song as any).audioFile,
+        audiofile: (song as any).audiofile,
+        finalAudioFile: audioFile,
+        hasAudio: !!audioFile
+      });
+
       praiseNightSongs.push({
         id: parseInt(song.id),
         title: (song as any).title,
@@ -187,7 +199,7 @@ export async function getSongsByPageId(pageId: number): Promise<PraiseNightSong[
         lyrics: (song as any).lyrics,
         solfas: (song as any).solfas,
         rehearsalCount: (song as any).rehearsalCount,
-        audioFile: (song as any).audioFile,
+        audioFile: audioFile,
         comments: comments,
         history: history
       })
@@ -529,6 +541,18 @@ export async function getSongsByCategory(categoryName: string): Promise<PraiseNi
         getHistoryBySongId(parseInt(song.id))
       ])
 
+      // Get audio file directly from song document fields
+      const audioFile = (song as any).audioFile || (song as any).audiofile || (song as any).audio_url || (song as any).media_url;
+      
+      // Debug: Log audio file mapping
+      console.log('🔍 Song audio mapping (category):', {
+        songTitle: (song as any).title,
+        audioFile: (song as any).audioFile,
+        audiofile: (song as any).audiofile,
+        finalAudioFile: audioFile,
+        hasAudio: !!audioFile
+      });
+
       praiseNightSongs.push({
         id: parseInt(song.id),
         title: (song as any).title,
@@ -546,7 +570,7 @@ export async function getSongsByCategory(categoryName: string): Promise<PraiseNi
         lyrics: (song as any).lyrics,
         solfas: (song as any).solfas,
         rehearsalCount: (song as any).rehearsalCount,
-        audioFile: (song as any).audioFile,
+        audioFile: audioFile,
         comments: comments,
         history: history
       })

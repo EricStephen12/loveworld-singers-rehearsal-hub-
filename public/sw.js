@@ -1,7 +1,7 @@
-// public/sw.js - Service Worker for offline caching (Less Aggressive)
-const CACHE_NAME = 'loveworld-singers-v2' // Updated version for cache busting
-const STATIC_CACHE = 'loveworld-static-v2'
-const DYNAMIC_CACHE = 'loveworld-dynamic-v2'
+// public/sw.js - Service Worker for offline caching
+const CACHE_NAME = 'loveworld-singers-v1'
+const STATIC_CACHE = 'loveworld-static-v1'
+const DYNAMIC_CACHE = 'loveworld-dynamic-v1'
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -72,39 +72,45 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    (async () => {
-      // Network-first strategy for better updates
-      try {
-        console.log('🌐 Fetching from network:', request.url)
-        const response = await fetch(request)
-        
-        // Only cache successful responses
-        if (response && response.status === 200 && response.type === 'basic') {
-          const responseToCache = response.clone()
-          const cache = await caches.open(DYNAMIC_CACHE)
-          console.log('💾 Caching response:', request.url)
-          cache.put(request, responseToCache)
-        }
-        
-        return response
-      } catch (error) {
-        console.log('🌐 Network failed, trying cache:', request.url)
-        
-        // Fallback to cache if network fails
-        const cachedResponse = await caches.match(request)
-        if (cachedResponse) {
-          console.log('📦 Serving from cache (network failed):', request.url)
+    caches.match(request)
+      .then((cachedResponse) => {
+        // Return cached version if available
+    if (cachedResponse) {
+          console.log('Serving from cache:', request.url)
           return cachedResponse
         }
-        
-        // Return offline page for navigation requests
-        if (request.mode === 'navigate') {
-          return caches.match('/offline.html')
-        }
-        
-        throw error
-      }
-    })()
+
+        // Otherwise fetch from network
+        return fetch(request)
+          .then((response) => {
+            // Don't cache non-successful responses
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response
+            }
+
+            // Clone the response
+            const responseToCache = response.clone()
+
+            // Cache the response
+            caches.open(DYNAMIC_CACHE)
+              .then((cache) => {
+                console.log('Caching dynamic response:', request.url)
+                cache.put(request, responseToCache)
+              })
+
+            return response
+          })
+          .catch((error) => {
+            console.error('Fetch failed:', error)
+            
+            // Return offline page for navigation requests
+            if (request.mode === 'navigate') {
+              return caches.match('/offline.html')
+            }
+            
+            throw error
+          })
+      })
   )
 })
 

@@ -146,8 +146,8 @@ function HomePageContent() {
     },
     {
       icon: Calendar,
-      title: 'Ministry Calendar',
-      href: '/pages/ministry-calendar',
+      title: 'Ministy Calendar',
+      href: '#',
       badge: null,
     },
     {
@@ -183,9 +183,9 @@ function HomePageContent() {
   ]
 
   return (
-     <div className="h-screen w-screen overflow-hidden flex flex-col">
+     <div className="h-screen w-screen overflow-hidden flex flex-col bg-gradient-to-br from-gray-50 via-white to-slate-50">
        {/* Responsive Container with Max Width */}
-       <div className="w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto flex flex-col h-full">
+       <div className="w-full max-w-2xl mx-auto flex flex-col h-full">
       {/* Fixed Header - Full Width */}
       <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50 w-full">
         <div className="w-full">
@@ -287,8 +287,12 @@ function HomePageContent() {
 
       {/* Search Results Overlay */}
       {isSearchOpen && (
-        <div className="fixed inset-0 z-30 bg-white/95 backdrop-blur-xl pt-20 overflow-y-auto">
-          <div className="px-3 sm:px-4 py-4 pb-8">
+        <div className="fixed inset-0 z-30 bg-white/95 backdrop-blur-xl pt-20 overflow-y-auto scrollbar-hide" style={{ 
+          scrollbarWidth: 'none', 
+          msOverflowStyle: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+          <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 pb-8">
             <div className="text-sm text-gray-500 mb-4">
               {globalSearchQuery ? (
                 `${typedSearchResults.length} result${typedSearchResults.length !== 1 ? 's' : ''} for "${globalSearchQuery}"`
@@ -309,7 +313,7 @@ function HomePageContent() {
                         setIsSearchOpen(false);
                         setGlobalSearchQuery('');
                       }}
-                      className="flex items-center p-4 bg-white rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50/50 transition-all duration-200 active:scale-95 shadow-sm"
+                      className="flex items-center p-4 bg-white/70 backdrop-blur-sm rounded-2xl border-0 hover:bg-white/90 transition-all duration-200 active:scale-[0.97] shadow-sm ring-1 ring-black/5"
                     >
                       <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
                         <IconComponent className="w-5 h-5 text-purple-600" />
@@ -351,10 +355,14 @@ function HomePageContent() {
       )}
 
       {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="w-full">
+      <div className="flex-1 overflow-y-auto scrollbar-hide content-bottom-safe" style={{ 
+        scrollbarWidth: 'none', 
+        msOverflowStyle: 'none',
+        WebkitOverflowScrolling: 'touch'
+      }}>
+        <div className="w-full px-3 sm:px-4 py-4 sm:py-6">
            {/* Hero Banner - Carousel */}
-           <div className="px-3 sm:px-6 md:px-8 lg:px-12 py-6 pt-20">
+           <div className="py-6 pt-20">
             <div className="relative h-[30vh] rounded-3xl overflow-hidden shadow-lg">
               {/* Carousel Images */}
               <div className="relative w-full h-full">
@@ -383,16 +391,13 @@ function HomePageContent() {
           </div>
 
            {/* Features Grid */}
-           <div className="px-3 sm:px-6 md:px-8 lg:px-12 pb-4">
+           <div className="pb-4">
              <div className="grid grid-cols-3 gap-2">
               {features.map((feature, index) => (
                 <Link
                   key={index}
                   href={feature.href}
-                  className="group flex flex-col items-center p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 active:scale-95 active:bg-gray-50 border border-gray-100/50 hover:border-purple-200/50"
-                  style={{
-                    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
-                  }}
+                  className="group flex flex-col items-center p-3 bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 active:scale-[0.97] border-0 hover:bg-white/90 ring-1 ring-black/5"
                 >
                   <div className="relative mb-2">
                     <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-sm">
@@ -411,10 +416,10 @@ function HomePageContent() {
           </div>
 
            {/* About Section */}
-           <div className="px-3 sm:px-6 md:px-8 lg:px-12 pb-6">
+           <div className="pb-6">
             <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">ABOUT</h2>
             <div className="space-y-2">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm overflow-hidden ring-1 ring-black/5">
                 <button 
                   onClick={() => toggleAbout(0)}
                   className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
@@ -434,10 +439,10 @@ function HomePageContent() {
           </div>
 
            {/* FAQ Section */}
-           <div className="px-3 sm:px-6 md:px-8 lg:px-12 pb-6">
+           <div className="pb-6">
             <h2 className="text-lg font-outfit-semibold text-gray-800 mb-4">FAQ</h2>
             <div className="space-y-2">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm overflow-hidden ring-1 ring-black/5">
                 <button 
                   onClick={() => toggleFAQ(0)}
                   className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
@@ -454,7 +459,7 @@ function HomePageContent() {
                 )}
               </div>
               
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm overflow-hidden ring-1 ring-black/5">
                 <button 
                   onClick={() => toggleFAQ(1)}
                   className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"
@@ -471,7 +476,7 @@ function HomePageContent() {
                 )}
               </div>
               
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl shadow-sm overflow-hidden ring-1 ring-black/5">
                 <button 
                   onClick={() => toggleFAQ(2)}
                   className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors active:bg-gray-100 focus:outline-none"

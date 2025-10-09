@@ -9,9 +9,9 @@ interface CacheItem<T> {
 
 class CacheService {
   private cache = new Map<string, CacheItem<any>>()
-  private readonly DEFAULT_TTL = 2 * 60 * 1000 // 2 minutes (less aggressive)
-  private readonly LONG_TTL = 5 * 60 * 1000 // 5 minutes (less aggressive)
-  private readonly VERY_LONG_TTL = 10 * 60 * 1000 // 10 minutes (less aggressive)
+  private readonly DEFAULT_TTL = 10 * 60 * 1000 // 10 minutes (moderate like Instagram)
+  private readonly LONG_TTL = 15 * 60 * 1000 // 15 minutes (moderate)
+  private readonly VERY_LONG_TTL = 60 * 60 * 1000 // 1 hour (moderate)
 
   // Set cache with TTL
   set<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
