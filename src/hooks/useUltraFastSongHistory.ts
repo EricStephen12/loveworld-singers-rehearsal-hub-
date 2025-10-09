@@ -11,7 +11,14 @@ interface SongHistoryCache {
   };
 }
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Real-time cache durations - everything is real-time now
+const CACHE_DURATION = {
+  COMMENTS: 0, // No cache for comments (real-time)
+  LYRICS: 0, // No cache for lyrics (real-time)
+  SOLFAS: 0, // No cache for solfas (real-time)
+  AUDIO: 0, // No cache for audio (real-time)
+  METADATA: 0 // No cache for metadata (real-time)
+};
 const CACHE_KEY = 'song-history-cache';
 
 export function useUltraFastSongHistory(songId: string | null) {
@@ -26,7 +33,8 @@ export function useUltraFastSongHistory(songId: string | null) {
       const cached = await offlineManager.getCachedData(CACHE_KEY) as SongHistoryCache;
       if (cached && cached[songId!] && songId) {
         const cacheEntry = cached[songId];
-        const isExpired = Date.now() - cacheEntry.timestamp > CACHE_DURATION;
+        // No cache - always fetch fresh data
+        const isExpired = true;
         
         if (!isExpired) {
           console.log('⚡ Loading cached song history instantly (0ms)');

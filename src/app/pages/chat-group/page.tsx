@@ -571,7 +571,7 @@ function ChatGroupContent() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-4 space-y-2 pt-20 pb-24">
+      <div className="flex-1 overflow-y-auto bg-gray-50 p-4 space-y-2 pt-20 pb-24 content-bottom-safe">
         {messages.map((message, index) => {
           const prevMessage = messages[index - 1]
           const showAvatar = !message.is_own && (!prevMessage || prevMessage.sender_id !== message.sender_id)
@@ -833,8 +833,8 @@ function ChatGroupContent() {
         </div>
       )}
 
-      {/* Input Area - Fixed - Full Width */}
-      <div className="fixed bottom-0 left-0 right-0 z-10 bg-white border-t border-gray-200 px-3 sm:px-4 py-4 w-full">
+      {/* Input Area - Fixed - Full Width with Safe Area */}
+      <div className="bottom-input-safe bg-white border-t border-gray-200 px-3 sm:px-4 py-4 w-full">
         <div className="flex items-end space-x-3">
           {/* Attachment button */}
           <button 

@@ -214,13 +214,14 @@ export const createCacheConfig = (
   priority
 });
 
-// Cache durations
+// Instagram-style cache durations
 export const CACHE_DURATIONS = {
-  INSTANT: 0, // No cache
-  SHORT: 2 * 1000, // 2 seconds
-  MEDIUM: 5 * 1000, // 5 seconds
-  LONG: 10 * 1000, // 10 seconds
-  VERY_LONG: 30 * 1000, // 30 seconds
+  NO_CACHE: 0, // No cache for real-time features
+  REAL_TIME: 1 * 1000, // 1 second for dynamic content
+  SHORT: 30 * 1000, // 30 seconds for semi-static content
+  MEDIUM: 5 * 60 * 1000, // 5 minutes for static content
+  LONG: 30 * 60 * 1000, // 30 minutes for very static content
+  VERY_LONG: 2 * 60 * 60 * 1000 // 2 hours for extremely static content
 } as const;
 
 // High priority cache keys (won't be evicted easily)

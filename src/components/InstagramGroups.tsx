@@ -907,7 +907,7 @@ export default function WhatsAppChat() {
 
 
           {/* Chats/Friends List */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto content-bottom-safe">
             {filteredChats.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full px-6 text-center">
                 <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-4">
@@ -1063,7 +1063,7 @@ export default function WhatsAppChat() {
           </header>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto bg-[#efeae2] p-4 space-y-2">
+          <div className="flex-1 overflow-y-auto bg-[#efeae2] p-4 space-y-2 content-bottom-safe">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <div className="bg-white rounded-lg shadow-sm p-6 max-w-sm">
@@ -1177,8 +1177,8 @@ export default function WhatsAppChat() {
             )}
           </div>
 
-          {/* Message Input */}
-          <div className="bg-gray-100 px-3 py-2 flex items-end gap-2 min-w-0">
+          {/* Message Input with Safe Area */}
+          <div className="bottom-input-safe bg-gray-100 px-3 py-2 flex items-end gap-2 min-w-0">
             <div className="flex-1 bg-white rounded-full flex items-center px-4 py-2 min-w-0">
               <button className="text-gray-500 hover:text-gray-700 mr-2 flex-shrink-0">
                 <Paperclip className="w-5 h-5" />

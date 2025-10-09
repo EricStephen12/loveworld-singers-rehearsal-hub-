@@ -5,7 +5,7 @@ import { AudioProvider } from '@/contexts/AudioContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import RealtimeNotifications from '@/components/RealtimeNotifications'
 import VersionChecker from '@/components/VersionChecker'
-// import ScreenshotPrevention from '@/components/ScreenshotPrevention'
+import ScreenshotPrevention from '@/components/ScreenshotPrevention'
 import SuperFastServiceWorker from '@/components/SuperFastServiceWorker'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import OfflineIndicator from '@/components/OfflineIndicator'
@@ -13,6 +13,8 @@ import { PerformanceOptimizer } from '@/lib/performance-optimizer'
 import { ViewportHeightFix } from '@/utils/viewport-height-fix'
 import { NavigationManager } from '@/utils/navigation'
 import { SafeAreaUtils } from '@/utils/safe-area-utils'
+import { DeviceSafeArea } from '@/utils/device-safe-area'
+import { FirebaseAuthService } from '@/lib/firebase-auth'
 import FeatureUpdateChecker from '@/components/FeatureUpdateChecker'
 import '@/utils/auth-debug'
 
@@ -22,10 +24,13 @@ if (typeof window !== 'undefined') {
   ViewportHeightFix.init()
   NavigationManager.init()
   SafeAreaUtils.init()
+  DeviceSafeArea.getInstance().init()
+  FirebaseAuthService.ensurePersistence()
   
   // Make utilities globally available for debugging
   ;(window as any).ViewportHeightFix = ViewportHeightFix
   ;(window as any).SafeAreaUtils = SafeAreaUtils
+  ;(window as any).DeviceSafeArea = DeviceSafeArea
 }
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
@@ -83,6 +88,7 @@ export const viewport: Viewport = {
   userScalable: false,
   themeColor: '#ffffff',
   viewportFit: 'cover', // Enable safe area support for notched devices
+        // ✅ Enhanced touch responsiveness
 }
 
 export default function RootLayout({
@@ -173,7 +179,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <AuthProvider>
             <AudioProvider>
-              {/* <ScreenshotPrevention /> */}
+              <ScreenshotPrevention />
               <main className="h-full w-full bg-gray-50">
                 {children}
               </main>

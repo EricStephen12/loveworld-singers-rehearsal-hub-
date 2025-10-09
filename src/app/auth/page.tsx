@@ -108,11 +108,11 @@ function AuthPageContent() {
         }
         
         // Always go directly to profile completion
-        console.log('✅ Account created, redirecting to profile completion...')
-        console.log('👤 User created with profile_completed: false')
+        console.log('✅ Account created, redirecting to home...')
+        console.log('👤 User created successfully')
         setTimeout(() => {
-          console.log('🔄 Redirecting to /profile-completion')
-        router.push('/profile-completion')
+          console.log('🔄 Redirecting to /home')
+        router.push('/home')
         }, 1500)
       } else {
         setSuccess('Checking your account...')

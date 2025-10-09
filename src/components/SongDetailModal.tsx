@@ -7,6 +7,8 @@ import { useAudio } from "@/contexts/AudioContext";
 import { FirebaseDatabaseService } from "@/lib/firebase-database";
 import { FirebaseCommentService } from "@/lib/firebase-comment-service";
 import { useUltraFastSongHistory } from "@/hooks/useUltraFastSongHistory";
+import { useRealtimeComments } from "@/hooks/useRealtimeComments";
+import { useRealtimeSongData } from "@/hooks/useRealtimeSongData";
 
 interface SongDetailModalProps {
   selectedSong: PraiseNightSong | null;
@@ -367,6 +369,28 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     getHistoryByType 
   } = useUltraFastSongHistory(currentSongData?.id?.toString() || null);
 
+  // Use real-time comments hook (no cache)
+  const { 
+    comments: realtimeComments, 
+    loading: isLoadingComments, 
+    error: commentsError,
+    refreshComments 
+  } = useRealtimeComments({ 
+    songId: currentSongData?.id?.toString() || null,
+    enabled: isOpen && activeHistoryTab === 'comments'
+  });
+
+  // Use real-time song data hook (no cache)
+  const { 
+    songData: realtimeSongData, 
+    loading: isLoadingSongData, 
+    error: songDataError,
+    refreshSongData 
+  } = useRealtimeSongData({ 
+    songId: currentSongData?.id?.toString() || null,
+    enabled: isOpen // Always enabled when modal is open
+  });
+
   // Get history data for the current song using the ultra-fast hook
   const getHistoryData = (type: 'lyrics' | 'solfas' | 'audio' | 'comments' | 'metadata'): HistoryEntry[] => {
     return getHistoryByType(type);
@@ -374,20 +398,28 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
   // History loading is now handled automatically by the useUltraFastSongHistory hook
 
-  // Get latest content (what's shown in main tabs)
+  // Get latest content (what's shown in main tabs) - uses real-time data
   const getLatestContent = (type: 'lyrics' | 'solfas' | 'audio' | 'comments') => {
-    if (!selectedSong) return null;
+    // Use real-time song data if available, otherwise fallback to selectedSong
+    const currentSong = realtimeSongData || selectedSong;
+    if (!currentSong) return null;
     
     switch (type) {
       case 'lyrics':
-        return selectedSong.lyrics;
+        return currentSong.lyrics;
       case 'solfas':
-        return selectedSong.solfas;
+        return currentSong.solfas;
       case 'audio':
-        return selectedSong.audioFile;
+        return currentSong.audioFile;
       case 'comments':
-        // Get ONLY the latest pastor's comment (newest one)
-        return selectedSong.comments
+        // Use real-time comments for latest content
+        if (realtimeComments && realtimeComments.length > 0) {
+          return realtimeComments
+            .filter(comment => comment.author === 'Pastor')
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+        }
+        // Fallback to current song comments
+        return currentSong.comments
           .filter(comment => comment.author === 'Pastor')
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
       default:
@@ -397,9 +429,21 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
   // Get older comments for history (all except the latest)
   const getOlderComments = () => {
-    if (!selectedSong || !Array.isArray(selectedSong.comments)) return [];
+    // Use real-time comments if available
+    if (realtimeComments && realtimeComments.length > 0) {
+      const pastorComments = realtimeComments
+        .filter(comment => comment.author === 'Pastor')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      // Return all except the latest (which is shown in main tab)
+      return pastorComments.slice(1);
+    }
     
-    const pastorComments = selectedSong.comments
+    // Fallback to real-time song data or selectedSong comments
+    const currentSong = realtimeSongData || selectedSong;
+    if (!currentSong || !Array.isArray(currentSong.comments)) return [];
+    
+    const pastorComments = currentSong.comments
       .filter(comment => comment.author === 'Pastor')
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
@@ -409,7 +453,9 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
   // Get older solfas for history (all except the latest)
   const getOlderSolfas = () => {
-    if (!currentSongData?.solfas) return [];
+    // Use real-time song data if available
+    const currentSong = realtimeSongData || currentSongData;
+    if (!currentSong?.solfas) return [];
     
     // For now, we only have current solfas, but this function is ready for when we have multiple versions
     // In the future, this would work like comments - showing previous versions
@@ -559,7 +605,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
         <div className="flex justify-center pt-2 pb-1 flex-shrink-0">
           <div
             onClick={onClose}
-            className="w-8 h-0.5 bg-gray-400 rounded-full cursor-pointer"
+            className="w-8 h-0.5 bg-gray-400 rounded-full cursor-pointer touch-optimized"
           ></div>
         </div>
 
@@ -594,26 +640,26 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           <div className="flex items-center space-x-4 mb-3">
             {/* Song Info - Center */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-white text-xl font-black text-center mb-4 font-poppins uppercase">{currentSongData?.title}</h1>
+              <h1 className="text-white text-xl font-black text-center mb-4 font-poppins uppercase">{(realtimeSongData || currentSongData)?.title}</h1>
               <div className="text-white text-sm space-y-1 font-poppins">
                 <div className="border-b border-white/30 pb-1">
-                  <span className="font-semibold uppercase">LEAD SINGER:</span> {currentSongData?.leadSinger ? currentSongData.leadSinger.split(',')[0].trim() : 'Unknown'}
+                  <span className="font-semibold uppercase">LEAD SINGER:</span> {(realtimeSongData || currentSongData)?.leadSinger ? (realtimeSongData || currentSongData)?.leadSinger?.split(',')[0].trim() : 'Unknown'}
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  <span><span className="font-semibold uppercase">WRITER:</span> {currentSongData?.writer || ''}</span>
-                  <span className="font-bold">x{currentSongData?.rehearsalCount || 1}</span>
+                  <span><span className="font-semibold uppercase">WRITER:</span> {(realtimeSongData || currentSongData)?.writer || ''}</span>
+                  <span className="font-bold">x{(realtimeSongData || currentSongData)?.rehearsalCount || 1}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  <span><span className="font-semibold uppercase">CONDUCTOR:</span> {currentSongData?.conductor || ''}</span>
-                  <span><span className="font-semibold uppercase">KEY:</span> {currentSongData?.key || ''}</span>
+                  <span><span className="font-semibold uppercase">CONDUCTOR:</span> {(realtimeSongData || currentSongData)?.conductor || ''}</span>
+                  <span><span className="font-semibold uppercase">KEY:</span> {(realtimeSongData || currentSongData)?.key || ''}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  <span><span className="font-semibold uppercase">KEYBOARDIST:</span> {currentSongData?.leadKeyboardist || ''}</span>
-                  <span><span className="font-semibold uppercase">TEMPO:</span> {currentSongData?.tempo || ''}</span>
+                  <span><span className="font-semibold uppercase">KEYBOARDIST:</span> {(realtimeSongData || currentSongData)?.leadKeyboardist || ''}</span>
+                  <span><span className="font-semibold uppercase">TEMPO:</span> {(realtimeSongData || currentSongData)?.tempo || ''}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  <span><span className="font-semibold uppercase">DRUMMER:</span> {currentSongData?.drummer || ''}</span>
-                  <span><span className="font-semibold uppercase">BASS GUITARIST:</span> {currentSongData?.leadGuitarist || ''}</span>
+                  <span><span className="font-semibold uppercase">DRUMMER:</span> {(realtimeSongData || currentSongData)?.drummer || ''}</span>
+                  <span><span className="font-semibold uppercase">BASS GUITARIST:</span> {(realtimeSongData || currentSongData)?.leadGuitarist || ''}</span>
                 </div>
               </div>
             </div>
@@ -1060,10 +1106,10 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
                 {activeHistoryTab === 'comments' && (
                   <div className="space-y-3">
-                    {isLoadingHistory && getOlderComments().length === 0 && getHistoryData('comments').length === 0 ? (
+                    {isLoadingComments && getOlderComments().length === 0 && getHistoryData('comments').length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mb-3"></div>
-                        <p className="text-gray-500 text-sm">Loading comments history...</p>
+                        <p className="text-gray-500 text-sm">Loading real-time comments...</p>
                       </div>
                     ) : getOlderComments().length === 0 && getHistoryData('comments').length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12">
@@ -1100,7 +1146,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                           <div className="px-4 pb-4">
                             <div className="text-sm text-slate-700">
                               <div className="bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200/50">
-                                <p className="text-sm text-slate-700">{comment.text}</p>
+                                <p className="text-sm text-slate-700">{(comment as any).text || (comment as any).content}</p>
                               </div>
                             </div>
                           </div>
@@ -1237,7 +1283,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           {/* Progress Bar */}
           <div className="mb-2">
             <div 
-              className="progress-bar w-full h-1 bg-gray-300 rounded-full relative cursor-pointer hover:h-1.5 transition-all duration-200 select-none"
+              className="progress-bar w-full h-1 bg-gray-300 rounded-full relative cursor-pointer hover:h-1.5 transition-all duration-200 select-none touch-optimized"
               onClick={handleProgressClick}
               onMouseDown={handleProgressMouseDown}
               onMouseMove={handleProgressMouseMove}

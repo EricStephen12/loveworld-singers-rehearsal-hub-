@@ -34,6 +34,8 @@ function PraiseNightPageContent() {
   const { signOut } = useAuth();
   const [currentPraiseNight, setCurrentPraiseNightState] = useState<PraiseNight | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullToRefresh, setPullToRefresh] = useState({ isPulling: false, startY: 0, currentY: 0, threshold: 80 });
 
   // Filter praise nights by category if specified
   const filteredPraiseNights = useMemo(() => {
@@ -117,8 +119,32 @@ function PraiseNightPageContent() {
       // Only auto-select if no page is currently selected and no page parameter
       const firstPage = filteredPraiseNights[0];
       setCurrentPraiseNightState(firstPage);
+      console.log('🎯 Auto-selected first page:', firstPage.name, 'Category:', firstPage.category);
     }
   }, [filteredPraiseNights, currentPraiseNight, pageParam]);
+
+  // Debug page selection
+  useEffect(() => {
+    console.log('🔍 Page Selection Debug:', {
+      categoryFilter,
+      pageParam,
+      currentPraiseNightName: currentPraiseNight?.name,
+      currentPraiseNightCategory: currentPraiseNight?.category,
+      filteredPraiseNights: filteredPraiseNights.map(p => ({ name: p.name, category: p.category, hasCountdown: !!p.countdown })),
+      allPraiseNights: allPraiseNights.map(p => ({ name: p.name, category: p.category, hasCountdown: !!p.countdown }))
+    });
+  }, [categoryFilter, pageParam, currentPraiseNight, filteredPraiseNights, allPraiseNights]);
+
+  // Auto-select a page with countdown data if current page has none
+  useEffect(() => {
+    if (currentPraiseNight && !currentPraiseNight.countdown && allPraiseNights.length > 0) {
+      const pageWithCountdown = allPraiseNights.find(p => p.countdown && (p.countdown.days > 0 || p.countdown.hours > 0 || p.countdown.minutes > 0 || p.countdown.seconds > 0));
+      if (pageWithCountdown) {
+        console.log('🔄 Switching to page with countdown:', pageWithCountdown.name);
+        setCurrentPraiseNightState(pageWithCountdown);
+      }
+    }
+  }, [currentPraiseNight, allPraiseNights]);
 
   // Real-time data automatically loads songs, so we don't need the manual loading effect anymore
 
@@ -176,6 +202,7 @@ function PraiseNightPageContent() {
     };
   }, []);
 
+
   // Use the banner image from the database, fallback to default
   const ecardSrc = useMemo(() => {
     if (!currentPraiseNight) return "/Ecards/1000876785.png";
@@ -219,13 +246,147 @@ function PraiseNightPageContent() {
     }
   }
 
+  // ✅ Pull-to-refresh functionality (like Instagram/Twitter)
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      console.log('🔄 Pull-to-refresh triggered...');
+      
+      // Clear all caches
+      if (typeof window !== 'undefined') {
+        // Clear localStorage cache
+        localStorage.removeItem('praise-nights-cache');
+        localStorage.removeItem('songs-cache');
+        localStorage.removeItem('comments-cache');
+        
+        // Clear any other caches
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.includes('cache') || key.includes('firebase')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+      
+      // Force refresh data
+      await refreshData();
+      
+      // Reload the page for complete refresh
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      
+    } catch (error) {
+      console.error('❌ Refresh error:', error);
+      // Fallback to page reload
+      window.location.reload();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  // ✅ Pull-to-refresh touch handlers
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (window.scrollY === 0) {
+        setPullToRefresh(prev => ({
+          ...prev,
+          isPulling: true,
+          startY: e.touches[0].clientY,
+          currentY: e.touches[0].clientY
+        }));
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (pullToRefresh.isPulling && window.scrollY === 0) {
+        const currentY = e.touches[0].clientY;
+        const pullDistance = Math.max(0, currentY - pullToRefresh.startY);
+        
+        setPullToRefresh(prev => ({
+          ...prev,
+          currentY,
+          pullDistance
+        }));
+
+        // Prevent default scrolling when pulling down
+        if (pullDistance > 0) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (pullToRefresh.isPulling) {
+        const pullDistance = pullToRefresh.currentY - pullToRefresh.startY;
+        
+        if (pullDistance > pullToRefresh.threshold) {
+          handleRefresh();
+        }
+        
+        setPullToRefresh({
+          isPulling: false,
+          startY: 0,
+          currentY: 0,
+          threshold: 80
+        });
+      }
+    };
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [pullToRefresh.isPulling, pullToRefresh.startY, pullToRefresh.currentY]);
+
   const menuItems = getMenuItems(handleLogout)
 
   // Server-side countdown timer that syncs with server time
   const { timeLeft, isLoading: countdownLoading, error: countdownError } = useServerCountdown({
-    countdownData: currentPraiseNight?.countdown,
+    countdownData: currentPraiseNight?.countdown || { days: 1, hours: 2, minutes: 30, seconds: 0 }, // Fallback for testing
     praiseNightId: currentPraiseNight?.id
   })
+
+  // Debug what's being passed to useServerCountdown
+  console.log('🔍 useServerCountdown Input:', {
+    currentPraiseNightName: currentPraiseNight?.name,
+    currentPraiseNightId: currentPraiseNight?.id,
+    countdownData: currentPraiseNight?.countdown,
+    hasCountdown: !!currentPraiseNight?.countdown,
+    categoryFilter,
+    filteredPraiseNightsCount: filteredPraiseNights.length,
+    allPraiseNightsCount: allPraiseNights.length,
+    allPraiseNightsNames: allPraiseNights.map(p => p.name),
+    filteredPraiseNightsNames: filteredPraiseNights.map(p => p.name)
+  });
+
+  // Debug countdown and rehearsal count data
+  useEffect(() => {
+    console.log('🔍 Debug - Current Praise Night:', {
+      id: currentPraiseNight?.id,
+      name: currentPraiseNight?.name,
+      countdown: currentPraiseNight?.countdown,
+      category: currentPraiseNight?.category,
+      hasCountdown: !!currentPraiseNight?.countdown,
+      categoryFilter,
+      shouldShowCountdown: categoryFilter !== 'archive' && currentPraiseNight && !(categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0),
+      songsCount: currentPraiseNight?.songs?.length,
+      firstSong: currentPraiseNight?.songs?.[0] ? {
+        title: currentPraiseNight.songs[0].title,
+        rehearsalCount: currentPraiseNight.songs[0].rehearsalCount
+      } : null
+    });
+    console.log('🔍 Debug - Countdown Hook:', {
+      timeLeft,
+      countdownLoading,
+      countdownError
+    });
+  }, [currentPraiseNight, timeLeft, countdownLoading, countdownError, categoryFilter, filteredPraiseNights.length]);
 
 
   // Handle category selection and close drawer
@@ -402,10 +563,10 @@ function PraiseNightPageContent() {
     return uniqueCategories;
   }, [finalSongData, currentPraiseNight?.songs]);
 
-  // Categories to show in horizontal bar (first 2)
-  const mainCategories = songCategories.slice(0, 2);
-  // Categories to keep in FAB (remaining ones)
-  const otherCategories = songCategories.slice(2);
+  // All categories in horizontal bar with auto-scroll
+  const mainCategories = songCategories;
+  // No more FAB categories - all moved to main bar
+  const otherCategories: string[] = [];
   
   // Debug logging for categories
   console.log('🎵 Category bar data:', {
@@ -414,6 +575,7 @@ function PraiseNightPageContent() {
     otherCategories: otherCategories,
     activeCategory: activeCategory
   });
+
 
   // ✅ Update active category when categories change (e.g., switching pages)
   useEffect(() => {
@@ -519,8 +681,19 @@ function PraiseNightPageContent() {
     setSearchQuery(''); // Clear search query when closing
   };
 
+  // Debug loading and error states
+  console.log('🔍 Page Render Debug:', {
+    loading,
+    error,
+    allPraiseNightsLength: allPraiseNights?.length,
+    filteredPraiseNightsLength: filteredPraiseNights?.length,
+    currentPraiseNight: currentPraiseNight?.name,
+    categoryFilter
+  });
+
   // Show loading state only if no cached data is available
   if (loading && allPraiseNights.length === 0) {
+    console.log('🔄 Showing loading state');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -533,6 +706,7 @@ function PraiseNightPageContent() {
 
   // Show error state
   if (error) {
+    console.log('❌ Showing error state:', error);
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -546,6 +720,21 @@ function PraiseNightPageContent() {
     );
   }
 
+  console.log('✅ Rendering main page content');
+  
+  // Fallback: If no data at all, show a basic page
+  if (!allPraiseNights || allPraiseNights.length === 0) {
+    console.log('⚠️ No praise nights data, showing fallback');
+  return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 text-sm">No praise night data available</p>
+          <p className="text-gray-500 text-xs mt-2">Check your connection and try again</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50 safe-area-bottom">
       <style jsx global>{`
@@ -619,6 +808,21 @@ function PraiseNightPageContent() {
           animation-play-state: paused;
         }
         
+        /* Allow manual scrolling by pausing animation on scroll */
+        .animate-scroll.manual-scroll {
+          animation-play-state: paused;
+        }
+        
+        /* Alternative approach - use transform instead of animation for better manual control */
+        .animate-scroll-alt {
+          width: 200%;
+          animation: none;
+        }
+        
+        .animate-scroll-alt.auto-scroll {
+          animation: scroll 20s linear infinite;
+        }
+        
         /* Custom scrollbar styling */
         .scrollbar-thin::-webkit-scrollbar {
           height: 4px;
@@ -633,6 +837,35 @@ function PraiseNightPageContent() {
           background: transparent;
         }
       `}</style>
+
+       {/* ✅ Pull-to-Refresh Indicator */}
+       {(pullToRefresh.isPulling || isRefreshing) && (
+         <div 
+           className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-200/50 flex items-center justify-center py-2"
+           style={{
+             transform: `translateY(${Math.min(pullToRefresh.currentY - pullToRefresh.startY, 60)}px)`,
+             transition: pullToRefresh.isPulling ? 'none' : 'transform 0.3s ease-out'
+           }}
+         >
+           <div className="flex items-center gap-2 text-gray-600">
+             {isRefreshing ? (
+               <>
+                 <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                 <span className="text-sm font-medium">Refreshing...</span>
+               </>
+             ) : (
+               <>
+                 <div className={`w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full transition-transform duration-200 ${
+                   (pullToRefresh.currentY - pullToRefresh.startY) > pullToRefresh.threshold ? 'rotate-180' : ''
+                 }`}></div>
+                 <span className="text-sm font-medium">
+                   {(pullToRefresh.currentY - pullToRefresh.startY) > pullToRefresh.threshold ? 'Release to refresh' : 'Pull to refresh'}
+                 </span>
+               </>
+             )}
+           </div>
+         </div>
+       )}
 
        {/* ✅ Fixed Header - Full Width */}
        <div className="flex-shrink-0 w-full">
@@ -655,7 +888,7 @@ function PraiseNightPageContent() {
                   <button
                     aria-label="Switch Praise Night"
                     onClick={() => setShowDropdown(!showDropdown)}
-                    className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition border border-slate-200"
+                    className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition border border-slate-200 touch-optimized"
                   >
                     <ChevronDown className="w-4 h-4" />
                   </button>
@@ -669,17 +902,18 @@ function PraiseNightPageContent() {
                    categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0 ? 'Pre-Rehearsal' :
                    (currentPraiseNight?.name || '')}
                 </h1>
-                {categoryFilter !== 'archive' && currentPraiseNight && !(categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0) && currentPraiseNight.countdown && (
+                {/* Always show countdown for debugging - remove this condition later */}
+                {currentPraiseNight && (
                   <div className="mt-0.5">
                     {/* Countdown Display */}
                     <div className="flex items-center gap-0.5 text-xs">
-                      <span className="font-bold text-gray-700">{formatNumber(timeLeft.days)}d</span>
-                      <span className="text-gray-500 font-bold">:</span>
-                      <span className="font-bold text-gray-700">{formatNumber(timeLeft.hours)}h</span>
-                      <span className="text-gray-500 font-bold">:</span>
-                      <span className="font-bold text-gray-700">{formatNumber(timeLeft.minutes)}m</span>
-                      <span className="text-gray-500 font-bold">:</span>
-                      <span className="font-bold text-gray-700">{formatNumber(timeLeft.seconds)}s</span>
+                    <span className="font-bold text-gray-700">{formatNumber(timeLeft.days)}d</span>
+                    <span className="text-gray-500 font-bold">:</span>
+                    <span className="font-bold text-gray-700">{formatNumber(timeLeft.hours)}h</span>
+                    <span className="text-gray-500 font-bold">:</span>
+                    <span className="font-bold text-gray-700">{formatNumber(timeLeft.minutes)}m</span>
+                    <span className="text-gray-500 font-bold">:</span>
+                    <span className="font-bold text-gray-700">{formatNumber(timeLeft.seconds)}s</span>
                     </div>
                   </div>
                 )}
@@ -690,7 +924,7 @@ function PraiseNightPageContent() {
                 <button
                   onClick={() => setIsSearchOpen((v) => !v)}
                   aria-label="Toggle search"
-                  className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90"
+                  className="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-0 focus:border-0 active:scale-95 hover:bg-gray-100/70 active:bg-gray-200/90 touch-optimized"
                   style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
                 >
                   <Search className="w-5 h-5 text-gray-600 transition-all duration-200" />
@@ -1167,7 +1401,7 @@ function PraiseNightPageContent() {
                       // Open modal without auto-play
                       handleSongClick(song, index);
                     }}
-                    className={`border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer ${
+                    className={`border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer touch-optimized ${
                       (() => {
                         const isActive = currentSong?.id === song.id;
                         if (isActive) {
@@ -1227,86 +1461,57 @@ function PraiseNightPageContent() {
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
 
-      {/* ✅ Category Bar for Individual Archive Pages */}
+      {/* ✅ Category Bar for Individual Archive Pages with Horizontal Scroll */}
       {categoryFilter === 'archive' && pageParam && (
-        <div className="fixed-bottom-safe safe-area-bottom-enhanced flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+        <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
           <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
-            {/* Category buttons with text - Take up most of the space */}
-            <div className="flex-1 flex gap-2">
+            {/* Category buttons with horizontal scroll */}
+            <div 
+              className="flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+            >
+              <div className="flex gap-2 min-w-max px-1">
               {mainCategories.map((category, index) => (
                 <button
                   key={category}
                   onClick={() => handleCategorySelect(category)}
-                  className={`flex-1 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center ${activeCategory === category
+                    className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
                     }`}
                 >
-                  <span className="block leading-tight break-words">{category}</span>
+                    <span className="block leading-tight">{category}</span>
                 </button>
               ))}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-       {/* ✅ Fixed Bottom Bar with Categories and FAB */}
+       {/* ✅ Fixed Bottom Bar with Horizontal Scrolling Categories */}
       {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
-         <div className="fixed-bottom-safe safe-area-bottom-enhanced flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+         <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
              <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
-              {/* Category buttons with text - Take up most of the space */}
-              <div className="flex-1 flex gap-2">
+              {/* Category buttons with horizontal scroll */}
+              <div 
+                className="flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+              >
+                <div className="flex gap-2 min-w-max px-1">
             {mainCategories.map((category, index) => (
                 <button
                     key={category}
                   onClick={() => handleCategorySelect(category)}
-                    className={`flex-1 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center ${activeCategory === category
+                      className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
                     }`}
                 >
-                    <span className="block leading-tight break-words">{category}</span>
+                      <span className="block leading-tight">{category}</span>
                 </button>
                 ))}
               </div>
-
-              {/* FAB positioned to the right with small gap */}
-              <div className="relative flex-shrink-0 ml-2">
-                {/* Others text positioned above FAB */}
-                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-purple-600 font-semibold text-center whitespace-nowrap z-10">
-                  Others
               </div>
-              <button
-                onClick={() => setIsCategoryDrawerOpen(true)}
-                onMouseEnter={() => setHoveredCategory("Other Categories")}
-                onMouseLeave={() => setHoveredCategory(null)}
-                  className="w-12 h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center active:scale-95"
-              >
-                <Image
-                  src="/click-icon.png"
-                  alt="Click for more categories"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
-              </button>
 
-              {/* iOS-style Tooltip for FAB */}
-              {hoveredCategory === "Other Categories" && (
-                <div className="fixed bottom-20 z-[60] pointer-events-none" style={{
-                    right: '16px',
-                    transform: 'translateX(0)'
-                }}>
-                  <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-medium px-4 py-2.5 rounded-xl whitespace-nowrap shadow-2xl border border-white/20 max-w-[280px]">
-                    Other Categories
-                    {/* iOS-style arrow */}
-                      <div className="absolute top-full right-4">
-                      <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-transparent border-t-black/90"></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       )}

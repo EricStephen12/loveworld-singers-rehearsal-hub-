@@ -159,6 +159,25 @@ export async function deletePage(id: number): Promise<boolean> {
 
 // ===== SONGS OPERATIONS =====
 
+// Get song by ID without caching (real-time)
+export async function getSongById(songId: string): Promise<PraiseNightSong | null> {
+  try {
+    console.log('🔥 Fetching real-time song from Firebase:', songId);
+    const song = await FirebaseDatabaseService.getDocument('songs', songId);
+    
+    if (song) {
+      console.log('✅ Real-time song fetched from Firebase:', (song as any).title);
+      return song as any as PraiseNightSong;
+    }
+    
+    console.log('❌ Song not found:', songId);
+    return null;
+  } catch (error) {
+    console.error('Error fetching song:', error);
+    return null;
+  }
+}
+
 export async function getSongsByPageId(pageId: number): Promise<PraiseNightSong[]> {
   try {
     const songs = await FirebaseDatabaseService.getCollectionWhere('songs', 'praiseNightId', '==', pageId)

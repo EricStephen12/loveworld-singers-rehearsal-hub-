@@ -57,12 +57,27 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
         location: (page as any).location || '',
         category: (page as any).category || 'ongoing',
         bannerImage: (page as any).bannerImage || (page as any).bannerimage || '',
-        countdown: {
-          days: (page as any).countdownDays || (page as any).countdown?.days || (page as any).countdowndays || 0,
-          hours: (page as any).countdownHours || (page as any).countdown?.hours || (page as any).countdownhours || 0,
-          minutes: (page as any).countdownMinutes || (page as any).countdown?.minutes || (page as any).countdownminutes || 0,
-          seconds: (page as any).countdownSeconds || (page as any).countdown?.seconds || (page as any).countdownseconds || 0
-        },
+        countdown: (() => {
+          const countdownData = {
+            days: (page as any).countdownDays || (page as any).countdown?.days || (page as any).countdowndays || 0,
+            hours: (page as any).countdownHours || (page as any).countdown?.hours || (page as any).countdownhours || 0,
+            minutes: (page as any).countdownMinutes || (page as any).countdown?.minutes || (page as any).countdownminutes || 0,
+            seconds: (page as any).countdownSeconds || (page as any).countdown?.seconds || (page as any).countdownseconds || 0
+          };
+          console.log('🕐 Countdown data for page:', {
+            pageId: (page as any).page_id || page.id,
+            pageName: (page as any).name || (page as any).title,
+            countdownData,
+            rawCountdownFields: {
+              countdownDays: (page as any).countdownDays,
+              countdownHours: (page as any).countdownHours,
+              countdownMinutes: (page as any).countdownMinutes,
+              countdownSeconds: (page as any).countdownSeconds,
+              countdown: (page as any).countdown
+            }
+          });
+          return countdownData;
+        })(),
         songs: allSongs.filter(song => {
           const songPageId = (song as any).praisenightid || (song as any).praiseNightId;
           const pageId = (page as any).page_id || parseInt(page.id) || index + 1;
@@ -89,6 +104,7 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
             songId: song.id,
             songFirebaseId: song.firebaseId,
             songTitle: (song as any).title,
+            rehearsalCount: (song as any).rehearsalcount || (song as any).rehearsalCount,
             allKeys: Object.keys(song),
             songData: song
           });
@@ -200,26 +216,26 @@ export function useRealtimeData() {
     loadInitialData();
   }, []);
 
-  // Set up periodic data refresh (Firebase doesn't have realtime subscriptions like Supabase)
+  // Instagram-style refresh strategy - different intervals for different content
   useEffect(() => {
-    console.log('🔄 Setting up periodic data refresh...');
+    console.log('🔄 Setting up Instagram-style refresh strategy...');
 
-    // Refresh data every 5 seconds to get updates quickly
-    const refreshInterval = setInterval(async () => {
+    // Real-time refresh for all data (every 1 second)
+    const realTimeInterval = setInterval(async () => {
       try {
-        console.log('🔄 Refreshing data from Firebase...');
+        console.log('🔄 Real-time refresh for all data...');
         const updatedPages = await fetchFirebaseData();
         const limitedPages = updatedPages.slice(0, MAX_PAGES_IN_MEMORY);
         setPages(limitedPages);
       } catch (error) {
         console.error('Error refreshing data:', error);
       }
-    }, 5000); // 5 seconds
+    }, 1000); // 1 second for real-time features
 
     // Cleanup interval on unmount
     return () => {
       console.log('🔄 Cleaning up refresh interval...');
-      clearInterval(refreshInterval);
+      clearInterval(realTimeInterval);
     };
   }, [MAX_PAGES_IN_MEMORY]);
 

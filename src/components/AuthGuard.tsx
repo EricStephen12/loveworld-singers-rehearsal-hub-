@@ -14,7 +14,7 @@ interface AuthGuardProps {
 export default function AuthGuard({
   children,
   requireAuth = true,
-  requireCompleteProfile = true,
+  requireCompleteProfile = false, // Changed to false - no profile completion required
   redirectTo
 }: AuthGuardProps) {
   const { user, profile, isLoading, isProfileComplete } = useAuth();

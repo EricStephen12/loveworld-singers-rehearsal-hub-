@@ -9,12 +9,20 @@ interface CacheItem<T> {
 
 class CacheService {
   private cache = new Map<string, CacheItem<any>>()
-  private readonly DEFAULT_TTL = 3 * 1000 // 3 seconds (for quick updates)
-  private readonly LONG_TTL = 5 * 1000 // 5 seconds (for quick updates)
-  private readonly VERY_LONG_TTL = 10 * 1000 // 10 seconds (for quick updates)
+  // Instagram-style caching strategy
+  private readonly NO_CACHE = 0 // No cache for real-time features
+  private readonly REAL_TIME_TTL = 1 * 1000 // 1 second for dynamic content
+  private readonly DEFAULT_TTL = 30 * 1000 // 30 seconds for semi-static content
+  private readonly LONG_TTL = 5 * 60 * 1000 // 5 minutes for static content
+  private readonly VERY_LONG_TTL = 30 * 60 * 1000 // 30 minutes for very static content
 
   // Set cache with TTL
   set<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
+    // Don't cache if TTL is 0 (real-time features)
+    if (ttl === this.NO_CACHE) {
+      return;
+    }
+    
     const item: CacheItem<T> = {
       data,
       timestamp: Date.now(),
@@ -22,11 +30,13 @@ class CacheService {
     }
     this.cache.set(key, item)
     
-    // Also store in localStorage for persistence
-    try {
-      localStorage.setItem(`cache_${key}`, JSON.stringify(item))
-    } catch (error) {
-      console.warn('Failed to store cache in localStorage:', error)
+    // Only store in localStorage for longer TTL items
+    if (ttl >= this.DEFAULT_TTL) {
+      try {
+        localStorage.setItem(`cache_${key}`, JSON.stringify(item))
+      } catch (error) {
+        console.warn('Failed to store cache in localStorage:', error)
+      }
     }
   }
 
@@ -64,7 +74,20 @@ class CacheService {
     return this.get(key) !== null
   }
 
-  // Clear specific cache
+  // Instagram-style cache methods
+  setRealTime<T>(key: string, data: T): void {
+    this.set(key, data, this.REAL_TIME_TTL)
+  }
+
+  setStatic<T>(key: string, data: T): void {
+    this.set(key, data, this.LONG_TTL)
+  }
+
+  setVeryStatic<T>(key: string, data: T): void {
+    this.set(key, data, this.VERY_LONG_TTL)
+  }
+
+  // Clear cache for specific key
   clear(key: string): void {
     this.cache.delete(key)
     try {
@@ -78,6 +101,7 @@ class CacheService {
   clearAll(): void {
     this.cache.clear()
     try {
+      // Clear all cache items from localStorage
       const keys = Object.keys(localStorage)
       keys.forEach(key => {
         if (key.startsWith('cache_')) {

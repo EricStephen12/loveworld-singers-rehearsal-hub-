@@ -84,15 +84,26 @@ export function useServerCountdown({
     const syncedTime = new Date(now.getTime() + serverTimeOffset)
     const difference = targetDateRef.current.getTime() - syncedTime.getTime()
     
+    // Debug: Log calculation details
+    console.log('🕐 Calculate Time Left:', {
+      now: now.toISOString(),
+      syncedTime: syncedTime.toISOString(),
+      targetDate: targetDateRef.current.toISOString(),
+      difference,
+      serverTimeOffset
+    });
+    
     if (difference > 0) {
       const days = Math.floor(difference / (1000 * 60 * 60 * 24))
       const hours = Math.floor((difference / (1000 * 60 * 60)) % 24)
       const minutes = Math.floor((difference / (1000 * 60)) % 60)
       const seconds = Math.floor((difference / 1000) % 60)
       
+      console.log('🕐 Calculated time left:', { days, hours, minutes, seconds });
       setTimeLeft({ days, hours, minutes, seconds })
     } else {
       // Countdown finished
+      console.log('🕐 Countdown finished - difference is negative:', difference);
       setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
@@ -145,6 +156,18 @@ export function useServerCountdown({
         
         // Calculate initial time
         calculateTimeLeft()
+        
+        // Debug: Log the target date and countdown data
+        console.log('🕐 Server Countdown Debug:', {
+          targetDate: target.toISOString(),
+          countdownData,
+          serverTime: serverTime.toISOString(),
+          totalMs: countdownData ? 
+            (countdownData.days * 24 * 60 * 60 * 1000) +
+            (countdownData.hours * 60 * 60 * 1000) +
+            (countdownData.minutes * 60 * 1000) +
+            (countdownData.seconds * 1000) : 0
+        });
         
         // Set up interval
         if (intervalRef.current) {

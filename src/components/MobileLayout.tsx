@@ -61,15 +61,9 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       setShowSplash(false)
       setShowAuth(true)
       setShowProfileCompletion(false)
-    } else if (!isProfileComplete) {
-      // User exists but profile not complete - show profile completion
-      console.log('📱 User exists but profile not complete - showing profile completion')
-      setShowSplash(false)
-      setShowAuth(false)
-      setShowProfileCompletion(true)
     } else {
-      // User is fully authenticated and profile complete - show main app
-      console.log('📱 User fully authenticated - showing main app')
+      // User is authenticated - show main app (no profile completion required)
+      console.log('📱 User authenticated - showing main app')
       setShowSplash(false)
       setShowAuth(false)
       setShowProfileCompletion(false)
@@ -90,13 +84,9 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     lastName: string
     email: string
   }) => {
-    if (socialData) {
-      setSocialData(socialData)
-      setShowAuth(false)
-      setShowProfileCompletion(true)
-    } else {
-      setShowAuth(false)
-    }
+    // Always go to main app after auth - no profile completion required
+    setShowAuth(false)
+    setShowProfileCompletion(false)
   }
 
   const handleProfileComplete = () => {

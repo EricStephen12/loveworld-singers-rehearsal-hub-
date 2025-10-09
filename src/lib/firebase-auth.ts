@@ -7,7 +7,10 @@ import {
   User,
   signInWithPopup,
   GoogleAuthProvider,
-  deleteUser
+  deleteUser,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from 'firebase/auth'
 import { auth, db } from './firebase-setup'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
@@ -16,6 +19,9 @@ export class FirebaseAuthService {
   // Sign in with email and password
   static async signIn(email: string, password: string) {
     try {
+      // Set persistence to LOCAL (keeps user signed in across browser sessions)
+      await setPersistence(auth, browserLocalPersistence)
+      
       const result = await signInWithEmailAndPassword(auth, email, password)
       return { user: result.user, error: null }
     } catch (error: any) {
@@ -26,6 +32,9 @@ export class FirebaseAuthService {
   // Sign up with email and password
   static async signUp(email: string, password: string, userData: any) {
     try {
+      // Set persistence to LOCAL (keeps user signed in across browser sessions)
+      await setPersistence(auth, browserLocalPersistence)
+      
       const result = await createUserWithEmailAndPassword(auth, email, password)
       
       // Create user profile in Firestore
@@ -59,6 +68,16 @@ export class FirebaseAuthService {
   // Listen to auth state changes
   static onAuthStateChange(callback: (user: User | null) => void) {
     return onAuthStateChanged(auth, callback)
+  }
+
+  // Ensure auth persistence is set (call this on app startup)
+  static async ensurePersistence() {
+    try {
+      await setPersistence(auth, browserLocalPersistence)
+      console.log('✅ Auth persistence set to LOCAL - users will stay signed in')
+    } catch (error) {
+      console.error('❌ Failed to set auth persistence:', error)
+    }
   }
 
   // Get user profile
@@ -101,6 +120,9 @@ export class FirebaseAuthService {
   // Create user with email and password (alias for signUp)
   static async createUserWithEmailAndPassword(email: string, password: string) {
     try {
+      // Set persistence to LOCAL (keeps user signed in across browser sessions)
+      await setPersistence(auth, browserLocalPersistence)
+      
       const result = await createUserWithEmailAndPassword(auth, email, password)
       
       // Create user profile in Firestore with profile_completed: false
@@ -151,6 +173,9 @@ export class FirebaseAuthService {
   // Sign in with Google
   static async signInWithGoogle() {
     try {
+      // Set persistence to LOCAL (keeps user signed in across browser sessions)
+      await setPersistence(auth, browserLocalPersistence)
+      
       const provider = new GoogleAuthProvider()
       const result = await signInWithPopup(auth, provider)
       

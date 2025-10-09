@@ -7,20 +7,8 @@ export default function SignupSuccessPage() {
   const router = useRouter()
 
   const handleGoToApp = () => {
-    // Check if user has completed all required steps
-    const hasCompletedProfile = localStorage.getItem('hasCompletedProfile') === 'true'
-    const hasSubscribed = localStorage.getItem('hasSubscribed') === 'true'
-    
-    if (!hasCompletedProfile) {
-      // Redirect to profile completion if not completed
-      router.push('/profile-completion')
-    } else if (!hasSubscribed) {
-      // Redirect to subscription if not subscribed
-      router.push('/subscription')
-    } else {
-      // All steps completed, go to home
-      router.push('/home')
-    }
+    // Always redirect to home after signup - no profile completion required
+    router.push('/home')
   }
 
   const handleBackToAuth = () => {
