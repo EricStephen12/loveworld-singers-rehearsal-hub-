@@ -262,7 +262,7 @@ export default function ChatPage() {
       </div>
 
       <SharedDrawer
-        items={getMenuItems() || []}
+        items={getMenuItems(undefined, undefined) || []}
         open={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
       />

@@ -9,6 +9,7 @@ import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
 import { useAuth } from '@/contexts/AuthContext'
+import { handleAppRefresh } from '@/utils/refresh-utils'
 
 export default function RehearsalsPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -31,6 +32,8 @@ export default function RehearsalsPage() {
       console.error('Logout error:', error)
     }
   }
+
+  const handleRefresh = handleAppRefresh;
 
   // Carousel for rehearsal images
   const images = useMemo(() => [
@@ -80,7 +83,7 @@ export default function RehearsalsPage() {
     }
   }, [])
 
-  const menuItems = getMenuItems(handleLogout)
+  const menuItems = getMenuItems(handleLogout, handleRefresh)
 
   const rehearsalOptions = [
     {

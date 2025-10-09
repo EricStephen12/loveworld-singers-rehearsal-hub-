@@ -9,6 +9,7 @@ import SharedDrawer from '@/components/SharedDrawer'
 import { useHomeGlobalSearch, HomeSearchResult } from '@/hooks/useHomeGlobalSearch'
 import { useAuth } from '@/contexts/AuthContext'
 import AuthGuard from '@/components/AuthGuard'
+import { handleAppRefresh } from '@/utils/refresh-utils'
 
 function HomePageContent() {
   const router = useRouter()
@@ -87,6 +88,8 @@ function HomePageContent() {
       console.error('Logout error:', error)
     }
   }
+
+  const handleRefresh = handleAppRefresh;
 
   // Helper function to get icon component by name
   const getIconComponent = (iconName: string) => {
@@ -502,7 +505,7 @@ function HomePageContent() {
         open={isDrawerOpen}
         onClose={toggleDrawer}
         title="Menu"
-        items={getMenuItems(handleLogout)}
+        items={getMenuItems(handleLogout, handleRefresh)}
       />
       </div> {/* End Desktop Container */}
     </div>

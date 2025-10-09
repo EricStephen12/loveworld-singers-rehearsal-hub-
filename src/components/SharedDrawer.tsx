@@ -57,8 +57,14 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
         {(items || []).map((item, index) => {
           const MenuItem: any = item.onClick ? 'button' : Link
 
-          // Special handling for logout
+          // Special handling for logout and refresh
           const isLogout = item.title.toLowerCase() === 'logout'
+          const isRefresh = item.title.toLowerCase() === 'refresh app'
+          
+          // Debug logging for refresh button
+          if (isRefresh) {
+            console.log('🔄 Rendering refresh button:', { title: item.title, hasIcon: !!item.icon, hasOnClick: !!item.onClick });
+          }
           const commonProps = item.onClick
             ? {
                 onClick: () => {
@@ -81,6 +87,8 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
               className={`flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/80 transition-all duration-200 active:bg-gray-100/80 w-full text-left group ${
                 isLogout
                   ? 'text-red-600 hover:bg-red-50/80 active:bg-red-100/80'
+                  : isRefresh
+                  ? 'text-blue-600 hover:bg-blue-50/80 active:bg-blue-100/80'
                   : 'text-gray-800'
               }`}
             >
@@ -88,10 +96,12 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
                   isLogout
                     ? 'bg-red-100/80 group-hover:bg-red-200/80'
+                    : isRefresh
+                    ? 'bg-blue-100/80 group-hover:bg-blue-200/80'
                     : 'bg-purple-100/80 group-hover:bg-purple-200/80'
                 }`}>
                   <item.icon className={`w-4 h-4 transition-colors duration-200 ${
-                    isLogout ? 'text-red-600' : 'text-purple-600'
+                    isLogout ? 'text-red-600' : isRefresh ? 'text-blue-600' : 'text-purple-600'
                   }`} />
                 </div>
                 <span className="text-sm font-poppins-medium">{item.title}</span>

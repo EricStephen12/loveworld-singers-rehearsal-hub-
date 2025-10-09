@@ -8,6 +8,7 @@ import ScreenHeader from '@/components/ScreenHeader'
 import SharedDrawer from '@/components/SharedDrawer'
 import { getMenuItems } from '@/config/menuItems'
 import { useAuth } from '@/contexts/AuthContext'
+import { handleAppRefresh } from '@/utils/refresh-utils'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
 import { ultraFastUploadProfileImage, ultraFastDeleteImage } from '@/utils/ultraFastImageUpload'
 import { validateImageFile } from '@/utils/imageUpload'
@@ -604,7 +605,7 @@ function ProfilePage() {
 
 
 
-  const menuItems = getMenuItems(handleLogout)
+  const menuItems = getMenuItems(handleLogout, handleAppRefresh)
 
   const rightButtons = null
 

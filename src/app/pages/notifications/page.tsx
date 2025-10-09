@@ -378,7 +378,7 @@ export default function NotificationsPage() {
         open={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
         items={(() => {
-          const menuItems = getMenuItems()
+          const menuItems = getMenuItems(undefined, undefined)
           return menuItems || []
         })()}
       />

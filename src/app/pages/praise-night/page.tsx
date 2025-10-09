@@ -21,6 +21,7 @@ import { usePageSearch, PageSearchResult } from "@/hooks/usePageSearch";
 import AudioWave from "@/components/AudioWave";
 import { useAuth } from "@/contexts/AuthContext";
 import { useServerCountdown } from "@/hooks/useServerCountdown";
+import { handleAppRefresh } from "@/utils/refresh-utils";
 
 function PraiseNightPageContent() {
   const searchParams = useSearchParams();
@@ -35,7 +36,6 @@ function PraiseNightPageContent() {
   const [currentPraiseNight, setCurrentPraiseNightState] = useState<PraiseNight | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pullToRefresh, setPullToRefresh] = useState({ isPulling: false, startY: 0, currentY: 0, threshold: 80 });
 
   // Filter praise nights by category if specified
   const filteredPraiseNights = useMemo(() => {
@@ -246,148 +246,18 @@ function PraiseNightPageContent() {
     }
   }
 
-  // ✅ Pull-to-refresh functionality (like Instagram/Twitter)
+  // ✅ Refresh functionality (clears cache but preserves auth)
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      console.log('🔄 Pull-to-refresh triggered...');
-      
-      // Clear app caches (but preserve authentication data)
-      if (typeof window !== 'undefined') {
-        // Clear app-specific caches
-        localStorage.removeItem('praise-nights-cache');
-        localStorage.removeItem('songs-cache');
-        localStorage.removeItem('comments-cache');
-        
-        // Clear other app caches but preserve Firebase auth data
-        const keys = Object.keys(localStorage);
-        keys.forEach(key => {
-          // Preserve all Firebase authentication and session data
-          const isFirebaseAuth = key.includes('firebase') || 
-                                key.includes('auth') || 
-                                key.includes('session') ||
-                                key.includes('loveworld-singers-session') ||
-                                key.startsWith('firebase:') ||
-                                key.includes('__firebase');
-          
-          // Only clear app data caches, NOT authentication data
-          if (key.includes('cache') && !isFirebaseAuth) {
-            localStorage.removeItem(key);
-          }
-        });
-        
-        console.log('✅ Cleared app caches while preserving authentication data');
-      }
-      
-      // Force refresh data
-      await refreshData();
-      
-      // Verify user is still authenticated before reload
-      const currentUser = (window as any).FirebaseAuthService?.getCurrentUser();
-      if (currentUser) {
-        console.log('✅ User still authenticated after cache clear:', currentUser.email);
-      } else {
-        console.log('⚠️ No user found, but auth data should be preserved');
-      }
-      
-      // Reload the page for complete refresh
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-      
-    } catch (error) {
-      console.error('❌ Refresh error:', error);
-      // Fallback to page reload
-      window.location.reload();
+      await handleAppRefresh();
     } finally {
       setIsRefreshing(false);
     }
   }
 
-  // ✅ Pull-to-refresh touch handlers (fixed to not interfere with normal scrolling)
-  useEffect(() => {
-    let startY = 0;
-    let isPulling = false;
-    let pullDistance = 0;
 
-    const handleTouchStart = (e: Event) => {
-      const touchEvent = e as TouchEvent;
-      // Only activate if at the very top of the page AND not in a scrollable container
-      const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
-      const isAtTop = window.scrollY === 0 && window.pageYOffset === 0;
-      const isInScrollContainer = scrollContainer && scrollContainer.scrollTop === 0;
-      
-      // Only activate if we're at the very top AND not in a scrollable content area
-      if (isAtTop && !isInScrollContainer) {
-        startY = touchEvent.touches[0].clientY;
-        isPulling = true;
-        pullDistance = 0;
-        console.log('🔄 Pull-to-refresh activated at top of page');
-      }
-    };
-
-    const handleTouchMove = (e: Event) => {
-      if (!isPulling) return;
-      
-      const touchEvent = e as TouchEvent;
-      const currentY = touchEvent.touches[0].clientY;
-      pullDistance = Math.max(0, currentY - startY);
-      
-      // Only show pull-to-refresh if pulling down significantly
-      if (pullDistance > 10) {
-        setPullToRefresh(prev => ({
-          ...prev,
-          isPulling: true,
-          startY,
-          currentY,
-          pullDistance
-        }));
-        
-        // Only prevent default if we're actually pulling down enough
-        if (pullDistance > 20) {
-          e.preventDefault();
-        }
-      }
-    };
-
-    const handleTouchEnd = () => {
-      if (isPulling && pullDistance > 120) { // Increased threshold from 80 to 120
-        console.log('🔄 Pull-to-refresh threshold reached, triggering refresh');
-        handleRefresh();
-      } else if (isPulling) {
-        console.log('🔄 Pull-to-refresh cancelled - not enough distance');
-      }
-      
-      // Reset pull-to-refresh state
-      setPullToRefresh({
-        isPulling: false,
-        startY: 0,
-        currentY: 0,
-        threshold: 120 // Increased threshold
-      });
-      
-      isPulling = false;
-      pullDistance = 0;
-    };
-
-    // Add listeners to the main container, not document
-    const mainContainer = document.querySelector('.main-container');
-    if (mainContainer) {
-      mainContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-      mainContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-      mainContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
-    }
-
-    return () => {
-      if (mainContainer) {
-        mainContainer.removeEventListener('touchstart', handleTouchStart);
-        mainContainer.removeEventListener('touchmove', handleTouchMove);
-        mainContainer.removeEventListener('touchend', handleTouchEnd);
-      }
-    };
-  }, []);
-
-  const menuItems = getMenuItems(handleLogout)
+  const menuItems = getMenuItems(handleLogout, handleRefresh)
 
   // Server-side countdown timer that syncs with server time
   const { timeLeft, isLoading: countdownLoading, error: countdownError } = useServerCountdown({
@@ -779,7 +649,7 @@ function PraiseNightPageContent() {
   }
   
   return (
-    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50 safe-area-bottom main-container">
+    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50 safe-area-bottom">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         
@@ -881,34 +751,6 @@ function PraiseNightPageContent() {
         }
       `}</style>
 
-       {/* ✅ Pull-to-Refresh Indicator */}
-       {(pullToRefresh.isPulling || isRefreshing) && (
-         <div 
-           className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-200/50 flex items-center justify-center py-2"
-           style={{
-             transform: `translateY(${Math.min(pullToRefresh.currentY - pullToRefresh.startY, 60)}px)`,
-             transition: pullToRefresh.isPulling ? 'none' : 'transform 0.3s ease-out'
-           }}
-         >
-           <div className="flex items-center gap-2 text-gray-600">
-             {isRefreshing ? (
-               <>
-                 <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                 <span className="text-sm font-medium">Refreshing...</span>
-               </>
-             ) : (
-               <>
-                 <div className={`w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full transition-transform duration-200 ${
-                   (pullToRefresh.currentY - pullToRefresh.startY) > 120 ? 'rotate-180' : ''
-                 }`}></div>
-                 <span className="text-sm font-medium">
-                   {(pullToRefresh.currentY - pullToRefresh.startY) > 120 ? 'Release to refresh' : 'Pull to refresh'}
-                 </span>
-               </>
-             )}
-           </div>
-         </div>
-       )}
 
        {/* ✅ Fixed Header - Full Width */}
        <div className="flex-shrink-0 w-full">
