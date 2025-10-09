@@ -48,7 +48,6 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
         seconds: (page as any).countdownSeconds || (page as any).countdown?.seconds || 0
       };
       
-      console.log(`📄 Page ${index} Mapped countdown:`, mappedCountdown);
       
       return {
         id: parseInt((page as any).page_id) || parseInt(page.id) || index + 1, // Use page_id, fallback to Firebase ID, then index
@@ -59,10 +58,10 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
         category: (page as any).category || 'ongoing',
         bannerImage: (page as any).bannerImage || (page as any).bannerimage || '',
         countdown: {
-          days: (page as any).countdownDays || (page as any).countdown?.days || 0,
-          hours: (page as any).countdownHours || (page as any).countdown?.hours || 0,
-          minutes: (page as any).countdownMinutes || (page as any).countdown?.minutes || 0,
-          seconds: (page as any).countdownSeconds || (page as any).countdown?.seconds || 0
+          days: (page as any).countdownDays || (page as any).countdown?.days || (page as any).countdowndays || 0,
+          hours: (page as any).countdownHours || (page as any).countdown?.hours || (page as any).countdownhours || 0,
+          minutes: (page as any).countdownMinutes || (page as any).countdown?.minutes || (page as any).countdownminutes || 0,
+          seconds: (page as any).countdownSeconds || (page as any).countdown?.seconds || (page as any).countdownseconds || 0
         },
         songs: allSongs.filter(song => {
           const songPageId = (song as any).praisenightid || (song as any).praiseNightId;

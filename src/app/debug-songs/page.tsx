@@ -45,6 +45,7 @@ export default function DebugSongsPage() {
   const [selectedView, setSelectedView] = useState<'all' | 'category' | 'page'>('all')
   const [audioAnalysis, setAudioAnalysis] = useState<any>(null)
   const [sampleSongs, setSampleSongs] = useState<SongData[]>([])
+  const [countdownAnalysis, setCountdownAnalysis] = useState<any>(null)
 
   useEffect(() => {
     loadSongsData()
@@ -130,6 +131,69 @@ export default function DebugSongsPage() {
       setSampleSongs(sampleSongsData as any)
       setAllSongs(songs as any)
       setPageInfo(pages as any)
+      
+      // Analyze countdown data
+      console.log('🕐 Analyzing countdown data in pages...')
+      const countdownAnalysis = {
+        totalPages: pages.length,
+        pagesWithCountdown: 0,
+        pagesWithCountdownDays: 0,
+        pagesWithCountdownHours: 0,
+        pagesWithCountdownMinutes: 0,
+        pagesWithCountdownSeconds: 0,
+        pagesWithCountdownObject: 0,
+        countdownFields: new Set<string>(),
+        samplePages: [] as any[]
+      }
+      
+      pages.forEach((page, index) => {
+        const pageData = page as any
+        
+        // Check all possible countdown fields
+        const countdownFields = Object.keys(pageData).filter(key => 
+          key.toLowerCase().includes('countdown') || 
+          key.toLowerCase().includes('timer') ||
+          key.toLowerCase().includes('time')
+        )
+        
+        countdownFields.forEach(field => countdownAnalysis.countdownFields.add(field))
+        
+        // Check specific countdown fields
+        if (pageData.countdownDays || pageData.countdowndays) countdownAnalysis.pagesWithCountdownDays++
+        if (pageData.countdownHours || pageData.countdownhours) countdownAnalysis.pagesWithCountdownHours++
+        if (pageData.countdownMinutes || pageData.countdownminutes) countdownAnalysis.pagesWithCountdownMinutes++
+        if (pageData.countdownSeconds || pageData.countdownseconds) countdownAnalysis.pagesWithCountdownSeconds++
+        if (pageData.countdown) countdownAnalysis.pagesWithCountdownObject++
+        
+        // Check if page has any countdown data
+        if (pageData.countdownDays || pageData.countdownHours || pageData.countdownMinutes || pageData.countdownSeconds ||
+            pageData.countdowndays || pageData.countdownhours || pageData.countdownminutes || pageData.countdownseconds ||
+            pageData.countdown) {
+          countdownAnalysis.pagesWithCountdown++
+        }
+        
+        // Store sample pages (first 3)
+        if (index < 3) {
+          countdownAnalysis.samplePages.push({
+            id: pageData.id || pageData.page_id,
+            name: pageData.name || pageData.title,
+            countdownFields: countdownFields,
+            countdownData: {
+              countdownDays: pageData.countdownDays,
+              countdownHours: pageData.countdownHours,
+              countdownMinutes: pageData.countdownMinutes,
+              countdownSeconds: pageData.countdownSeconds,
+              countdowndays: pageData.countdowndays,
+              countdownhours: pageData.countdownhours,
+              countdownminutes: pageData.countdownminutes,
+              countdownseconds: pageData.countdownseconds,
+              countdown: pageData.countdown
+            }
+          })
+        }
+      })
+      
+      setCountdownAnalysis(countdownAnalysis)
       
       // Group songs by category
       const categoryGroups: SongsByCategory = {}
@@ -362,6 +426,113 @@ export default function DebugSongsPage() {
                           <div>
                             <span className="font-medium text-purple-600">mediaId:</span>
                             <span className="ml-2 text-gray-600">{song.mediaId}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Countdown Analysis Section */}
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <h3 className="font-semibold text-orange-900 mb-4">🕐 Countdown Data Analysis</h3>
+            
+            {countdownAnalysis && (
+              <div className="mb-4">
+                <h4 className="font-semibold text-orange-800 mb-2">Countdown Field Summary:</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="bg-white p-2 rounded">
+                    <div className="font-medium">Total Pages</div>
+                    <div className="text-lg font-bold text-orange-600">{countdownAnalysis.totalPages}</div>
+                  </div>
+                  <div className="bg-white p-2 rounded">
+                    <div className="font-medium">Pages with Countdown</div>
+                    <div className="text-lg font-bold text-green-600">{countdownAnalysis.pagesWithCountdown}</div>
+                  </div>
+                  <div className="bg-white p-2 rounded">
+                    <div className="font-medium">countdownDays Field</div>
+                    <div className="text-lg font-bold text-purple-600">{countdownAnalysis.pagesWithCountdownDays}</div>
+                  </div>
+                  <div className="bg-white p-2 rounded">
+                    <div className="font-medium">countdown Object</div>
+                    <div className="text-lg font-bold text-blue-600">{countdownAnalysis.pagesWithCountdownObject}</div>
+                  </div>
+                </div>
+                
+                <div className="mt-3">
+                  <div className="font-medium text-orange-800 mb-1">Available Countdown Fields:</div>
+                  <div className="text-sm text-orange-700">
+                    {countdownAnalysis.countdownFields.size > 0 ? (
+                      <span className="bg-white px-2 py-1 rounded border">
+                        {Array.from(countdownAnalysis.countdownFields).join(', ')}
+                      </span>
+                    ) : (
+                      <span className="text-red-600">❌ No countdown-related fields found</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {countdownAnalysis && countdownAnalysis.samplePages.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-orange-800 mb-2">Sample Pages (First 3):</h4>
+                <div className="space-y-3">
+                  {countdownAnalysis.samplePages.map((page: any, index: number) => (
+                    <div key={index} className="bg-white p-3 rounded border">
+                      <div className="font-medium text-gray-900 mb-2">
+                        Page {index + 1}: "{page.name}" (ID: {page.id})
+                      </div>
+                      <div className="text-sm space-y-1">
+                        <div>
+                          <span className="font-medium text-orange-600">Countdown Fields Found:</span>
+                          <span className="ml-2 text-xs font-mono text-gray-600">
+                            {page.countdownFields.length > 0 ? page.countdownFields.join(', ') : 'None'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="font-medium text-blue-600">countdownDays:</span>
+                            <span className="ml-1">{page.countdownData.countdownDays || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-blue-600">countdownHours:</span>
+                            <span className="ml-1">{page.countdownData.countdownHours || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-blue-600">countdownMinutes:</span>
+                            <span className="ml-1">{page.countdownData.countdownMinutes || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-blue-600">countdownSeconds:</span>
+                            <span className="ml-1">{page.countdownData.countdownSeconds || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-green-600">countdowndays:</span>
+                            <span className="ml-1">{page.countdownData.countdowndays || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-green-600">countdownhours:</span>
+                            <span className="ml-1">{page.countdownData.countdownhours || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-green-600">countdownminutes:</span>
+                            <span className="ml-1">{page.countdownData.countdownminutes || 'null'}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-green-600">countdownseconds:</span>
+                            <span className="ml-1">{page.countdownData.countdownseconds || 'null'}</span>
+                          </div>
+                        </div>
+                        {page.countdownData.countdown && (
+                          <div>
+                            <span className="font-medium text-purple-600">countdown object:</span>
+                            <span className="ml-2 text-xs font-mono text-gray-600">
+                              {JSON.stringify(page.countdownData.countdown)}
+                            </span>
                           </div>
                         )}
                       </div>

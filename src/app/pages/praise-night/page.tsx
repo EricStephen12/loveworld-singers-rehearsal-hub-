@@ -18,9 +18,9 @@ import SharedDrawer from "@/components/SharedDrawer";
 import { getMenuItems } from "@/config/menuItems";
 import { useAudio } from "@/contexts/AudioContext";
 import { usePageSearch, PageSearchResult } from "@/hooks/usePageSearch";
-import GlobalMiniPlayer from "@/components/GlobalMiniPlayer";
 import AudioWave from "@/components/AudioWave";
 import { useAuth } from "@/contexts/AuthContext";
+import { useServerCountdown } from "@/hooks/useServerCountdown";
 
 function PraiseNightPageContent() {
   const searchParams = useSearchParams();
@@ -221,97 +221,12 @@ function PraiseNightPageContent() {
 
   const menuItems = getMenuItems(handleLogout)
 
-  // Persistent countdown timer that continues even when page is closed
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
+  // Server-side countdown timer that syncs with server time
+  const { timeLeft, isLoading: countdownLoading, error: countdownError } = useServerCountdown({
+    countdownData: currentPraiseNight?.countdown,
+    praiseNightId: currentPraiseNight?.id
   })
 
-  // Initialize persistent countdown timer
-  useEffect(() => {
-    if (!currentPraiseNight) {
-      setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      return;
-    }
-    
-    console.log('🕐 Praise Night Page - Current Praise Night:', {
-      id: currentPraiseNight.id,
-      name: currentPraiseNight.name,
-      countdown: currentPraiseNight.countdown,
-      countdownDays: currentPraiseNight.countdown?.days,
-      countdownHours: currentPraiseNight.countdown?.hours,
-      countdownMinutes: currentPraiseNight.countdown?.minutes,
-      countdownSeconds: currentPraiseNight.countdown?.seconds
-    });
-
-    // Create a unique key for this praise night's countdown
-    const countdownKey = `countdown_${currentPraiseNight.id}`;
-    const targetDateKey = `target_date_${currentPraiseNight.id}`;
-
-    // Get or create target date
-    let targetDate: Date;
-    const storedTargetDate = localStorage.getItem(targetDateKey);
-    
-    if (storedTargetDate) {
-      // Use existing target date
-      targetDate = new Date(storedTargetDate);
-    } else {
-      // Create new target date based on current countdown
-      const now = new Date();
-      const countdown = currentPraiseNight.countdown || { days: 0, hours: 0, minutes: 0, seconds: 0 };
-      
-      console.log('🕐 Praise Night Countdown Data:', {
-        pageId: currentPraiseNight.id,
-        pageName: currentPraiseNight.name,
-        countdown: countdown
-      });
-      
-      // Calculate target date by adding countdown to current time
-      targetDate = new Date(now.getTime() + 
-        (countdown.days * 24 * 60 * 60 * 1000) +
-        (countdown.hours * 60 * 60 * 1000) +
-        (countdown.minutes * 60 * 1000) +
-        (countdown.seconds * 1000)
-      );
-      
-      // Store the target date for persistence
-      localStorage.setItem(targetDateKey, targetDate.toISOString());
-    }
-
-    // Calculate time remaining function
-    const calculateTimeLeft = () => {
-      const now = new Date();
-      const difference = targetDate.getTime() - now.getTime();
-      
-      if (difference > 0) {
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((difference / (1000 * 60)) % 60);
-        const seconds = Math.floor((difference / 1000) % 60);
-        
-        setTimeLeft({ days, hours, minutes, seconds });
-      } else {
-        // Countdown finished
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        // Clean up stored data
-        localStorage.removeItem(countdownKey);
-        localStorage.removeItem(targetDateKey);
-      }
-    };
-
-    // Calculate immediately
-    calculateTimeLeft();
-    
-    // Update every second
-    const timer = setInterval(calculateTimeLeft, 1000);
-
-    // Cleanup
-    return () => {
-      clearInterval(timer);
-    };
-  }, [currentPraiseNight?.id])
 
   // Handle category selection and close drawer
   const handleCategorySelect = (category: string) => {
@@ -632,7 +547,7 @@ function PraiseNightPageContent() {
   }
 
   return (
-    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50">
+    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50 safe-area-bottom">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         
@@ -754,15 +669,18 @@ function PraiseNightPageContent() {
                    categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0 ? 'Pre-Rehearsal' :
                    (currentPraiseNight?.name || '')}
                 </h1>
-                {categoryFilter !== 'archive' && currentPraiseNight && !(categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0) && (
-                  <div className="flex items-center gap-0.5 text-xs mt-0.5">
-                    <span className="font-bold text-gray-700">{formatNumber(timeLeft.days)}d</span>
-                    <span className="text-gray-500 font-bold">:</span>
-                    <span className="font-bold text-gray-700">{formatNumber(timeLeft.hours)}h</span>
-                    <span className="text-gray-500 font-bold">:</span>
-                    <span className="font-bold text-gray-700">{formatNumber(timeLeft.minutes)}m</span>
-                    <span className="text-gray-500 font-bold">:</span>
-                    <span className="font-bold text-gray-700">{formatNumber(timeLeft.seconds)}s</span>
+                {categoryFilter !== 'archive' && currentPraiseNight && !(categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0) && currentPraiseNight.countdown && (
+                  <div className="mt-0.5">
+                    {/* Countdown Display */}
+                    <div className="flex items-center gap-0.5 text-xs">
+                      <span className="font-bold text-gray-700">{formatNumber(timeLeft.days)}d</span>
+                      <span className="text-gray-500 font-bold">:</span>
+                      <span className="font-bold text-gray-700">{formatNumber(timeLeft.hours)}h</span>
+                      <span className="text-gray-500 font-bold">:</span>
+                      <span className="font-bold text-gray-700">{formatNumber(timeLeft.minutes)}m</span>
+                      <span className="text-gray-500 font-bold">:</span>
+                      <span className="font-bold text-gray-700">{formatNumber(timeLeft.seconds)}s</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1249,16 +1167,23 @@ function PraiseNightPageContent() {
                       // Open modal without auto-play
                       handleSongClick(song, index);
                     }}
-                    className={`bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer ${selectedSongIndex === index
-                      ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-200/50 bg-purple-50/30'
-                      : 'ring-1 ring-black/5'
+                    className={`border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer ${
+                      (() => {
+                        const isActive = currentSong?.id === song.id;
+                        if (isActive) {
+                          console.log('🎵 Active song detected:', song.title, 'Current song:', currentSong?.title);
+                        }
+                        return isActive;
+                      })()
+                        ? 'ring-2 ring-purple-400 shadow-lg shadow-purple-200/30 bg-purple-200 hover:bg-purple-300' // Active or playing - solid purple
+                        : 'bg-white hover:bg-gray-50 ring-1 ring-black/5'
                       }`}
                   >
                     {/* Song Header - Rehearsal Style */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 lg:gap-4">
                         <div className="w-10 h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-sm">
-                          {currentSong?.id === song.id ? (
+                          {currentSong?.id === song.id && isPlaying ? (
                             <AudioWave className="h-6 w-6" />
                           ) : (
                           <span className="text-sm lg:text-base font-semibold text-purple-600">
@@ -1294,7 +1219,7 @@ function PraiseNightPageContent() {
           </div>
         )}
 
-        {/* Add bottom padding to prevent content from being hidden behind sticky categories */}
+        {/* Add bottom padding to prevent content from being hidden behind sticky categories and safe areas */}
         <div className="h-20"></div> {/* Spacer for fixed bottom elements */}
       </div>
       </div>
@@ -1452,8 +1377,6 @@ function PraiseNightPageContent() {
         />
       )}
       
-      {/* Mini Player */}
-      <GlobalMiniPlayer />
     </div>
   );
 }

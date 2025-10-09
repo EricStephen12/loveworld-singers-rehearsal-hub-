@@ -153,8 +153,15 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     const handleAudioEnded = (event: CustomEvent) => {
       console.log('🔄 Audio ended, repeat mode:', isRepeating);
       console.log('🔄 Current song index:', currentSongIndex, 'Total songs:', categorySongs.length);
+      console.log('🔄 Event song title:', event.detail.song?.title);
+      console.log('🔄 Current song data title:', currentSongData?.title);
+      console.log('🔄 Songs match:', event.detail.song?.title === currentSongData?.title);
       
-      if (isRepeating && event.detail.song?.title === currentSongData?.title) {
+      // Check if this is the current song (by title or ID)
+      const isCurrentSong = event.detail.song?.title === currentSongData?.title || 
+                           event.detail.song?.id === currentSongData?.id;
+      
+      if (isRepeating && isCurrentSong) {
         console.log('🔄 Repeating song:', currentSongData?.title);
         // Restart the current song
         if (audioRef.current) {
@@ -163,7 +170,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
             console.error('Error repeating song:', error);
           });
         }
-      } else if (!isRepeating && event.detail.song?.title === currentSongData?.title) {
+      } else if (!isRepeating && isCurrentSong) {
         // Auto-skip to next song when not repeating
         console.log('⏭️ Auto-skipping to next song (repeat disabled)');
         if (currentSongIndex < categorySongs.length - 1 && categorySongs.length > 0) {
@@ -238,6 +245,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     const newRepeatState = !isRepeating;
     setIsRepeating(newRepeatState);
     console.log('🔄 Repeat toggled:', newRepeatState ? 'ON' : 'OFF');
+    console.log('🔄 Repeat state changed from', isRepeating, 'to', newRepeatState);
   };
 
   const handleMusicPage = () => {
@@ -589,7 +597,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
               <h1 className="text-white text-xl font-black text-center mb-4 font-poppins uppercase">{currentSongData?.title}</h1>
               <div className="text-white text-sm space-y-1 font-poppins">
                 <div className="border-b border-white/30 pb-1">
-                  <span className="font-semibold uppercase">LEAD SINGER:</span> {currentSongData?.leadSinger || ''}
+                  <span className="font-semibold uppercase">LEAD SINGER:</span> {currentSongData?.leadSinger ? currentSongData.leadSinger.split(',')[0].trim() : 'Unknown'}
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
                   <span><span className="font-semibold uppercase">WRITER:</span> {currentSongData?.writer || ''}</span>
@@ -728,11 +736,11 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                 <div className="text-center py-8 text-slate-500">
                   <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
                     <span className="text-slate-400 text-xl">💬</span>
-                  </div>
+                            </div>
                   <p className="text-sm">No comments yet</p>
                   <p className="text-xs text-slate-400">Comments will appear here when added</p>
                   <div className="text-gray-300 text-xs mt-2">Debug: {currentSongData?.comments ? `Found ${Array.isArray(currentSongData.comments) ? currentSongData.comments.length : 'not array'} comments` : 'No comments field'}</div>
-                </div>
+                          </div>
               ) : (
                 (Array.isArray(currentSongData.comments) ? currentSongData.comments : []).map((comment: any) => (
                   <div key={comment.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
