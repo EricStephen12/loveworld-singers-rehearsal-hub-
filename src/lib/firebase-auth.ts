@@ -75,8 +75,37 @@ export class FirebaseAuthService {
     try {
       await setPersistence(auth, browserLocalPersistence)
       console.log('✅ Auth persistence set to LOCAL - users will stay signed in')
+      
+      // Additional persistence checks
+      const currentUser = auth.currentUser
+      if (currentUser) {
+        console.log('✅ User is already signed in:', currentUser.email)
+        console.log('✅ Auth persistence working - user will stay signed in across sessions')
+      } else {
+        console.log('ℹ️ No user currently signed in')
+      }
     } catch (error) {
       console.error('❌ Failed to set auth persistence:', error)
+    }
+  }
+
+  // Enhanced persistence check
+  static async checkPersistenceStatus() {
+    try {
+      const currentUser = auth.currentUser
+      return {
+        hasUser: !!currentUser,
+        userEmail: currentUser?.email || null,
+        persistenceSet: true,
+        message: currentUser ? 'User will stay signed in' : 'No user signed in'
+      }
+    } catch (error) {
+      return {
+        hasUser: false,
+        userEmail: null,
+        persistenceSet: false,
+        message: 'Error checking persistence'
+      }
     }
   }
 

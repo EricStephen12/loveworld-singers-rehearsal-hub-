@@ -27,10 +27,16 @@ if (typeof window !== 'undefined') {
   DeviceSafeArea.getInstance().init()
   FirebaseAuthService.ensurePersistence()
   
+  // Check persistence status and make it globally available
+  FirebaseAuthService.checkPersistenceStatus().then(status => {
+    console.log('🔐 Auth Persistence Status:', status)
+  })
+  
   // Make utilities globally available for debugging
   ;(window as any).ViewportHeightFix = ViewportHeightFix
   ;(window as any).SafeAreaUtils = SafeAreaUtils
   ;(window as any).DeviceSafeArea = DeviceSafeArea
+  ;(window as any).FirebaseAuthService = FirebaseAuthService
 }
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 

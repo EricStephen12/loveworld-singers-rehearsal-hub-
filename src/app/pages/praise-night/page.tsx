@@ -252,24 +252,43 @@ function PraiseNightPageContent() {
     try {
       console.log('🔄 Pull-to-refresh triggered...');
       
-      // Clear all caches
+      // Clear app caches (but preserve authentication data)
       if (typeof window !== 'undefined') {
-        // Clear localStorage cache
+        // Clear app-specific caches
         localStorage.removeItem('praise-nights-cache');
         localStorage.removeItem('songs-cache');
         localStorage.removeItem('comments-cache');
         
-        // Clear any other caches
+        // Clear other app caches but preserve Firebase auth data
         const keys = Object.keys(localStorage);
         keys.forEach(key => {
-          if (key.includes('cache') || key.includes('firebase')) {
+          // Preserve all Firebase authentication and session data
+          const isFirebaseAuth = key.includes('firebase') || 
+                                key.includes('auth') || 
+                                key.includes('session') ||
+                                key.includes('loveworld-singers-session') ||
+                                key.startsWith('firebase:') ||
+                                key.includes('__firebase');
+          
+          // Only clear app data caches, NOT authentication data
+          if (key.includes('cache') && !isFirebaseAuth) {
             localStorage.removeItem(key);
           }
         });
+        
+        console.log('✅ Cleared app caches while preserving authentication data');
       }
       
       // Force refresh data
       await refreshData();
+      
+      // Verify user is still authenticated before reload
+      const currentUser = (window as any).FirebaseAuthService?.getCurrentUser();
+      if (currentUser) {
+        console.log('✅ User still authenticated after cache clear:', currentUser.email);
+      } else {
+        console.log('⚠️ No user found, but auth data should be preserved');
+      }
       
       // Reload the page for complete refresh
       setTimeout(() => {
@@ -285,64 +304,79 @@ function PraiseNightPageContent() {
     }
   }
 
-  // ✅ Pull-to-refresh touch handlers
+  // ✅ Pull-to-refresh touch handlers (fixed to not interfere with normal scrolling)
   useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      if (window.scrollY === 0) {
-        setPullToRefresh(prev => ({
-          ...prev,
-          isPulling: true,
-          startY: e.touches[0].clientY,
-          currentY: e.touches[0].clientY
-        }));
+    let startY = 0;
+    let isPulling = false;
+    let pullDistance = 0;
+
+    const handleTouchStart = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      // Only activate if at the very top of the page
+      if (window.scrollY === 0 && window.pageYOffset === 0) {
+        startY = touchEvent.touches[0].clientY;
+        isPulling = true;
+        pullDistance = 0;
       }
     };
 
-    const handleTouchMove = (e: TouchEvent) => {
-      if (pullToRefresh.isPulling && window.scrollY === 0) {
-        const currentY = e.touches[0].clientY;
-        const pullDistance = Math.max(0, currentY - pullToRefresh.startY);
-        
+    const handleTouchMove = (e: Event) => {
+      if (!isPulling) return;
+      
+      const touchEvent = e as TouchEvent;
+      const currentY = touchEvent.touches[0].clientY;
+      pullDistance = Math.max(0, currentY - startY);
+      
+      // Only show pull-to-refresh if pulling down significantly
+      if (pullDistance > 10) {
         setPullToRefresh(prev => ({
           ...prev,
+          isPulling: true,
+          startY,
           currentY,
           pullDistance
         }));
-
-        // Prevent default scrolling when pulling down
-        if (pullDistance > 0) {
+        
+        // Only prevent default if we're actually pulling down enough
+        if (pullDistance > 20) {
           e.preventDefault();
         }
       }
     };
 
     const handleTouchEnd = () => {
-      if (pullToRefresh.isPulling) {
-        const pullDistance = pullToRefresh.currentY - pullToRefresh.startY;
-        
-        if (pullDistance > pullToRefresh.threshold) {
-          handleRefresh();
-        }
-        
-        setPullToRefresh({
-          isPulling: false,
-          startY: 0,
-          currentY: 0,
-          threshold: 80
-        });
+      if (isPulling && pullDistance > 80) {
+        handleRefresh();
       }
+      
+      // Reset pull-to-refresh state
+      setPullToRefresh({
+        isPulling: false,
+        startY: 0,
+        currentY: 0,
+        threshold: 80
+      });
+      
+      isPulling = false;
+      pullDistance = 0;
     };
 
-    document.addEventListener('touchstart', handleTouchStart, { passive: false });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
+    // Add listeners to the main container, not document
+    const mainContainer = document.querySelector('.main-container');
+    if (mainContainer) {
+      mainContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+      mainContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+      mainContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
 
     return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
+      if (mainContainer) {
+        mainContainer.removeEventListener('touchstart', handleTouchStart);
+        mainContainer.removeEventListener('touchmove', handleTouchMove);
+        mainContainer.removeEventListener('touchend', handleTouchEnd);
+      }
     };
-  }, [pullToRefresh.isPulling, pullToRefresh.startY, pullToRefresh.currentY]);
+  }, []);
 
   const menuItems = getMenuItems(handleLogout)
 
@@ -736,7 +770,7 @@ function PraiseNightPageContent() {
   }
   
   return (
-    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50 safe-area-bottom">
+    <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50 safe-area-bottom main-container">
       <style jsx global>{`
         html { scroll-behavior: smooth; }
         

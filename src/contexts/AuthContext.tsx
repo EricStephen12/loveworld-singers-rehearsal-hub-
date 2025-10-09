@@ -14,7 +14,6 @@ interface AuthContextType {
   user: User | null
   profile: UserProfile | null
   isLoading: boolean
-  isProfileComplete: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -413,13 +412,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Remove automatic redirects - let AuthGuard handle all redirects
   // This prevents redirect loops between AuthContext and AuthGuard
 
-  const isProfileComplete = profile?.profile_completed === true
-
   // Debug logging
   console.log('AuthContext: Profile state:', {
     hasProfile: !!profile,
-    profileCompleted: profile?.profile_completed,
-    isProfileComplete
+    userEmail: user?.email
   })
 
   // Memoize context value to prevent unnecessary re-renders
@@ -427,10 +423,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         isLoading,
-        isProfileComplete,
         signOut,
         refreshProfile
-  }), [user, profile, isLoading, isProfileComplete, signOut, refreshProfile])
+  }), [user, profile, isLoading, signOut, refreshProfile])
 
   return (
     <AuthContext.Provider value={contextValue}>

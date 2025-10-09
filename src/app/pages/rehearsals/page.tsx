@@ -146,7 +146,17 @@ export default function RehearsalsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-slate-50">
+    <div className="h-screen w-screen overflow-hidden flex flex-col bg-gradient-to-br from-gray-50 via-white to-slate-50">
+      <style jsx global>{`
+        html { scroll-behavior: smooth; }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
       <ScreenHeader 
         title="Rehearsals" 
         onMenuClick={toggleMenu} 
@@ -154,7 +164,9 @@ export default function RehearsalsPage() {
         onTitleClick={handleTitleClick}
       />
 
-      <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
+      {/* ✅ Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div className="w-full max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-20 content-bottom-safe">
         {/* Image Carousel */}
         <div className="mb-6">
           <div
@@ -211,7 +223,7 @@ export default function RehearsalsPage() {
             </Link>
           ))}
         </div>
-
+        </div>
       </div>
 
       <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems as any} />

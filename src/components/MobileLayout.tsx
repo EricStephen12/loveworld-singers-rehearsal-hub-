@@ -12,7 +12,7 @@ interface MobileLayoutProps {
 }
 
 export default function MobileLayout({ children }: MobileLayoutProps) {
-  const { user, profile, isLoading, isProfileComplete } = useAuth()
+  const { user, profile, isLoading } = useAuth()
   const [showSplash, setShowSplash] = useState(true)
   const [showAuth, setShowAuth] = useState(false)
   const [showProfileCompletion, setShowProfileCompletion] = useState(false)
@@ -47,7 +47,6 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     console.log('🔍 MobileLayout Debug:', {
       isLoading,
       user: !!user,
-      isProfileComplete,
       showSplash,
       showAuth,
       showProfileCompletion
@@ -70,7 +69,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     }
     
     setIsInitialized(true)
-  }, [user, isProfileComplete, isLoading])
+  }, [user, isLoading])
 
   const handleSplashComplete = () => {
     setShowSplash(false)

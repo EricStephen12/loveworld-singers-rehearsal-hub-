@@ -17,7 +17,7 @@ export default function AuthGuard({
   requireCompleteProfile = false, // Changed to false - no profile completion required
   redirectTo
 }: AuthGuardProps) {
-  const { user, profile, isLoading, isProfileComplete } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const router = useRouter();
   const [shouldRender, setShouldRender] = useState(false);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
@@ -27,7 +27,6 @@ export default function AuthGuard({
       isLoading, 
       user: !!user, 
       profile: !!profile, 
-      isProfileComplete,
       requireAuth,
       requireCompleteProfile 
     });
@@ -120,19 +119,16 @@ export default function AuthGuard({
       return;
     }
 
-    // If complete profile is required but profile is not complete (check isProfileComplete)
-    if (requireCompleteProfile && isAuthenticated && profile && !isProfileComplete) {
-      console.log('AuthGuard: Profile incomplete (isProfileComplete=false), redirecting to profile completion page');
-      console.log('AuthGuard: isProfileComplete:', isProfileComplete);
-      console.log('AuthGuard: Redirecting to /profile-completion');
-      router.push('/profile-completion');
-      return;
+    // Profile completion is no longer required - users go directly to app
+    // This check is kept for backward compatibility but always passes
+    if (requireCompleteProfile && isAuthenticated && profile) {
+      console.log('AuthGuard: Profile completion check passed (no longer required)');
     }
 
     // If we get here, all requirements are met
     console.log('AuthGuard: All requirements met, rendering children');
     setShouldRender(true);
-  }, [user, profile, isLoading, isProfileComplete, requireAuth, requireCompleteProfile, redirectTo, router, hasCheckedAuth]);
+  }, [user, profile, isLoading, requireAuth, requireCompleteProfile, redirectTo, router, hasCheckedAuth]);
 
   // Show loading while checking auth
   if (isLoading || !hasCheckedAuth) {

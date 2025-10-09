@@ -20,10 +20,10 @@ export interface UserSession {
 export class SessionManager {
   private static readonly STORAGE_KEY = 'loveworld-singers-session'
   private static readonly DEFAULT_CONFIG: SessionConfig = {
-    duration: 10, // 10 days by default
+    duration: 30, // 30 days by default (Instagram-style long sessions)
     unit: 'days',
     autoRefresh: true,
-    refreshThreshold: 60 // Refresh when 1 hour is left
+    refreshThreshold: 1440 // Refresh when 24 hours is left (1 day)
   }
 
   // Create a new session
