@@ -64,6 +64,41 @@ export class FirebaseDatabaseService {
     }
   }
 
+  // Get a single song by ID - CRITICAL for SongDetailModal
+  static async getSongById(songId: string) {
+    try {
+      console.log('🔍 [getSongById] Fetching song with ID:', songId);
+      
+      const docRef = doc(db, 'songs', songId);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const songData: any = {
+          id: docSnap.id,
+          firebaseId: docSnap.id,
+          ...data
+        };
+        
+        console.log('✅ [getSongById] Song found:', songData.title);
+        console.log('🎤 [getSongById] Lead singer:', songData.leadSinger || 'MISSING');
+        console.log('🎸 [getSongById] Lead guitarist:', songData.leadGuitarist || 'MISSING');
+        console.log('🎹 [getSongById] Lead keyboardist:', songData.leadKeyboardist || 'MISSING');
+        console.log('🥁 [getSongById] Drummer:', songData.drummer || 'MISSING');
+        console.log('🎵 [getSongById] Audio file:', songData.audioFile || 'MISSING');
+        
+        return songData;
+      } else {
+        console.warn('❌ [getSongById] Song not found with ID:', songId);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ [getSongById] Error:', error);
+      return null;
+    }
+  }
+
+
   // Get user profile
   static async getUserProfile(userId: string) {
     try {

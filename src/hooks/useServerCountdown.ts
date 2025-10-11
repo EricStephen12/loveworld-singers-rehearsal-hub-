@@ -122,29 +122,41 @@ export function useServerCountdown({
       try {
         // Get server time first
         const serverTime = await fetchServerTime()
-        
+
         let target: Date
-        
+
         if (targetDate) {
           // Use provided target date
           target = targetDate
         } else if (countdownData) {
-          // Use the countdown data from Firebase directly
-          const totalMs = 
-            (countdownData.days * 24 * 60 * 60 * 1000) +
-            (countdownData.hours * 60 * 60 * 1000) +
-            (countdownData.minutes * 60 * 1000) +
-            (countdownData.seconds * 1000);
-          
-          // Use the countdown data as-is from Firebase
-          target = new Date(serverTime.getTime() + totalMs);
-          
-          console.log('🕐 Countdown data processing:', {
-            countdownData,
-            totalMs,
-            serverTime: serverTime.toISOString(),
-            target: target.toISOString()
-          });
+          // Check if we have a stored target date for this praise night
+          const storageKey = `server_target_date_${praiseNightId}`
+          const storedTargetDate = localStorage.getItem(storageKey)
+
+          if (storedTargetDate) {
+            // Use stored target date to prevent timer reset
+            target = new Date(storedTargetDate)
+            console.log('🕐 Using stored target date:', target.toISOString());
+          } else {
+            // First time - calculate target date from countdown data
+            const totalMs =
+              (countdownData.days * 24 * 60 * 60 * 1000) +
+              (countdownData.hours * 60 * 60 * 1000) +
+              (countdownData.minutes * 60 * 1000) +
+              (countdownData.seconds * 1000);
+
+            target = new Date(serverTime.getTime() + totalMs);
+
+            console.log('🕐 First time - calculating target date:', {
+              countdownData,
+              totalMs,
+              serverTime: serverTime.toISOString(),
+              target: target.toISOString()
+            });
+
+            // Store it for future use
+            localStorage.setItem(storageKey, target.toISOString())
+          }
         } else {
           // If no countdown data, don't show countdown
           console.log('🕐 No countdown data available');
@@ -152,14 +164,8 @@ export function useServerCountdown({
           setIsLoading(false);
           return;
         }
-        
+
         targetDateRef.current = target
-        
-        // Store target date in localStorage for persistence
-        if (praiseNightId) {
-          const storageKey = `server_target_date_${praiseNightId}`
-          localStorage.setItem(storageKey, target.toISOString())
-        }
         
         
         // Calculate initial time
@@ -200,7 +206,7 @@ export function useServerCountdown({
         intervalRef.current = null
       }
     }
-  }, [targetDate, countdownData, praiseNightId])
+  }, [praiseNightId]) // Only re-run when praise night changes, not when countdownData changes
 
   // Sync with server time every 30 seconds to maintain accuracy
   useEffect(() => {

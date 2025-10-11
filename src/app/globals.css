@@ -39,11 +39,14 @@ body {
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
 }
 
-/* Mobile viewport height fix */
+/* Mobile viewport height fix - ensures full screen height like native apps */
 .mobile-vh {
-  height: 100vh;
-  height: 100dvh;
-  height: calc(var(--vh, 1vh) * 100);
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: calc(var(--vh, 1vh) * 100);
+  max-height: 100vh;
+  max-height: 100dvh;
+  max-height: calc(var(--vh, 1vh) * 100);
 }
 
 /* Safe area bottom padding */
@@ -203,13 +206,22 @@ body {
   flex-direction: column;
 }
 
-/* Content area with bottom spacing */
+/* Content area with bottom spacing - accounts for fixed bottom bars */
 .mobile-content {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
+}
+
+/* Scrollable content with fixed bottom navigation - like native apps */
+.mobile-content-with-bottom-nav {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Account for fixed bottom bar (typically 60-80px) + safe area */
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 100px);
 }
 
 /* Small screen optimizations */

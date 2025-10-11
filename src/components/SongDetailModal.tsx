@@ -725,7 +725,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
         </div>
 
         {/* Content Area - Scrollable */}
-        <div className="flex-1 px-6 py-4 content-bottom-safe overflow-y-auto">
+        <div className="flex-1 px-6 py-4 overflow-y-auto" style={{ paddingBottom: '180px' }}>
           {activeTab === 'lyrics' && (
             <div className="max-w-none">
               <div className="text-gray-900 leading-relaxed space-y-6 text-sm text-left font-poppins">

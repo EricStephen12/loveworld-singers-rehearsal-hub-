@@ -198,22 +198,16 @@ export function useRealtimeData() {
       console.log(`📊 Songs matching page ${pageId}: ${pageSongs.length}`);
 
       const mappedSongs: PraiseNightSong[] = pageSongs.map((song: any) => ({
+        // Spread all original fields first to preserve everything from Firebase
+        ...song,
+        // Then override specific fields to ensure correct types
         id: song.id, // Use Firebase document ID directly (string)
         firebaseId: song.id, // Firebase document ID
         title: song.title || 'Untitled Song',
         status: song.status || 'unheard',
         category: song.category || '',
         praiseNightId: String(pageId), // Ensure it's a string
-        lyrics: song.lyrics || '',
-        leadSinger: song.leadSinger || '',
-        writer: song.writer || '',
-        conductor: song.conductor || '',
-        key: song.key || '',
-        tempo: song.tempo || '',
-        leadKeyboardist: song.leadKeyboardist || '',
-        drummer: song.drummer || '',
         comments: song.comments || [],
-        audioFile: song.audioFile || '',
         history: song.history || [],
         rehearsalCount: song.rehearsalCount || 1
       }));

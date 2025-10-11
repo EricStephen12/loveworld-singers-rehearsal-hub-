@@ -744,54 +744,54 @@ function ProfilePage() {
 
 
       {/* Account Information - Collapsible */}
-      <div className="px-4 mt-4">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="px-4 mt-3">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
           <button
             onClick={() => toggleSection('account')}
-            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+            className="w-full px-3 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-md">
-                <Shield className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center shadow-md">
+                <Shield className="w-4 h-4 text-white" />
               </div>
               <div className="text-left">
-                <h3 className="text-base font-bold text-gray-900">Account</h3>
-                <p className="text-xs text-gray-500">Login & security</p>
+                <h3 className="text-sm font-bold text-gray-900">Account</h3>
+                <p className="text-[10px] text-gray-500">Login & security</p>
               </div>
             </div>
             <div className={`transform transition-transform duration-200 ${expandedSections.account ? 'rotate-180' : ''}`}>
-              <ChevronDown className="w-5 h-5 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </div>
           </button>
 
           <div className={`overflow-hidden transition-all duration-300 ${expandedSections.account ? 'max-h-96' : 'max-h-0'}`}>
-            <div className="px-4 pb-4 pt-2">
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md ${
+            <div className="px-3 pb-3 pt-1">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-2.5 border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md ${
                     userProfile.socialProvider === 'google' ? 'bg-blue-500' :
                     userProfile.socialProvider === 'kingschat' ? 'bg-purple-500' : 'bg-gray-500'
                   }`}>
                     {userProfile.socialProvider === 'google' ? (
-                      <svg className="w-5 h-5 text-white" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-white" viewBox="0 0 24 24">
                         <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                       </svg>
                     ) : userProfile.socialProvider === 'kingschat' ? (
                       <img
                         src="/kingschat.jpeg"
                         alt="KingsChat"
-                        className="w-5 h-5 rounded-full object-cover"
+                        className="w-4 h-4 rounded-full object-cover"
                       />
                     ) : (
-                      <Mail className="w-5 h-5 text-white" />
+                      <Mail className="w-4 h-4 text-white" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p className="text-xs font-semibold text-gray-900">
                       {userProfile.socialProvider === 'google' ? 'Google Account' :
                        userProfile.socialProvider === 'kingschat' ? 'KingsChat Account' : 'Email Account'}
                     </p>
-                    <p className="text-xs text-gray-600 truncate">{userProfile.socialId}</p>
+                    <p className="text-[10px] text-gray-600 truncate">{userProfile.socialId}</p>
                   </div>
                 </div>
               </div>
@@ -801,30 +801,30 @@ function ProfilePage() {
       </div>
 
       {/* Personal Information - Collapsible */}
-      <div className="px-4 mt-3">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="px-4 mt-2">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
           <button
             onClick={() => toggleSection('personal')}
-            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+            className="w-full px-3 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-md">
-                <User className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-md">
+                <User className="w-4 h-4 text-white" />
               </div>
               <div className="text-left">
-                <h3 className="text-base font-bold text-gray-900">Personal Info</h3>
-                <p className="text-xs text-gray-500">
+                <h3 className="text-sm font-bold text-gray-900">Personal Info</h3>
+                <p className="text-[10px] text-gray-500">
                   {isEditing ? '✏️ Editing mode' : 'Name, contact & details'}
                 </p>
               </div>
             </div>
             <div className={`transform transition-transform duration-200 ${expandedSections.personal ? 'rotate-180' : ''}`}>
-              <ChevronDown className="w-5 h-5 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </div>
           </button>
 
           <div className={`overflow-hidden transition-all duration-300 ${expandedSections.personal ? 'max-h-[2000px]' : 'max-h-0'}`}>
-            <div className="px-4 pb-4 pt-2">
+            <div className="px-3 pb-3 pt-1">
             {isEditing ? (
               <>
                 {/* Profile Image Upload */}
@@ -1128,46 +1128,46 @@ function ProfilePage() {
             ) : (
               <>
                 {/* View Mode - Modern Cards */}
-                <div className="space-y-3">
-                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">First Name</label>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.firstName || 'Not set'}</p>
+                        <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">First Name</label>
+                        <p className="text-xs font-semibold text-gray-900 mt-0.5">{userProfile.firstName || 'Not set'}</p>
                       </div>
                       <div>
-                        <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Middle</label>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.middleName || 'Not set'}</p>
+                        <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Middle</label>
+                        <p className="text-xs font-semibold text-gray-900 mt-0.5">{userProfile.middleName || 'Not set'}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Last Name</label>
-                    <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.lastName || 'Not set'}</p>
+                  <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                    <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Last Name</label>
+                    <p className="text-xs font-semibold text-gray-900 mt-0.5">{userProfile.lastName || 'Not set'}</p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Gender</label>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.gender || 'Not set'}</p>
+                        <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Gender</label>
+                        <p className="text-xs font-semibold text-gray-900 mt-0.5">{userProfile.gender || 'Not set'}</p>
                       </div>
                       <div>
-                        <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Birthday</label>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">
+                        <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Birthday</label>
+                        <p className="text-xs font-semibold text-gray-900 mt-0.5">
                           {userProfile.birthday ? new Date(userProfile.birthday).toLocaleDateString() : 'Not set'}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide flex items-center gap-1">
+                  <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                    <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide flex items-center gap-1">
                       <Phone className="w-3 h-3" />
                       Phone Number
                     </label>
-                    <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.phoneNumber || 'Not set'}</p>
+                    <p className="text-xs font-semibold text-gray-900 mt-0.5">{userProfile.phoneNumber || 'Not set'}</p>
                   </div>
                 </div>
               </>
@@ -1178,41 +1178,41 @@ function ProfilePage() {
       </div>
 
       {/* Location Information - Collapsible */}
-      <div className="px-4 mt-3">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="px-4 mt-2">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
           <button
             onClick={() => toggleSection('location')}
-            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+            className="w-full px-3 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-md">
-                <MapPin className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-md">
+                <MapPin className="w-4 h-4 text-white" />
               </div>
               <div className="text-left">
-                <h3 className="text-base font-bold text-gray-900">Location</h3>
-                <p className="text-xs text-gray-500">Region, zone & church</p>
+                <h3 className="text-sm font-bold text-gray-900">Location</h3>
+                <p className="text-[10px] text-gray-500">Region, zone & church</p>
               </div>
             </div>
             <div className={`transform transition-transform duration-200 ${expandedSections.location ? 'rotate-180' : ''}`}>
-              <ChevronDown className="w-5 h-5 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </div>
           </button>
 
           <div className={`overflow-hidden transition-all duration-300 ${expandedSections.location ? 'max-h-96' : 'max-h-0'}`}>
-            <div className="px-4 pb-4 pt-2 space-y-3">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
-                <label className="text-xs text-green-700 font-semibold uppercase tracking-wide">Region</label>
-                <p className="text-sm font-bold text-gray-900 mt-1">{userProfile.region || 'Not set'}</p>
+            <div className="px-3 pb-3 pt-1 space-y-2">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-2 border border-green-100">
+                <label className="text-[10px] text-green-700 font-semibold uppercase tracking-wide">Region</label>
+                <p className="text-xs font-bold text-gray-900 mt-0.5">{userProfile.region || 'Not set'}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                  <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Zone</label>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.zone || 'Not set'}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                  <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Zone</label>
+                  <p className="text-xs font-semibold text-gray-900 mt-0.5">{userProfile.zone || 'Not set'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                  <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Church</label>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.church || 'Not set'}</p>
+                <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                  <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Church</label>
+                  <p className="text-xs font-semibold text-gray-900 mt-0.5">{userProfile.church || 'Not set'}</p>
                 </div>
               </div>
             </div>
@@ -1221,54 +1221,54 @@ function ProfilePage() {
       </div>
 
       {/* Ministry Information - Collapsible */}
-      <div className="px-4 mt-3">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="px-4 mt-2">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
           <button
             onClick={() => toggleSection('ministry')}
-            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+            className="w-full px-3 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
-                <Briefcase className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md">
+                <Briefcase className="w-4 h-4 text-white" />
               </div>
               <div className="text-left">
-                <h3 className="text-base font-bold text-gray-900">Ministry</h3>
-                <p className="text-xs text-gray-500">Role & groups</p>
+                <h3 className="text-sm font-bold text-gray-900">Ministry</h3>
+                <p className="text-[10px] text-gray-500">Role & groups</p>
               </div>
             </div>
             <div className={`transform transition-transform duration-200 ${expandedSections.ministry ? 'rotate-180' : ''}`}>
-              <ChevronDown className="w-5 h-5 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </div>
           </button>
 
           <div className={`overflow-hidden transition-all duration-300 ${expandedSections.ministry ? 'max-h-96' : 'max-h-0'}`}>
-            <div className="px-4 pb-4 pt-2 space-y-3">
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-100">
-                <label className="text-xs text-purple-700 font-semibold uppercase tracking-wide">Designation</label>
-                <div className="mt-2">
-                  <span className="inline-flex items-center bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm">
-                    <Music className="w-4 h-4 mr-1.5" />
+            <div className="px-3 pb-3 pt-1 space-y-2">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-2 border border-purple-100">
+                <label className="text-[10px] text-purple-700 font-semibold uppercase tracking-wide">Designation</label>
+                <div className="mt-1">
+                  <span className="inline-flex items-center bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                    <Music className="w-3 h-3 mr-1" />
                     {userProfile.designation || 'Not specified'}
                   </span>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-3 border border-blue-100">
-                <label className="text-xs text-blue-700 font-semibold uppercase tracking-wide">Administration</label>
-                <div className="mt-2">
-                  <span className="inline-flex items-center bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm">
-                    <Award className="w-4 h-4 mr-1.5" />
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-2 border border-blue-100">
+                <label className="text-[10px] text-blue-700 font-semibold uppercase tracking-wide">Administration</label>
+                <div className="mt-1">
+                  <span className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                    <Award className="w-3 h-3 mr-1" />
                     {userProfile.administration || 'Not specified'}
                   </span>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
-                <label className="text-xs text-green-700 font-semibold uppercase tracking-wide">Groups</label>
-                <div className="mt-2 flex flex-wrap gap-2">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-2 border border-green-100">
+                <label className="text-[10px] text-green-700 font-semibold uppercase tracking-wide">Groups</label>
+                <div className="mt-1 flex flex-wrap gap-1.5">
                   {userProfile.groups.map((group, index) => (
-                    <span key={index} className="inline-flex items-center bg-green-100 text-green-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm">
-                      <Users className="w-3.5 h-3.5 mr-1.5" />
+                    <span key={index} className="inline-flex items-center bg-green-100 text-green-800 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm">
+                      <Users className="w-3 h-3 mr-1" />
                       {group}
                     </span>
                   ))}
@@ -1280,71 +1280,71 @@ function ProfilePage() {
       </div>
 
       {/* QR Code Check-in - Collapsible */}
-      <div className="px-4 mt-3">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="px-4 mt-2">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
           <button
             onClick={() => toggleSection('qrCode')}
-            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+            className="w-full px-3 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
-                <QrCode className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center shadow-md">
+                <QrCode className="w-4 h-4 text-white" />
               </div>
               <div className="text-left">
-                <h3 className="text-base font-bold text-gray-900">QR Check-in</h3>
-                <p className="text-xs text-gray-500">
+                <h3 className="text-sm font-bold text-gray-900">QR Check-in</h3>
+                <p className="text-[10px] text-gray-500">
                   {qrGenerated && timeLeft > 0 ? `⏱️ ${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')} left` : 'Tap to generate'}
                 </p>
               </div>
             </div>
             <div className={`transform transition-transform duration-200 ${expandedSections.qrCode ? 'rotate-180' : ''}`}>
-              <ChevronDown className="w-5 h-5 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </div>
           </button>
 
           <div className={`overflow-hidden transition-all duration-300 ${expandedSections.qrCode ? 'max-h-[600px]' : 'max-h-0'}`}>
-            <div className="px-4 pb-4 pt-2">
+            <div className="px-3 pb-3 pt-1">
               {qrGenerated && qrCode ? (
                 <div className="text-center">
-                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
-                    <div className="inline-block bg-white p-4 rounded-2xl shadow-lg">
+                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+                    <div className="inline-block bg-white p-3 rounded-lg shadow-lg">
                       <QRCodeGenerator
                         value={qrCode}
-                        size={200}
+                        size={160}
                         className="mx-auto"
                       />
                     </div>
-                    <p className="text-xs text-gray-600 font-mono mt-3 bg-white/50 backdrop-blur-sm px-3 py-2 rounded-lg inline-block">{qrCode}</p>
+                    <p className="text-[10px] text-gray-600 font-mono mt-2 bg-white/50 backdrop-blur-sm px-2 py-1 rounded-lg inline-block">{qrCode}</p>
 
                     {/* Timer Badge */}
-                    <div className="mt-4 inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm">
-                      <Clock className="w-4 h-4 text-indigo-600" />
-                      <span className="text-sm font-bold text-gray-900">
+                    <div className="mt-3 inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full shadow-sm">
+                      <Clock className="w-3 h-3 text-indigo-600" />
+                      <span className="text-xs font-bold text-gray-900">
                         {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                       </span>
                     </div>
 
                     <button
                       onClick={generateQRCode}
-                      className="mt-4 w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-bold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                      className="mt-3 w-full px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg active:scale-95"
                     >
                       🔄 Generate New Code
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6">
-                  <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                    <QrCode className="w-16 h-16 text-indigo-600" />
+                <div className="text-center py-4">
+                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                    <QrCode className="w-12 h-12 text-indigo-600" />
                   </div>
-                  <p className="text-sm text-gray-600 mb-4 font-medium">Generate your attendance QR code</p>
+                  <p className="text-xs text-gray-600 mb-3 font-medium">Generate your attendance QR code</p>
                   <button
                     onClick={generateQRCode}
-                    className="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                    className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg active:scale-95"
                   >
                     ✨ Generate QR Code
                   </button>
-                  <p className="text-xs text-gray-500 mt-3">Valid for 5 minutes</p>
+                  <p className="text-[10px] text-gray-500 mt-2">Valid for 5 minutes</p>
                 </div>
               )}
             </div>
@@ -1354,52 +1354,52 @@ function ProfilePage() {
 
 
       {/* Recent Attendance - Collapsible */}
-      <div className="px-4 mt-3">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="px-4 mt-2">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
           <button
             onClick={() => toggleSection('attendance')}
-            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+            className="w-full px-3 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-md">
-                <Calendar className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center shadow-md">
+                <Calendar className="w-4 h-4 text-white" />
               </div>
               <div className="text-left">
-                <h3 className="text-base font-bold text-gray-900">Attendance</h3>
-                <p className="text-xs text-gray-500">Recent check-ins</p>
+                <h3 className="text-sm font-bold text-gray-900">Attendance</h3>
+                <p className="text-[10px] text-gray-500">Recent check-ins</p>
               </div>
             </div>
             <div className={`transform transition-transform duration-200 ${expandedSections.attendance ? 'rotate-180' : ''}`}>
-              <ChevronDown className="w-5 h-5 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </div>
           </button>
 
           <div className={`overflow-hidden transition-all duration-300 ${expandedSections.attendance ? 'max-h-[800px]' : 'max-h-0'}`}>
-            <div className="px-4 pb-4 pt-2">
+            <div className="px-3 pb-3 pt-1">
               {attendanceHistory.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {attendanceHistory.map((record, index) => (
-                    <div key={index} className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full shadow-sm ${
+                    <div key={index} className="bg-gray-50 rounded-lg p-2 border border-gray-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full shadow-sm ${
                           record.status === 'present' ? 'bg-green-500' :
                           record.status === 'late' ? 'bg-yellow-500' : 'bg-red-500'
                         }`}></div>
                         <div>
-                          <p className="text-sm font-bold text-gray-900">{record.event_name}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs font-bold text-gray-900">{record.event_name}</p>
+                          <p className="text-[10px] text-gray-500">
                             {new Date(record.check_in_time).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`text-xs font-bold ${
+                        <p className={`text-[10px] font-bold ${
                           record.status === 'present' ? 'text-green-600' :
                           record.status === 'late' ? 'text-yellow-600' : 'text-red-600'
                         }`}>
                           {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-[10px] text-gray-500">
                           {new Date(record.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
@@ -1407,12 +1407,12 @@ function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
-                    <Calendar className="w-8 h-8 text-gray-400" />
+                <div className="text-center py-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm">
+                    <Calendar className="w-6 h-6 text-gray-400" />
                   </div>
-                  <p className="text-sm font-semibold text-gray-700 mb-1">No attendance yet</p>
-                  <p className="text-xs text-gray-500">Use your QR code to check in</p>
+                  <p className="text-xs font-semibold text-gray-700 mb-0.5">No attendance yet</p>
+                  <p className="text-[10px] text-gray-500">Use your QR code to check in</p>
                 </div>
               )}
 

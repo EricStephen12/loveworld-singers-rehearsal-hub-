@@ -12,7 +12,6 @@ import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer,
 import SongDetailModal from "@/components/SongDetailModal";
 import { PraiseNightSong, PraiseNight } from "@/types/supabase";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
-import OfflineIndicator from "@/components/OfflineIndicator";
 import ScreenHeader from "@/components/ScreenHeader";
 import SharedDrawer from "@/components/SharedDrawer";
 import { getMenuItems } from "@/config/menuItems";
@@ -1074,11 +1073,8 @@ function PraiseNightPageContent() {
 
 
        {/* ✅ Scrollable Content Container */}
-       <div className="flex-1">
-         <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative content-bottom-safe">
-        {/* Offline Banner */}
-        <OfflineIndicator />
-
+       <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch">
+         <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-4 relative mobile-content-with-bottom-nav">
         {/* Archive Cards Grid - Special layout for archive category */}
         {categoryFilter === 'archive' && (
           <div className="mb-6">
@@ -1483,19 +1479,23 @@ function PraiseNightPageContent() {
       )}
 
       {/* Song Detail Modal */}
-      {isSongDetailOpen && selectedSong && (
-        <SongDetailModal
-          selectedSong={selectedSong}
-          isOpen={isSongDetailOpen}
-          onClose={handleCloseSongDetail}
-          currentFilter={activeFilter}
-          songs={finalSongData}
-          onSongChange={(newSong) => {
-            setSelectedSong(newSong);
-            // Don't auto-play here since the modal handles it
-          }}
-        />
-      )}
+      {isSongDetailOpen && selectedSong && (() => {
+        // Always get the latest song data from finalSongData (real-time)
+        const latestSongData = finalSongData.find(s => s.id === selectedSong.id) || selectedSong;
+        return (
+          <SongDetailModal
+            selectedSong={latestSongData}
+            isOpen={isSongDetailOpen}
+            onClose={handleCloseSongDetail}
+            currentFilter={activeFilter}
+            songs={finalSongData}
+            onSongChange={(newSong) => {
+              setSelectedSong(newSong);
+              // Don't auto-play here since the modal handles it
+            }}
+          />
+        );
+      })()}
       
     </div>
   );
