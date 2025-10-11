@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRealtimeData } from './useRealtimeData';
 import { PraiseNightSong, PraiseNight } from '@/types/supabase';
+import { FirebaseDatabaseService } from '@/lib/firebase-database';
 
 export interface HomeSearchResult {
   id: string;
@@ -18,14 +19,39 @@ export interface HomeSearchResult {
 export function useHomeGlobalSearch() {
   const { pages } = useRealtimeData();
   const [searchQuery, setSearchQuery] = useState('');
+  const [allSongs, setAllSongs] = useState<PraiseNightSong[]>([]);
+  const [songsLoaded, setSongsLoaded] = useState(false);
+
+  // Load all songs for search
+  useEffect(() => {
+    const loadAllSongs = async () => {
+      try {
+        const songs = await FirebaseDatabaseService.getCollection('songs');
+        setAllSongs(songs as any[]);
+        setSongsLoaded(true);
+      } catch (error) {
+        console.error('Error loading songs for search:', error);
+        setSongsLoaded(true);
+      }
+    };
+
+    if (pages.length > 0 && !songsLoaded) {
+      loadAllSongs();
+    }
+  }, [pages.length, songsLoaded]);
 
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!searchQuery.trim()) {
+      console.log('🔍 Home Search: No query provided');
+      return [];
+    }
 
     const query = searchQuery.toLowerCase().trim();
     const results: HomeSearchResult[] = [];
+    
+    console.log('🔍 Home Search: Searching with query:', query, 'in', pages.length, 'pages and', allSongs.length, 'songs');
 
-    // Search through all pages and songs
+    // Search through all pages
     pages.forEach(page => {
       // Search page names
       if (page.name.toLowerCase().includes(query)) {
@@ -40,9 +66,10 @@ export function useHomeGlobalSearch() {
           icon: 'Calendar'
         });
       }
+    });
 
-      // Search songs within each page
-      page.songs.forEach(song => {
+    // Search through all songs
+    allSongs.forEach(song => {
         const matchesTitle = song.title.toLowerCase().includes(query);
         const matchesWriter = song.writer?.toLowerCase().includes(query);
         const matchesLeadSinger = song.leadSinger?.toLowerCase().includes(query);
@@ -53,6 +80,13 @@ export function useHomeGlobalSearch() {
         const matchesSolfas = song.solfas?.toLowerCase().includes(query);
 
         if (matchesTitle || matchesWriter || matchesLeadSinger || matchesConductor || matchesCategory || matchesKey || matchesLyrics || matchesSolfas) {
+          // Find the page this song belongs to
+          const songPage = pages.find(page => 
+            page.id === song.praiseNightId || 
+            page.id === song.praiseNightId?.toString() ||
+            page.firebaseId === song.praiseNightId
+          );
+
           let matchReason = '';
           if (matchesTitle) matchReason = 'Song Title';
           else if (matchesWriter) matchReason = `Writer: ${song.writer}`;
@@ -64,13 +98,13 @@ export function useHomeGlobalSearch() {
           else if (matchesSolfas) matchReason = 'Solfas Content';
 
           results.push({
-            id: `song-${song.title}-${page.id}`,
+            id: `song-${song.title}-${songPage?.id || 'unknown'}`,
             type: 'song',
             title: song.title,
             subtitle: matchReason,
-            description: `${page.name} • ${song.category} • ${song.status}`,
-            url: `/pages/praise-night?page=${page.id}&song=${encodeURIComponent(song.title)}`,
-            pageId: page.id,
+            description: `${songPage?.name || 'Unknown Page'} • ${song.category} • ${song.status}`,
+            url: `/pages/praise-night?page=${songPage?.id || 'unknown'}&song=${encodeURIComponent(song.title)}`,
+            pageId: songPage?.id || 'unknown',
             category: song.category,
             status: song.status,
             icon: 'Music'
@@ -78,24 +112,22 @@ export function useHomeGlobalSearch() {
         }
       });
 
-      // Search categories
-      const categories = [...new Set(page.songs.map(song => song.category))];
-      categories.forEach(category => {
-        if (category.toLowerCase().includes(query)) {
-          const songsInCategory = page.songs.filter(song => song.category === category);
-          results.push({
-            id: `category-${category}-${page.id}`,
-            type: 'category',
-            title: category,
-            subtitle: 'Song Category',
-            description: `${page.name} • ${songsInCategory.length} songs`,
-            url: `/pages/praise-night?page=${page.id}&category=${encodeURIComponent(category)}`,
-            pageId: page.id,
-            category: category,
-            icon: 'Flag'
-          });
-        }
-      });
+    // Search categories from all songs
+    const categories = [...new Set(allSongs.map(song => song.category))];
+    categories.forEach(category => {
+      if (category.toLowerCase().includes(query)) {
+        const songsInCategory = allSongs.filter(song => song.category === category);
+        results.push({
+          id: `category-${category}`,
+          type: 'category',
+          title: category,
+          subtitle: 'Song Category',
+          description: `${songsInCategory.length} songs`,
+          url: `/pages/praise-night?category=${encodeURIComponent(category)}`,
+          category: category,
+          icon: 'Flag'
+        });
+      }
     });
 
     // Search app features
@@ -182,7 +214,7 @@ export function useHomeGlobalSearch() {
       // Then alphabetically
       return a.title.localeCompare(b.title);
     }).slice(0, 15); // Limit to 15 results for home search
-  }, [searchQuery, pages]);
+  }, [searchQuery, pages, allSongs, songsLoaded]);
 
   return {
     searchQuery,

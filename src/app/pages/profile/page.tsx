@@ -630,7 +630,7 @@ function ProfilePage() {
   const rightButtons = null
 
   return (
-    <div className="h-screen flex flex-col bg-white overflow-hidden">
+    <div className="h-screen flex flex-col bg-white overflow-hidden overflow-x-hidden">
       {/* Animated Header */}
       <ScreenHeader 
         title="Profile" 
@@ -650,13 +650,13 @@ function ProfilePage() {
 
 
       {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50">
       {/* Profile Header - Modern TikTok Style */}
-      <div className="relative px-4 pt-6 pb-8 bg-gradient-to-br from-purple-600 via-purple-500 to-blue-500">
+      <div className="relative px-4 pt-6 pb-8 bg-gradient-to-br from-purple-600 via-purple-500 to-blue-500 overflow-hidden">
         {/* Decorative Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
+        <div className="absolute inset-0 opacity-10 overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 sm:w-48 sm:h-48 lg:w-64 lg:h-64 bg-white rounded-full -translate-y-16 sm:-translate-y-24 lg:-translate-y-32 translate-x-16 sm:translate-x-24 lg:translate-x-32"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-36 sm:h-36 lg:w-48 lg:h-48 bg-white rounded-full translate-y-12 sm:translate-y-18 lg:translate-y-24 -translate-x-12 sm:-translate-x-18 lg:-translate-x-24"></div>
         </div>
 
         <div className="relative text-center">

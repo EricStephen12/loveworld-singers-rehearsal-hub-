@@ -604,8 +604,13 @@ function PraiseNightPageContent() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Use page-specific search hook
-  const { searchQuery, setSearchQuery, searchResults, hasResults } = usePageSearch(currentPraiseNight);
+  // Use page-specific search hook with actual songs data
+  const { searchQuery, setSearchQuery, searchResults, hasResults } = usePageSearch(
+    currentPraiseNight ? {
+      ...currentPraiseNight,
+      songs: allSongsFromFirebase
+    } : null
+  );
   const typedSearchResults = searchResults as PageSearchResult[];
 
   const onHeaderSearchClick = () => {

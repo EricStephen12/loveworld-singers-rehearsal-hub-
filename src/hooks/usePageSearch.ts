@@ -15,10 +15,19 @@ export function usePageSearch(currentPage: PraiseNight | null) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim() || !currentPage?.songs) return [];
+    if (!searchQuery.trim() || !currentPage?.songs) {
+      console.log('🔍 Page Search: No query or no songs', { 
+        hasQuery: !!searchQuery.trim(), 
+        hasSongs: !!currentPage?.songs,
+        songsCount: currentPage?.songs?.length || 0
+      });
+      return [];
+    }
 
     const query = searchQuery.toLowerCase().trim();
     const results: PageSearchResult[] = [];
+    
+    console.log('🔍 Page Search: Searching with query:', query, 'in', currentPage.songs.length, 'songs');
 
     // Search songs within the current page only
     currentPage.songs.forEach(song => {
