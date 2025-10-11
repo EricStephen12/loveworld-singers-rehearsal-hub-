@@ -9,6 +9,7 @@ import { FirebaseAuthService } from '@/lib/firebase-auth';
 import { logAdminAction } from '@/lib/admin-activity-logger';
 import { versionManager } from '@/utils/versionManager';
 import { uploadBannerImage } from '@/utils/imageUpload';
+import { IDManager } from '@/utils/idManager';
 import { ToastContainer, Toast } from '../../components/Toast';
 
 // Import admin components
@@ -671,6 +672,13 @@ export default function AdminPage() {
   // Song management functions
   const handleEditSong = (song: PraiseNightSong) => {
     console.log('🎵 handleEditSong called with:', song);
+    console.log('🎵 Song ID fields:', {
+      id: song.id,
+      firebaseId: song.firebaseId,
+      primaryId: IDManager.getPrimaryId(song),
+      isSupabaseId: IDManager.isSupabaseId(IDManager.getPrimaryId(song)),
+      isFirebaseId: IDManager.isFirebaseId(IDManager.getPrimaryId(song))
+    });
     console.log('🎵 Setting editingSong and showSongModal to true');
     setEditingSong(song);
     setShowSongModal(true);
@@ -687,7 +695,12 @@ export default function AdminPage() {
       const newStatus = song.status === 'heard' ? 'unheard' : 'heard';
       const updatedSong = { ...song, status: newStatus };
 
-      const result = await FirebaseDatabaseService.updateSong(song.id || 0, updatedSong);
+      const songId = IDManager.getPrimaryId(song);
+      if (!IDManager.isValidId(songId)) {
+        throw new Error('Invalid song ID for status update');
+      }
+
+      const result = await FirebaseDatabaseService.updateSong(songId, updatedSong);
 
       if (result.success) {
         console.log('✅ Song status updated successfully');
@@ -726,28 +739,43 @@ export default function AdminPage() {
 
       let result;
 
-      // Check if we're editing an existing song
-      // Use firebaseId as the primary identifier since that's the actual document ID
-      const isEditingExistingSong = editingSong && (editingSong.firebaseId || (editingSong.id && editingSong.id.length > 0));
+      // Use ID manager to determine if we're editing an existing song
+      const primarySongId = IDManager.getPrimaryId(songData);
+      const primaryEditingSongId = editingSong ? IDManager.getPrimaryId(editingSong) : '';
+      
+      console.log('🔍 ID Analysis:');
+      console.log('📊 songData:', songData);
+      console.log('📊 editingSong:', editingSong);
+      console.log('📊 primarySongId:', primarySongId);
+      console.log('📊 primaryEditingSongId:', primaryEditingSongId);
+      console.log('📊 isEditingExistingSong:', IDManager.isValidId(primarySongId) || IDManager.isValidId(primaryEditingSongId));
+      
+      const isEditingExistingSong = IDManager.isValidId(primarySongId) || IDManager.isValidId(primaryEditingSongId);
 
       if (isEditingExistingSong) {
-        // Update existing song - use firebaseId if available, otherwise use id
-        const songIdToUpdate = editingSong.firebaseId || editingSong.id!;
+        // Use ID manager to get the correct ID for update
+        const songIdToUpdate = primarySongId || primaryEditingSongId;
+        
         console.log('🔄 Updating existing song');
-        console.log('📊 editingSong.firebaseId:', editingSong.firebaseId);
-        console.log('📊 editingSong.id:', editingSong.id);
+        IDManager.debugIds(songData, 'Song Data');
+        if (editingSong) {
+          IDManager.debugIds(editingSong, 'Editing Song');
+        }
         console.log('📊 songIdToUpdate (will use this):', songIdToUpdate);
-        console.log('📊 songIdToUpdate type:', typeof songIdToUpdate);
         console.log('📊 songData.praiseNightId:', songData.praiseNightId);
         console.log('📊 songData.title:', songData.title);
 
-        if (!songIdToUpdate) {
+        if (!IDManager.isValidId(songIdToUpdate)) {
           throw new Error('No valid song ID found for update');
         }
 
         // Detect what changed for notifications
         const changes: string[] = [];
-        const existingSong = allSongs.find(s => s.id === editingSong.id || s.firebaseId === editingSong.firebaseId);
+        const existingSong = allSongs.find(s => {
+          const sId = IDManager.getPrimaryId(s);
+          const targetId = songIdToUpdate;
+          return IDManager.areIdsEqual(sId, targetId);
+        });
 
         if (existingSong) {
           if (existingSong.lyrics !== songData.lyrics) {
@@ -789,7 +817,14 @@ export default function AdminPage() {
         }
       } else {
         // Add new song
-        console.log('➕ Creating new song');
+        console.log('➕ Creating new song (this should NOT happen when editing!)');
+        console.log('🚨 WHY IS THIS CREATING INSTEAD OF UPDATING?');
+        console.log('🔍 Debug info:');
+        console.log('📊 songData has ID?', !!songData.id);
+        console.log('📊 songData has firebaseId?', !!songData.firebaseId);
+        console.log('📊 editingSong exists?', !!editingSong);
+        console.log('📊 editingSong has ID?', editingSong ? !!editingSong.id : 'N/A');
+        console.log('📊 editingSong has firebaseId?', editingSong ? !!editingSong.firebaseId : 'N/A');
         
         // Ensure we use the correct page ID format (Firebase document ID)
         const updatedSongData = {
@@ -808,6 +843,20 @@ export default function AdminPage() {
 
         if (result.success) {
           console.log('✅ Song added successfully');
+          console.log('🎵 Created song with Firebase ID:', result.id);
+          console.log('🎵 Full result:', result);
+          console.log('🎵 Created song object:', result.song);
+          
+          // Verify the created song has proper ID fields
+          if (result.song) {
+            console.log('🎵 Created song ID fields:', {
+              id: result.song.id,
+              firebaseId: result.song.firebaseId,
+              title: (result.song as any).title,
+              praiseNightId: (result.song as any).praiseNightId
+            });
+          }
+          
           addToast({
             type: 'success',
             message: 'Song added successfully'
@@ -846,17 +895,13 @@ export default function AdminPage() {
     if (!songToDelete) return;
 
     try {
-      // Use firebaseId if available, otherwise use id
-      const songIdToDelete = songToDelete.firebaseId || songToDelete.id;
+      // Use ID manager to get the correct ID for deletion
+      const songIdToDelete = IDManager.getPrimaryId(songToDelete);
 
-      console.log('🗑️ Deleting song:', {
-        title: songToDelete.title,
-        firebaseId: songToDelete.firebaseId,
-        id: songToDelete.id,
-        usingId: songIdToDelete
-      });
+      console.log('🗑️ Deleting song:');
+      IDManager.debugIds(songToDelete, 'Song to Delete');
 
-      if (!songIdToDelete) {
+      if (!IDManager.isValidId(songIdToDelete)) {
         throw new Error('No valid song ID found for deletion');
       }
 

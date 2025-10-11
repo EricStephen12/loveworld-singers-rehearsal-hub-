@@ -514,16 +514,37 @@ export default function AdminModals(props: AdminModalsProps) {
       )}
 
       {/* Song Edit Modal */}
+      {showSongModal && (
+        <>
+          {console.log('🎵 MODAL DEBUG - EditSongModal is opening with:')}
+          {console.log('🎵 editingSong:', editingSong)}
+          {console.log('🎵 editingSong ID fields:', editingSong ? {
+            id: editingSong.id,
+            firebaseId: editingSong.firebaseId,
+            allFields: Object.keys(editingSong)
+          } : 'No editingSong')}
+        </>
+      )}
       <EditSongModal
         isOpen={showSongModal}
         onClose={() => {
+          console.log('🎵 MODAL DEBUG - EditSongModal closing');
           setShowSongModal(false);
           setEditingSong(null);
         }}
         song={editingSong}
         categories={allCategories}
         praiseNightCategories={pages.map(page => ({ id: page.id, name: page.name, description: 'Praise Night Event', date: page.date, location: page.location, icon: 'Music', color: '#8B5CF6', isActive: true, createdAt: new Date(), updatedAt: new Date(), countdown: page.countdown }))}
-        onUpdate={handleSaveSong}
+        onUpdate={(songData) => {
+          console.log('🎵 MODAL DEBUG - onUpdate called with songData:');
+          console.log('🎵 songData:', songData);
+          console.log('🎵 songData ID fields:', {
+            id: songData.id,
+            firebaseId: songData.firebaseId,
+            allFields: Object.keys(songData)
+          });
+          handleSaveSong(songData);
+        }}
       />
 
       {/* Delete Confirmation Dialog */}

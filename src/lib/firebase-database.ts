@@ -15,6 +15,7 @@ import {
   onSnapshot
 } from 'firebase/firestore'
 import { db } from './firebase-setup'
+import { IDManager } from '@/utils/idManager'
 
 export class FirebaseDatabaseService {
   // Get all praise nights (pages) - optimized for millions of users
@@ -345,7 +346,24 @@ export class FirebaseDatabaseService {
 
       console.log('🔥 Creating song with clean data:', cleanData)
       const docRef = await addDoc(collection(db, 'songs'), cleanData)
-      return { success: true, id: docRef.id, ...cleanData }
+      
+      // Return the created song with proper ID fields
+      const createdSong = {
+        ...cleanData,
+        id: docRef.id, // Firebase document ID as primary ID
+        firebaseId: docRef.id, // Also store as firebaseId for clarity
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      console.log('✅ Song created successfully with ID:', docRef.id);
+      console.log('🎵 Created song data:', createdSong);
+      
+      return { 
+        success: true, 
+        id: docRef.id,
+        song: createdSong
+      }
     } catch (error) {
       console.error('Error creating song:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -354,13 +372,23 @@ export class FirebaseDatabaseService {
 
   static async updateSong(songId: string | number, data: any) {
     try {
+      // Use ID manager to get the correct ID
+      const primaryId = IDManager.getPrimaryId({ id: songId, firebaseId: songId });
+      
+      if (!IDManager.isValidId(primaryId)) {
+        console.error('❌ Invalid song ID for update:', songId);
+        return { 
+          success: false, 
+          error: `Invalid song ID: ${songId}` 
+        };
+      }
+
       console.log('🔥 Firebase updateSong called with:', {
-        songId: songId,
-        songIdType: typeof songId,
-        collection: 'songs',
+        originalSongId: songId,
+        primaryId: primaryId,
+        isFirebaseId: IDManager.isFirebaseId(primaryId),
+        isSupabaseId: IDManager.isSupabaseId(primaryId),
         dataKeys: Object.keys(data),
-        hasId: !!data.id,
-        hasFirebaseId: !!data.firebaseId,
         hasPraiseNightId: !!data.praiseNightId,
         praiseNightId: data.praiseNightId,
         hasComments: !!data.comments,
@@ -377,16 +405,16 @@ export class FirebaseDatabaseService {
       delete cleanData.id;
       delete cleanData.firebaseId;
 
-      // Check if document exists first
-      const docRef = doc(db, 'songs', songId.toString());
+      // Check if document exists first using the primary ID
+      const docRef = doc(db, 'songs', primaryId);
       console.log('🔍 Checking if song document exists in Firebase songs collection...');
-      console.log('📍 Document path:', `songs/${songId.toString()}`);
+      console.log('📍 Document path:', `songs/${primaryId}`);
 
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
-        console.warn('⚠️ Song document not found in Firebase songs collection:', songId);
-        console.log('📊 Document path checked:', `songs/${songId.toString()}`);
+        console.warn('⚠️ Song document not found in Firebase songs collection:', primaryId);
+        console.log('📊 Document path checked:', `songs/${primaryId}`);
         console.log('🔄 Creating new document with this ID instead...');
 
         // Document doesn't exist, create it with setDoc using the provided ID
@@ -396,13 +424,13 @@ export class FirebaseDatabaseService {
           updatedAt: new Date()
         });
 
-        console.log('✅ Song document created successfully in songs collection with ID:', songId);
+        console.log('✅ Song document created successfully in songs collection with ID:', primaryId);
         return { success: true };
       }
 
       console.log('✅ Song document exists in songs collection, proceeding with update');
       console.log('📊 Existing document data:', docSnap.data());
-      console.log('🔥 Updating song with ID:', songId, 'clean data keys:', Object.keys(cleanData))
+      console.log('🔥 Updating song with ID:', primaryId, 'clean data keys:', Object.keys(cleanData))
       console.log('🔥 Clean data to update:', cleanData);
       console.log('🔥 Comments being saved:', {
         comments: data.comments,
@@ -429,19 +457,32 @@ export class FirebaseDatabaseService {
 
   static async deleteSong(songId: string | number) {
     try {
+      // Use ID manager to get the correct ID
+      const primaryId = IDManager.getPrimaryId({ id: songId, firebaseId: songId });
+      
+      if (!IDManager.isValidId(primaryId)) {
+        console.error('❌ Invalid song ID for deletion:', songId);
+        return { 
+          success: false, 
+          error: `Invalid song ID: ${songId}` 
+        };
+      }
+
       console.log('🔥 Deleting song from Firebase songs collection');
-      console.log('📊 Song ID:', songId);
-      console.log('📊 Song ID type:', typeof songId);
-      console.log('📍 Document path:', `songs/${songId.toString()}`);
+      console.log('📊 Original Song ID:', songId);
+      console.log('📊 Primary ID:', primaryId);
+      console.log('📊 Is Firebase ID:', IDManager.isFirebaseId(primaryId));
+      console.log('📊 Is Supabase ID:', IDManager.isSupabaseId(primaryId));
+      console.log('📍 Document path:', `songs/${primaryId}`);
 
       // Check if document exists before deleting
-      const docRef = doc(db, 'songs', songId.toString());
+      const docRef = doc(db, 'songs', primaryId);
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
         console.error('❌ Song document not found in Firebase songs collection');
-        console.error('📍 Checked path:', `songs/${songId.toString()}`);
-        return { success: false, error: `Song not found in database (ID: ${songId})` };
+        console.error('📍 Checked path:', `songs/${primaryId}`);
+        return { success: false, error: `Song not found in database (ID: ${primaryId})` };
       }
 
       console.log('✅ Song document found, deleting...');

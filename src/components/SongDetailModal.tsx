@@ -1105,12 +1105,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
                 {activeHistoryTab === 'comments' && (
                   <div className="space-y-3">
-                    {isLoadingComments && getOlderComments().length === 0 && getHistoryData('comments').length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mb-3"></div>
-                        <p className="text-gray-500 text-sm">Loading real-time comments...</p>
-                      </div>
-                    ) : getOlderComments().length === 0 && getHistoryData('comments').length === 0 ? (
+                    {getOlderComments().length === 0 && getHistoryData('comments').length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12">
                         <Users className="w-12 h-12 text-gray-300 mb-3" />
                         <p className="text-gray-500 text-sm font-medium">No Comments History</p>

@@ -372,6 +372,14 @@ export default function EditSongModal({
   // Initialize form when song changes
   useEffect(() => {
     if (song) {
+      console.log('🎵 MODAL DEBUG - useEffect triggered with song:');
+      console.log('🎵 song object:', song);
+      console.log('🎵 song ID fields:', {
+        id: song.id,
+        firebaseId: song.firebaseId,
+        allFields: Object.keys(song)
+      });
+      
       // Editing existing song - populate form with song data
       setSongTitle(song.title || '');
       setSongCategory(song.category || '');
@@ -539,6 +547,13 @@ export default function EditSongModal({
       });
 
       // Pass the song ID if editing an existing song
+      console.log('🎵 MODAL DEBUG - Save button clicked');
+      console.log('🎵 song object:', song);
+      console.log('🎵 song.id:', song?.id);
+      console.log('🎵 song.firebaseId:', song?.firebaseId);
+      console.log('🎵 song exists?', !!song);
+      console.log('🎵 song.id exists?', !!(song?.id));
+      
       if (song && song.id) {
         console.log('🎵 EditSongModal - Editing existing song:', {
           songId: song.id,
@@ -561,7 +576,10 @@ export default function EditSongModal({
         console.log('🎵 EditSongModal - Sending update data:', updateData);
         onUpdate(updateData);
       } else {
-        console.log('🎵 EditSongModal - Creating new song');
+        console.log('🚨 EditSongModal - Creating new song (this should NOT happen when editing!)');
+        console.log('🚨 WHY IS THIS CREATING? song:', song);
+        console.log('🚨 song.id:', song?.id);
+        console.log('🚨 song.firebaseId:', song?.firebaseId);
         onUpdate(updatedSong);
       }
       
