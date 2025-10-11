@@ -400,7 +400,7 @@ export async function deletePage(id: number): Promise<boolean> {
 
 // ===== SONGS OPERATIONS =====
 
-export async function getSongsByPageId(pageId: number): Promise<PraiseNightSong[]> {
+export async function getSongsByPageId(pageId: string | number): Promise<PraiseNightSong[]> {
   try {
     const { data: songs, error } = await supabase
       .from('songs')
@@ -1090,17 +1090,20 @@ export async function getAllMedia(): Promise<MediaFile[]> {
     });
     const startTime = performance.now();
 
-    // Optimized query - only select needed fields
+    // Optimized query - only select needed fields, with pagination for better performance
     const { data, error } = await supabase
       .from('media')
-      .select('id, name, url, type, size, folder, storagepath, uploadedat, createdat, updatedat')
+      .select('id, name, url, type, size, folder, storagepath, uploadedat, createdat, updatedat', { count: 'exact' })
       .order('uploadedat', { ascending: false })
-      .limit(1000); // Add reasonable limit
+      .limit(500); // Reduced limit for faster initial load
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Database error:', error);
+      throw error;
+    }
 
     const loadTime = performance.now() - startTime;
-    console.log(`⚡ Media loaded in ${loadTime.toFixed(2)}ms`);
+    console.log(`⚡ Media loaded in ${loadTime.toFixed(2)}ms (${data?.length || 0} files)`);
 
     const mediaFiles = (data || []).map(media => ({
       id: media.id,

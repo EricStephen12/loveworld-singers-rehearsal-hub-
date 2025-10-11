@@ -11,25 +11,28 @@ interface BasicTextEditorProps {
   id?: string;
 }
 
-export default function BasicTextEditor({ 
-  value, 
-  onChange, 
-  placeholder = "Type your content here...", 
+export default function BasicTextEditor({
+  value,
+  onChange,
+  placeholder = "Type your content here...",
   className = "",
-  id 
+  id
 }: BasicTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  // Only set initial value, don't update on every value change (prevents typing issues)
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value) {
+    if (editorRef.current && !isInitialized && value) {
       editorRef.current.innerHTML = value;
+      setIsInitialized(true);
     }
-  }, [value]);
+  }, [value, isInitialized]);
 
   const handleInput = () => {
     if (editorRef.current) {
@@ -214,7 +217,7 @@ export default function BasicTextEditor({
         contentEditable
         onInput={handleInput}
         onPaste={handlePaste}
-        className="min-h-[200px] p-4 focus:outline-none"
+        className="min-h-[200px] max-h-[400px] overflow-y-auto p-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
         style={{
           fontFamily: 'inherit',
           lineHeight: '1.6',

@@ -47,62 +47,15 @@ class SmartCacheManager {
     }
   }
 
-  // Set cache with smart invalidation
+  // Set cache with smart invalidation - DISABLED (no caching)
   public setCache(config: CacheConfig, data: any): void {
-    const now = Date.now();
-    const entry: SmartCacheEntry = {
-      data,
-      timestamp: now,
-      version: config.version || this.APP_VERSION,
-      expiresAt: now + config.duration,
-      priority: config.priority
-    };
-
-    // Remove oldest entries if cache is full
-    if (this.cache.size >= this.MAX_CACHE_SIZE) {
-      this.evictOldestEntries();
-    }
-
-    this.cache.set(config.key, entry);
-    
-    // Also store in localStorage for persistence (only in browser)
-    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem(`cache-${config.key}`, JSON.stringify(entry));
-      } catch (error) {
-        console.warn('Failed to store cache in localStorage:', error);
-      }
-    }
+    // No caching - always return without storing
+    return;
   }
 
-  // Get cache with smart validation
+  // Get cache with smart validation - DISABLED (no caching)
   public getCache(key: string): any | null {
-    // Check memory cache first
-    const memoryEntry = this.cache.get(key);
-    if (memoryEntry && this.isValidEntry(memoryEntry)) {
-      return memoryEntry.data;
-    }
-
-    // Check localStorage cache (only in browser)
-    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(`cache-${key}`);
-        if (stored) {
-          const entry: SmartCacheEntry = JSON.parse(stored);
-          if (this.isValidEntry(entry)) {
-            // Restore to memory cache
-            this.cache.set(key, entry);
-            return entry.data;
-          } else {
-            // Remove expired entry
-            localStorage.removeItem(`cache-${key}`);
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to read cache from localStorage:', error);
-      }
-    }
-
+    // No caching - always return null to force fresh data
     return null;
   }
 

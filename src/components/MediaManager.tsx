@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Upload, 
-  Image, 
-  Music, 
-  File, 
-  Trash2, 
-  Download, 
+import {
+  Upload,
+  Image,
+  Music,
+  File,
+  Trash2,
+  Download,
   Search,
   Filter,
   Grid,
@@ -20,11 +20,13 @@ import {
   Pause,
   Check,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  Settings
 } from 'lucide-react';
 import { uploadAudioToSupabase, deleteAudioFromSupabase } from '@/lib/supabase-storage';
 import { getAllMedia, createMediaFile, deleteMediaFile, MediaFile as DatabaseMediaFile, clearMediaCache } from '@/lib/database';
 import { Toast } from './Toast';
+import { runMediaDiagnostics, printDiagnostics } from '@/utils/media-diagnostics';
 
 interface MediaFile {
   id: string;
@@ -65,7 +67,8 @@ export default function MediaManager({
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
-  
+  const [runningDiagnostics, setRunningDiagnostics] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -80,20 +83,21 @@ export default function MediaManager({
       if (showLoading) setLoading(true);
       console.log('🚀 Loading media files...');
       const startTime = performance.now();
-      
+
       const mediaFiles = await getAllMedia();
-      
+
       const loadTime = performance.now() - startTime;
       console.log(`⚡ Media loaded in ${loadTime.toFixed(2)}ms`);
-      
+      console.log(`📊 Total media files: ${mediaFiles.length}`);
+
       // Show success message for slow loads
-      if (loadTime > 1000) {
+      if (loadTime > 1000 && showLoading) {
         addToast({
           type: 'info',
-          message: `Media loaded in ${(loadTime/1000).toFixed(1)}s - caching for faster future loads`
+          message: `Loaded ${mediaFiles.length} files in ${(loadTime/1000).toFixed(1)}s`
         });
       }
-      
+
       // Convert database format to component format
       const convertedFiles: MediaFile[] = mediaFiles.map(dbFile => ({
         id: dbFile.id.toString(),
@@ -103,13 +107,25 @@ export default function MediaManager({
         size: dbFile.size,
         folder: dbFile.folder || 'uncategorized',
         uploadedAt: dbFile.uploadedAt,
+        storagePath: dbFile.storagePath,
         createdAt: new Date(dbFile.createdAt),
         updatedAt: new Date(dbFile.updatedAt)
       }));
-      
+
       setFiles(convertedFiles);
+
+      if (showLoading && convertedFiles.length === 0) {
+        addToast({
+          type: 'info',
+          message: 'No media files found. Upload some files to get started!'
+        });
+      }
     } catch (error) {
-      console.error('Error loading media files:', error);
+      console.error('❌ Error loading media files:', error);
+      addToast({
+        type: 'error',
+        message: `Failed to load media: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
     } finally {
       setLoading(false);
     }
@@ -162,73 +178,115 @@ export default function MediaManager({
   };
 
   const handleFileUpload = async (fileList: FileList) => {
+    if (!fileList || fileList.length === 0) {
+      addToast({
+        type: 'error',
+        message: 'No files selected'
+      });
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
-    
+
+    let successCount = 0;
+    let failCount = 0;
+
     try {
+      console.log(`📤 Starting upload of ${fileList.length} file(s)...`);
+
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
         setUploadingFile(file.name);
-        
+        console.log(`📤 Uploading file ${i + 1}/${fileList.length}: ${file.name} (${formatFileSize(file.size)})`);
+
         // Determine file type
         let fileType: 'image' | 'audio' | 'video' | 'document' = 'document';
         if (file.type.startsWith('image/')) fileType = 'image';
         else if (file.type.startsWith('audio/')) fileType = 'audio';
         else if (file.type.startsWith('video/')) fileType = 'video';
 
-        // Upload to Supabase Storage with progress tracking
-        const uploadResult = await uploadAudioToSupabase(file, (progress) => {
-          setUploadProgress(progress);
-        });
-        
-        if (uploadResult) {
-          // Save to database with Supabase Storage info
-          const dbMediaFile = await createMediaFile({
-            name: file.name,
-            url: uploadResult.url,
-            type: fileType,
-            size: file.size,
-            folder: fileType,
-            storagePath: uploadResult.path, // Store path for deletion
-            uploadedAt: new Date().toISOString()
+        try {
+          // Upload to Supabase Storage with progress tracking
+          const uploadResult = await uploadAudioToSupabase(file, (progress) => {
+            setUploadProgress(progress);
           });
-          
-          if (dbMediaFile) {
-            const newFile: MediaFile = {
-              id: dbMediaFile.id.toString(),
-              name: dbMediaFile.name,
-              url: dbMediaFile.url,
-              type: dbMediaFile.type,
-              size: dbMediaFile.size,
-              uploadedAt: dbMediaFile.uploadedAt,
-              folder: dbMediaFile.folder,
-              storagePath: dbMediaFile.storagePath
-            };
-            
-            // Refresh local data to show new file
-            await loadFilesFromDatabase();
-            addToast({
-              type: 'success',
-              message: `File "${file.name}" uploaded successfully!`
+
+          if (uploadResult) {
+            console.log(`✅ File uploaded to storage: ${uploadResult.url}`);
+
+            // Save to database with Supabase Storage info
+            const dbMediaFile = await createMediaFile({
+              name: file.name,
+              url: uploadResult.url,
+              type: fileType,
+              size: file.size,
+              folder: fileType,
+              storagePath: uploadResult.path, // Store path for deletion
+              uploadedAt: new Date().toISOString()
             });
+
+            if (dbMediaFile) {
+              console.log(`✅ File saved to database with ID: ${dbMediaFile.id}`);
+              successCount++;
+
+              addToast({
+                type: 'success',
+                message: `✅ "${file.name}" uploaded successfully!`
+              });
+            } else {
+              console.error(`❌ Failed to save "${file.name}" to database`);
+              failCount++;
+              addToast({
+                type: 'error',
+                message: `❌ Failed to save "${file.name}" to database`
+              });
+            }
           } else {
+            console.error(`❌ Failed to upload "${file.name}" to storage`);
+            failCount++;
             addToast({
               type: 'error',
-              message: `Failed to save "${file.name}" to database`
+              message: `❌ Failed to upload "${file.name}" to storage`
             });
           }
-        } else {
+        } catch (fileError) {
+          console.error(`❌ Error uploading "${file.name}":`, fileError);
+          failCount++;
           addToast({
             type: 'error',
-            message: `Failed to upload "${file.name}"`
+            message: `❌ Error uploading "${file.name}": ${fileError instanceof Error ? fileError.message : 'Unknown error'}`
           });
         }
       }
+
+      // Refresh local data to show new files
+      if (successCount > 0) {
+        await loadFilesFromDatabase(false);
+      }
+
+      // Show summary
+      if (successCount > 0 && failCount === 0) {
+        addToast({
+          type: 'success',
+          message: `🎉 All ${successCount} file(s) uploaded successfully!`
+        });
+      } else if (successCount > 0 && failCount > 0) {
+        addToast({
+          type: 'warning',
+          message: `⚠️ ${successCount} succeeded, ${failCount} failed`
+        });
+      } else if (failCount > 0) {
+        addToast({
+          type: 'error',
+          message: `❌ All ${failCount} file(s) failed to upload`
+        });
+      }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('❌ Upload error:', error);
       addToast({
         type: 'error',
-        message: 'Upload failed. Please try again.'
+        message: `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     } finally {
       setUploading(false);
@@ -308,7 +366,48 @@ export default function MediaManager({
     });
   };
 
-  const handleAudioPlay = (file: MediaFile) => {
+  const handleRunDiagnostics = async () => {
+    setRunningDiagnostics(true);
+    addToast({
+      type: 'info',
+      message: 'Running diagnostics... Check console for results'
+    });
+
+    try {
+      const results = await runMediaDiagnostics();
+      printDiagnostics(results);
+
+      const failed = results.filter(r => r.status === 'fail').length;
+      const warnings = results.filter(r => r.status === 'warning').length;
+
+      if (failed > 0) {
+        addToast({
+          type: 'error',
+          message: `Diagnostics complete: ${failed} test(s) failed. Check console for details.`
+        });
+      } else if (warnings > 0) {
+        addToast({
+          type: 'warning',
+          message: `Diagnostics complete: ${warnings} warning(s). Check console for details.`
+        });
+      } else {
+        addToast({
+          type: 'success',
+          message: 'All diagnostics passed! ✅'
+        });
+      }
+    } catch (error) {
+      console.error('Diagnostics error:', error);
+      addToast({
+        type: 'error',
+        message: 'Failed to run diagnostics'
+      });
+    } finally {
+      setRunningDiagnostics(false);
+    }
+  };
+
+  const handleAudioPlay = async (file: MediaFile) => {
     if (playingAudioId === file.id) {
       // Pause current audio
       if (audioRef.current) {
@@ -319,20 +418,37 @@ export default function MediaManager({
       // Stop any currently playing audio
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
-      
+
       // Play new audio
       if (audioRef.current) {
-        audioRef.current.src = file.url;
-        audioRef.current.play().then(() => {
+        try {
+          console.log('🎵 Attempting to play audio:', file.url);
+
+          // Set crossOrigin to handle CORS
+          audioRef.current.crossOrigin = 'anonymous';
+          audioRef.current.src = file.url;
+
+          // Load the audio first
+          audioRef.current.load();
+
+          // Wait for it to be ready
+          await audioRef.current.play();
           setPlayingAudioId(file.id);
-        }).catch((error) => {
-          console.error('Error playing audio:', error);
+
+          console.log('✅ Audio playing successfully');
+          addToast({
+            type: 'success',
+            message: `Playing: ${file.name}`
+          });
+        } catch (error) {
+          console.error('❌ Error playing audio:', error);
           addToast({
             type: 'error',
-            message: 'Failed to play audio file'
+            message: `Failed to play audio: ${error instanceof Error ? error.message : 'Unknown error'}`
           });
-        });
+        }
       }
     }
   };
@@ -382,9 +498,20 @@ export default function MediaManager({
   const folders = ['all', ...Array.from(new Set(files.map(f => f.folder).filter(Boolean)))];
 
   return (
-    <div className="overflow-y-auto overflow-x-hidden bg-transparent">
+    <div className="h-full w-full flex flex-col bg-white relative overflow-hidden">
+      {/* Loading Overlay */}
+      {loading && files.length === 0 && (
+        <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+          <div className="text-center">
+            <RefreshCw className="w-12 h-12 mx-auto mb-4 text-purple-600 animate-spin" />
+            <p className="text-gray-600 font-medium">Loading media files...</p>
+            <p className="text-gray-400 text-sm mt-2">This may take a moment</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="mb-4">
+      <div className="flex-shrink-0 p-6 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-gray-900">
@@ -401,14 +528,25 @@ export default function MediaManager({
           </div>
           <div className="flex items-center gap-2">
             {!selectionMode && (
-              <button
-                onClick={() => loadFilesFromDatabase(true)}
-                disabled={loading}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
+              <>
+                <button
+                  onClick={handleRunDiagnostics}
+                  disabled={runningDiagnostics}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 text-sm"
+                  title="Run system diagnostics"
+                >
+                  <Settings className={`w-4 h-4 ${runningDiagnostics ? 'animate-spin' : ''}`} />
+                  Diagnose
+                </button>
+                <button
+                  onClick={() => loadFilesFromDatabase(true)}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </>
             )}
             {selectionMode && selectedFile && (
               <button
@@ -471,7 +609,7 @@ export default function MediaManager({
       </div>
 
       {/* Upload Area */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
+      <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gray-50">
         <div
           ref={dropZoneRef}
           onDragOver={handleDragOver}
@@ -517,7 +655,7 @@ export default function MediaManager({
       </div>
 
       {/* View Controls */}
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-white">
+      <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-white">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setViewMode('grid')}
@@ -542,8 +680,8 @@ export default function MediaManager({
         </p>
       </div>
 
-      {/* Files Grid/List */}
-      <div className="p-4">
+      {/* Files Grid/List - Scrollable Area */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-6">
         {uploading && (
           <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
@@ -698,7 +836,22 @@ export default function MediaManager({
       </div>
 
       {/* Hidden Audio Element */}
-      <audio ref={audioRef} preload="none" />
+      <audio
+        ref={audioRef}
+        preload="metadata"
+        crossOrigin="anonymous"
+        onError={(e) => {
+          console.error('❌ Audio element error:', e);
+          setPlayingAudioId(null);
+          addToast({
+            type: 'error',
+            message: 'Audio playback error. The file may be corrupted or inaccessible.'
+          });
+        }}
+        onLoadedData={() => {
+          console.log('✅ Audio loaded successfully');
+        }}
+      />
     </div>
   );
 }

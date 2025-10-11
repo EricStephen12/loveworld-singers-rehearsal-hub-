@@ -9,6 +9,7 @@ import { FirebaseCommentService } from "@/lib/firebase-comment-service";
 import { useUltraFastSongHistory } from "@/hooks/useUltraFastSongHistory";
 import { useRealtimeComments } from "@/hooks/useRealtimeComments";
 import { useRealtimeSongData } from "@/hooks/useRealtimeSongData";
+import { firebaseLowDataService } from "@/lib/firebase-low-data-service";
 
 interface SongDetailModalProps {
   selectedSong: PraiseNightSong | null;
@@ -769,7 +770,6 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                   <div className="text-center py-8">
                     <div className="text-gray-500 text-sm mb-2">No Solfas Available</div>
                     <div className="text-gray-400 text-xs">Solfas notation will be displayed here when available</div>
-                    <div className="text-gray-300 text-xs mt-2">Debug: {currentSongData?.solfas ? `Found: "${currentSongData.solfas}"` : 'Not found'}</div>
                   </div>
                 )}
               </div>
@@ -785,7 +785,6 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                             </div>
                   <p className="text-sm">No comments yet</p>
                   <p className="text-xs text-slate-400">Comments will appear here when added</p>
-                  <div className="text-gray-300 text-xs mt-2">Debug: {currentSongData?.comments ? `Found ${Array.isArray(currentSongData.comments) ? currentSongData.comments.length : 'not array'} comments` : 'No comments field'}</div>
                           </div>
               ) : (
                 (Array.isArray(currentSongData.comments) ? currentSongData.comments : []).map((comment: any) => (

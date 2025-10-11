@@ -4,10 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { User } from 'firebase/auth'
 import { FirebaseAuthService } from '@/lib/firebase-auth'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
-import { userCache, profileCache, invalidateUserCache } from '@/lib/smart-cache'
-import { cacheService, CACHE_KEYS } from '@/lib/cache-service'
-import { OfflineFallback } from '@/lib/offline-fallback'
-import { SessionManager } from '@/lib/session-manager'
+// Removed cache imports - using website-style simple approach
 import type { UserProfile } from '@/types/supabase'
 
 interface AuthContextType {
@@ -31,27 +28,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user?.uid) return
     
     try {
-      // Check cache first with new cache service
-      const cacheKey = `${CACHE_KEYS.USER_PROFILE}_${user.uid}`
-      const cachedProfile = cacheService.get(cacheKey)
-      
-      if (cachedProfile) {
-        console.log('🚀 Using cached profile - instant load!')
-        setProfile(cachedProfile as any)
-        return
-      }
-      
-      console.log('💾 Fetching fresh profile')
+      console.log('🌐 Website-style fetching fresh profile')
       const userProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid)
       if (userProfile) {
         setProfile(userProfile as any)
-        // Cache the profile with long TTL
-        cacheService.setUserData(cacheKey, userProfile)
-        // Also cache in old system for compatibility
-        profileCache.set(cacheKey, userProfile)
+        console.log('✅ Profile loaded successfully')
       }
     } catch (error) {
-      console.error('Profile refresh error:', error)
+      console.error('❌ Error refreshing profile:', error)
     }
   }, [user?.uid])
 
@@ -70,10 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Clear ALL possible storage
     try {
-      // Clear new cache service first
-      if (user?.uid) {
-        cacheService.invalidateUserData(user.uid)
-      }
+      // No cache clearing needed - using website-style approach
       
       // Clear authentication flags
       localStorage.removeItem('userAuthenticated')
@@ -110,12 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Storage clear error:', e)
     }
     
-    // Clear caches
-    try {
-      invalidateUserCache(user?.uid)
-    } catch (e) {
-      console.log('Cache clear error:', e)
-    }
+    // No cache clearing needed - using website-style approach
     
     // Force Firebase logout and wait for it
     try {
@@ -162,16 +138,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }, 5000) // 5 second timeout
         })
 
-        let currentUser
+        let currentUser: User | null = null
         try {
-          currentUser = await Promise.race([authPromise, timeoutPromise])
+          currentUser = await Promise.race([authPromise, timeoutPromise]) as User | null
         } catch (error) {
-          console.log('⚠️ Auth check failed, trying offline fallback...')
-          // Try offline fallback
-          currentUser = OfflineFallback.getCachedSession()
-          if (currentUser) {
-            console.log('📱 Using cached session from offline fallback')
-          }
+          console.log('⚠️ Auth check failed, no offline fallback needed')
+          // No offline fallback - using website-style approach
         }
 
         // Handle app resume and offline scenarios (like Instagram)
@@ -198,22 +170,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   if (currentUser) {
                     console.log('✅ Session restored successfully from Firebase')
                   } else {
-                    // If no Firebase user but we have auth indicators, use cached data
-                    console.log('🔄 Using cached auth data (Firebase unavailable)')
-                    currentUser = OfflineFallback.getCachedSession()
+                    // If no Firebase user but we have auth indicators, wait for Firebase
+                    console.log('🔄 Waiting for Firebase to restore session')
                   }
                 } catch (error) {
-                  console.log('❌ Firebase session restoration failed, using cached data')
-                  currentUser = OfflineFallback.getCachedSession()
+                  console.log('❌ Firebase session restoration failed, will retry')
                 }
               } else {
-                // Offline: Use cached session data or create offline user
-                console.log('📴 Offline mode - using cached session')
-                currentUser = OfflineFallback.getCachedSession() || OfflineFallback.createOfflineUser()
+                // Offline: Wait for connection
+                console.log('📴 Offline mode - waiting for connection')
               }
               
               // If we have any user data (from Firebase or cache), keep user logged in
-              if (currentUser) {
+          if (currentUser) {
                 console.log('✅ User session maintained (online/offline)')
               } else {
                 console.log('⚠️ No user data found, but keeping auth flags for next attempt')
@@ -240,12 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem('bypassLogin', 'true') // Additional flag for navigation
             }
 
-            // Create or validate session (Instagram-style - very long duration)
-            const existingSession = SessionManager.getCurrentSession()
-            if (!existingSession) {
-              // Create new session (30 days like Instagram)
-              SessionManager.createCustomSession(currentUser.uid, currentUser.email || '', 30, 'days')
-            }
+            // No session management needed - using website-style approach
 
             // Load profile with timeout protection and offline fallback
             try {
@@ -256,20 +220,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }, 3000) // 3 second timeout for profile
               })
 
-              let userProfile
+              let userProfile: UserProfile | null = null
               try {
-                userProfile = await Promise.race([profilePromise, profileTimeoutPromise])
+                userProfile = await Promise.race([profilePromise, profileTimeoutPromise]) as UserProfile | null
               } catch (error) {
-                console.log('⚠️ Profile load failed, trying offline fallback...')
-                // Try offline fallback
-                userProfile = OfflineFallback.getCachedProfile()
-                if (userProfile) {
-                  console.log('📱 Using cached profile from offline fallback')
-                }
+                console.log('⚠️ Profile load failed, will retry later')
+                // No offline fallback - using website-style approach
               }
 
-                  if (isMounted && userProfile) {
-                    setProfile(userProfile)
+              if (isMounted && userProfile) {
+                setProfile(userProfile)
               }
             } catch (error) {
               console.error('Profile load error:', error)
@@ -344,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             console.log('📋 Loading profile for user:', user.uid)
             const userProfile = await FirebaseDatabaseService.getDocument('profiles', user.uid)
-              if (isMounted && userProfile) {
+            if (isMounted && userProfile) {
               console.log('✅ Profile loaded successfully')
               setProfile(userProfile as any)
             } else {
@@ -431,7 +391,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Remove automatic redirects - let AuthGuard handle all redirects
   // This prevents redirect loops between AuthContext and AuthGuard
-
+  
   // Debug logging
   console.log('AuthContext: Profile state:', {
     hasProfile: !!profile,

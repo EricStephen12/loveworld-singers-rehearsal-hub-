@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, LogOut, Menu, X, Bell, Music, BarChart3, HelpCircle, Home, Play, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
+import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, LogOut, Menu, X, Bell, Music, BarChart3, HelpCircle, Home, Play, Loader2, AlertTriangle, Trash2, ChevronDown, ChevronUp, MapPin, Phone, Mail, Shield, Briefcase } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -57,8 +57,28 @@ function ProfilePage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState({
+    account: false,
+    personal: false,
+    location: false,
+    ministry: false,
+    contact: false,
+    qrCode: false,
+    attendance: false
+  })
+
   const router = useRouter()
   const { user, signOut, profile: currentProfile, isLoading, refreshProfile } = useAuth()
+
+  // Toggle section expansion
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
 
   // Set client flag to prevent hydration issues
   useEffect(() => {
@@ -630,17 +650,25 @@ function ProfilePage() {
 
 
       {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto">
-      {/* Profile Header */}
-      <div className="px-4 py-8 bg-gradient-to-br from-purple-50 to-blue-50">
-        <div className="text-center">
+      <div className="flex-1 overflow-y-auto bg-gray-50">
+      {/* Profile Header - Modern TikTok Style */}
+      <div className="relative px-4 pt-6 pb-8 bg-gradient-to-br from-purple-600 via-purple-500 to-blue-500">
+        {/* Decorative Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
+        </div>
+
+        <div className="relative text-center">
+          {/* Profile Image with Glow Effect */}
           <div className="relative inline-block mb-4">
-            <div className="relative w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mx-auto overflow-hidden">
+            <div className="absolute inset-0 bg-white rounded-full blur-xl opacity-50 scale-110"></div>
+            <div className="relative w-28 h-28 bg-white rounded-full flex items-center justify-center mx-auto overflow-hidden ring-4 ring-white/30 shadow-2xl">
               {profileImage ? (
                 <>
-                  <img 
-                    src={profileImage} 
-                    alt="Profile" 
+                  <img
+                    src={profileImage}
+                    alt="Profile"
                     className="w-full h-full object-cover"
                   />
                   {isEditing && (
@@ -662,43 +690,51 @@ function ProfilePage() {
                           }
                         }
                       }}
-                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      className="absolute top-1 right-1 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg hover:scale-110"
                       title="Delete image"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </button>
                   )}
                 </>
               ) : (
-              <User className="w-12 h-12 text-white" />
+              <User className="w-14 h-14 text-purple-600" />
               )}
             </div>
+
+            {/* Edit Button with Animation */}
             <button
               onClick={() => {
                 setIsEditing(!isEditing)
                 setSaveMessage('')
               }}
-              className="absolute bottom-0 right-0 w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition-all hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              className="absolute bottom-0 right-0 w-11 h-11 bg-white text-purple-600 rounded-full flex items-center justify-center shadow-xl hover:shadow-2xl transition-all hover:scale-110 active:scale-95 focus:outline-none focus:ring-4 focus:ring-white/50"
               aria-label="Edit Profile"
             >
-              <Edit className="w-5 h-5 text-white" />
+              <Edit className="w-5 h-5" />
             </button>
           </div>
-          
-          <h2 className="text-2xl font-outfit-bold text-gray-800 mb-2">
+
+          {/* User Info */}
+          <h2 className="text-2xl font-bold text-white mb-1 drop-shadow-lg">
             {userProfile.fullName || 'User'}
           </h2>
-          <p className="text-xs text-gray-500 mb-4">{userProfile.email || 'user@example.com'}</p>
-          
-          <div className="flex items-center justify-center space-x-2 flex-wrap gap-2">
-            <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-poppins-medium">
-              {userProfile.designation || 'Member'}
-            </span>
-            <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-poppins-medium">
-              {userProfile.administration || 'General'}
-            </span>
+          <p className="text-sm text-white/90 mb-4 drop-shadow">{userProfile.email || 'user@example.com'}</p>
+
+          {/* Badges - Horizontal Scroll */}
+          <div className="flex items-center justify-center gap-2 flex-wrap px-4">
+            {userProfile.designation && (
+              <span className="text-xs bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full font-medium border border-white/30 shadow-lg">
+                {userProfile.designation}
+              </span>
+            )}
+            {userProfile.administration && (
+              <span className="text-xs bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full font-medium border border-white/30 shadow-lg">
+                {userProfile.administration}
+              </span>
+            )}
             {selectedGroup && (
-              <span className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full font-poppins-medium">
+              <span className="text-xs bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full font-medium border border-white/30 shadow-lg">
                 {availableGroups.find(g => g.value === selectedGroup)?.label || selectedGroup}
               </span>
             )}
@@ -707,54 +743,88 @@ function ProfilePage() {
       </div>
 
 
-      {/* Account Information */}
-      <div className="px-4 py-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Account Information</h3>
-          
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 mb-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                userProfile.socialProvider === 'google' ? 'bg-blue-500' : 
-                userProfile.socialProvider === 'kingschat' ? 'bg-purple-500' : 'bg-gray-500'
-              }`}>
-                {userProfile.socialProvider === 'google' ? (
-                  <svg className="w-4 h-4 text-white" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  </svg>
-                ) : userProfile.socialProvider === 'kingschat' ? (
-                  <img 
-                    src="/kingschat.jpeg" 
-                    alt="KingsChat" 
-                    className="w-4 h-4 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white font-bold text-sm">@</span>
-                )}
+      {/* Account Information - Collapsible */}
+      <div className="px-4 mt-4">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+          <button
+            onClick={() => toggleSection('account')}
+            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-md">
+                <Shield className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <p className="text-gray-900 text-sm font-medium">
-                  {userProfile.socialProvider === 'google' ? 'Google Account' : 
-                   userProfile.socialProvider === 'kingschat' ? 'KingsChat Account' : 'Email Account'}
-                </p>
-                <p className="text-gray-600 text-xs">{userProfile.socialId}</p>
+              <div className="text-left">
+                <h3 className="text-base font-bold text-gray-900">Account</h3>
+                <p className="text-xs text-gray-500">Login & security</p>
+              </div>
+            </div>
+            <div className={`transform transition-transform duration-200 ${expandedSections.account ? 'rotate-180' : ''}`}>
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            </div>
+          </button>
+
+          <div className={`overflow-hidden transition-all duration-300 ${expandedSections.account ? 'max-h-96' : 'max-h-0'}`}>
+            <div className="px-4 pb-4 pt-2">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md ${
+                    userProfile.socialProvider === 'google' ? 'bg-blue-500' :
+                    userProfile.socialProvider === 'kingschat' ? 'bg-purple-500' : 'bg-gray-500'
+                  }`}>
+                    {userProfile.socialProvider === 'google' ? (
+                      <svg className="w-5 h-5 text-white" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      </svg>
+                    ) : userProfile.socialProvider === 'kingschat' ? (
+                      <img
+                        src="/kingschat.jpeg"
+                        alt="KingsChat"
+                        className="w-5 h-5 rounded-full object-cover"
+                      />
+                    ) : (
+                      <Mail className="w-5 h-5 text-white" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {userProfile.socialProvider === 'google' ? 'Google Account' :
+                       userProfile.socialProvider === 'kingschat' ? 'KingsChat Account' : 'Email Account'}
+                    </p>
+                    <p className="text-xs text-gray-600 truncate">{userProfile.socialId}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Personal Information */}
-      <div className="px-4 py-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Personal Information</h3>
-            {isEditing && (
-              <span className="text-xs text-purple-600 font-medium">Editing Mode</span>
-            )}
-          </div>
+      {/* Personal Information - Collapsible */}
+      <div className="px-4 mt-3">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+          <button
+            onClick={() => toggleSection('personal')}
+            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-md">
+                <User className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-base font-bold text-gray-900">Personal Info</h3>
+                <p className="text-xs text-gray-500">
+                  {isEditing ? '✏️ Editing mode' : 'Name, contact & details'}
+                </p>
+              </div>
+            </div>
+            <div className={`transform transition-transform duration-200 ${expandedSections.personal ? 'rotate-180' : ''}`}>
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            </div>
+          </button>
 
-          <div className="space-y-4">
+          <div className={`overflow-hidden transition-all duration-300 ${expandedSections.personal ? 'max-h-[2000px]' : 'max-h-0'}`}>
+            <div className="px-4 pb-4 pt-2">
             {isEditing ? (
               <>
                 {/* Profile Image Upload */}
@@ -1057,241 +1127,319 @@ function ProfilePage() {
               </>
             ) : (
               <>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">First Name</label>
-                    <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.firstName || 'Not provided'}</p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Middle Name</label>
-                    <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.middleName || 'Not provided'}</p>
-              </div>
-            </div>
-            
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Last Name</label>
-                  <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.lastName || 'Not provided'}</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Gender</label>
-                    <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.gender || 'Not provided'}</p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Birthday</label>
-                    <p className="text-sm font-medium text-gray-800 mt-1">
-                      {userProfile.birthday ? new Date(userProfile.birthday).toLocaleDateString() : 'Not provided'}
-                    </p>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Phone Number</label>
-                  <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.phoneNumber || 'Not provided'}</p>
-            </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Location Information */}
-      <div className="px-4 py-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Location Information</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Region</label>
-              <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.region || 'Not provided'}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Zone</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.zone || 'Not provided'}</p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Church</label>
-                <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.church || 'Not provided'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Ministry Information */}
-      <div className="px-4 py-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Ministry Information</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Designation</label>
-              <div className="mt-1">
-                <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                  {userProfile.designation || 'Not specified'}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Administration</label>
-              <div className="mt-1">
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                  {userProfile.administration || 'Not specified'}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-gray-700 uppercase tracking-wide font-bold">Groups</label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {userProfile.groups.map((group, index) => (
-                  <span key={index} className="bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-medium">
-                    {group}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contact Information */}
-      <div className="px-4 py-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Contact Information</h3>
-          
-          <div className="space-y-4">
-            
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Phone Number</label>
-              <p className="text-sm font-medium text-gray-800 mt-1">{userProfile.phoneNumber || 'Not provided'}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* QR Code Check-in */}
-      <div className="px-4 py-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Attendance Check-in</h3>
-            {qrGenerated && timeLeft > 0 && (
-            <div className="flex items-center space-x-1 text-xs text-gray-500">
-              <Clock className="w-3 h-3" />
-                <span>Expires in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
-            </div>
-            )}
-          </div>
-          
-          <div className="text-center">
-            {qrGenerated && qrCode ? (
-              <div className="mb-4">
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <QRCodeGenerator 
-                      value={qrCode} 
-                      size={200} 
-                      className="mx-auto"
-                    />
-                    {/* Fallback if QR code fails */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 hidden" id="qr-fallback">
-              <div className="text-center">
-                        <QrCode className="w-16 h-16 text-gray-400 mx-auto mb-2" />
-                        <p className="text-xs text-gray-500">QR Code unavailable</p>
+                {/* View Mode - Modern Cards */}
+                <div className="space-y-3">
+                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">First Name</label>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.firstName || 'Not set'}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Middle</label>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.middleName || 'Not set'}</p>
                       </div>
                     </div>
                   </div>
-                </div>
-                <p className="text-xs text-gray-600 font-mono mt-2">{qrCode}</p>
-                <button
-                  onClick={generateQRCode}
-                  className="mt-3 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  Generate New QR Code
-                </button>
-              </div>
-            ) : (
-              <div className="text-center">
-                <div className="w-32 h-32 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                  <QrCode className="w-16 h-16 text-gray-400" />
-            </div>
-                <p className="text-sm text-gray-600 mb-4">Generate a QR code for attendance check-in</p>
-              <button 
-                  onClick={generateQRCode}
-                  className="px-6 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                  Generate QR Code
-              </button>
-                <p className="text-xs text-gray-500 mt-2">QR code expires in 5 minutes</p>
-            </div>
-            )}
-          </div>
-        </div>
-      </div>
 
+                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Last Name</label>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.lastName || 'Not set'}</p>
+                  </div>
 
-      {/* Recent Attendance */}
-      <div className="px-4 py-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-800 mb-3">Recent Attendance</h3>
-          
-          {attendanceHistory.length > 0 ? (
-          <div className="space-y-3">
-            {attendanceHistory.map((record, index) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                      record.status === 'present' ? 'bg-green-500' : 
-                      record.status === 'late' ? 'bg-yellow-500' : 'bg-red-500'
-                  }`}></div>
-                  <div>
-                      <p className="text-sm font-medium text-gray-800">{record.event_name}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(record.check_in_time).toLocaleDateString()}
-                      </p>
+                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Gender</label>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.gender || 'Not set'}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Birthday</label>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">
+                          {userProfile.birthday ? new Date(userProfile.birthday).toLocaleDateString() : 'Not set'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide flex items-center gap-1">
+                      <Phone className="w-3 h-3" />
+                      Phone Number
+                    </label>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.phoneNumber || 'Not set'}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-xs font-medium ${
-                      record.status === 'present' ? 'text-green-600' : 
-                      record.status === 'late' ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
-                      {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(record.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-          ) : (
-            <div className="text-center py-6">
-              <Calendar className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">No attendance records yet</p>
-              <p className="text-xs text-gray-400">Check in using your QR code to start tracking</p>
-            </div>
-          )}
-          
-          {/* Danger Zone - Inside Recent Attendance Section */}
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-red-800 mb-2">Danger Zone</h3>
-              <p className="text-xs text-red-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-              <button
-                onClick={() => setShowDeleteDialog(true)}
-                className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Account
-              </button>
+              </>
+            )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Location Information - Collapsible */}
+      <div className="px-4 mt-3">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+          <button
+            onClick={() => toggleSection('location')}
+            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-md">
+                <MapPin className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-base font-bold text-gray-900">Location</h3>
+                <p className="text-xs text-gray-500">Region, zone & church</p>
+              </div>
+            </div>
+            <div className={`transform transition-transform duration-200 ${expandedSections.location ? 'rotate-180' : ''}`}>
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            </div>
+          </button>
+
+          <div className={`overflow-hidden transition-all duration-300 ${expandedSections.location ? 'max-h-96' : 'max-h-0'}`}>
+            <div className="px-4 pb-4 pt-2 space-y-3">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
+                <label className="text-xs text-green-700 font-semibold uppercase tracking-wide">Region</label>
+                <p className="text-sm font-bold text-gray-900 mt-1">{userProfile.region || 'Not set'}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Zone</label>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.zone || 'Not set'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <label className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Church</label>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{userProfile.church || 'Not set'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ministry Information - Collapsible */}
+      <div className="px-4 mt-3">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+          <button
+            onClick={() => toggleSection('ministry')}
+            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
+                <Briefcase className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-base font-bold text-gray-900">Ministry</h3>
+                <p className="text-xs text-gray-500">Role & groups</p>
+              </div>
+            </div>
+            <div className={`transform transition-transform duration-200 ${expandedSections.ministry ? 'rotate-180' : ''}`}>
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            </div>
+          </button>
+
+          <div className={`overflow-hidden transition-all duration-300 ${expandedSections.ministry ? 'max-h-96' : 'max-h-0'}`}>
+            <div className="px-4 pb-4 pt-2 space-y-3">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-100">
+                <label className="text-xs text-purple-700 font-semibold uppercase tracking-wide">Designation</label>
+                <div className="mt-2">
+                  <span className="inline-flex items-center bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm">
+                    <Music className="w-4 h-4 mr-1.5" />
+                    {userProfile.designation || 'Not specified'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-3 border border-blue-100">
+                <label className="text-xs text-blue-700 font-semibold uppercase tracking-wide">Administration</label>
+                <div className="mt-2">
+                  <span className="inline-flex items-center bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm">
+                    <Award className="w-4 h-4 mr-1.5" />
+                    {userProfile.administration || 'Not specified'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
+                <label className="text-xs text-green-700 font-semibold uppercase tracking-wide">Groups</label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {userProfile.groups.map((group, index) => (
+                    <span key={index} className="inline-flex items-center bg-green-100 text-green-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm">
+                      <Users className="w-3.5 h-3.5 mr-1.5" />
+                      {group}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* QR Code Check-in - Collapsible */}
+      <div className="px-4 mt-3">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+          <button
+            onClick={() => toggleSection('qrCode')}
+            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
+                <QrCode className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-base font-bold text-gray-900">QR Check-in</h3>
+                <p className="text-xs text-gray-500">
+                  {qrGenerated && timeLeft > 0 ? `⏱️ ${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')} left` : 'Tap to generate'}
+                </p>
+              </div>
+            </div>
+            <div className={`transform transition-transform duration-200 ${expandedSections.qrCode ? 'rotate-180' : ''}`}>
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            </div>
+          </button>
+
+          <div className={`overflow-hidden transition-all duration-300 ${expandedSections.qrCode ? 'max-h-[600px]' : 'max-h-0'}`}>
+            <div className="px-4 pb-4 pt-2">
+              {qrGenerated && qrCode ? (
+                <div className="text-center">
+                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
+                    <div className="inline-block bg-white p-4 rounded-2xl shadow-lg">
+                      <QRCodeGenerator
+                        value={qrCode}
+                        size={200}
+                        className="mx-auto"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-600 font-mono mt-3 bg-white/50 backdrop-blur-sm px-3 py-2 rounded-lg inline-block">{qrCode}</p>
+
+                    {/* Timer Badge */}
+                    <div className="mt-4 inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm">
+                      <Clock className="w-4 h-4 text-indigo-600" />
+                      <span className="text-sm font-bold text-gray-900">
+                        {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={generateQRCode}
+                      className="mt-4 w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-bold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                    >
+                      🔄 Generate New Code
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+                    <QrCode className="w-16 h-16 text-indigo-600" />
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4 font-medium">Generate your attendance QR code</p>
+                  <button
+                    onClick={generateQRCode}
+                    className="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                  >
+                    ✨ Generate QR Code
+                  </button>
+                  <p className="text-xs text-gray-500 mt-3">Valid for 5 minutes</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      {/* Recent Attendance - Collapsible */}
+      <div className="px-4 mt-3">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+          <button
+            onClick={() => toggleSection('attendance')}
+            className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors active:bg-gray-100"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-md">
+                <Calendar className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-base font-bold text-gray-900">Attendance</h3>
+                <p className="text-xs text-gray-500">Recent check-ins</p>
+              </div>
+            </div>
+            <div className={`transform transition-transform duration-200 ${expandedSections.attendance ? 'rotate-180' : ''}`}>
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            </div>
+          </button>
+
+          <div className={`overflow-hidden transition-all duration-300 ${expandedSections.attendance ? 'max-h-[800px]' : 'max-h-0'}`}>
+            <div className="px-4 pb-4 pt-2">
+              {attendanceHistory.length > 0 ? (
+                <div className="space-y-2">
+                  {attendanceHistory.map((record, index) => (
+                    <div key={index} className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full shadow-sm ${
+                          record.status === 'present' ? 'bg-green-500' :
+                          record.status === 'late' ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}></div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{record.event_name}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(record.check_in_time).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xs font-bold ${
+                          record.status === 'present' ? 'text-green-600' :
+                          record.status === 'late' ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(record.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
+                    <Calendar className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-700 mb-1">No attendance yet</p>
+                  <p className="text-xs text-gray-500">Use your QR code to check in</p>
+                </div>
+              )}
+
+              {/* Danger Zone */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="bg-gradient-to-br from-red-50 to-pink-50 border-2 border-red-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    <h3 className="text-sm font-bold text-red-800">Danger Zone</h3>
+                  </div>
+                  <p className="text-xs text-red-600 mb-3">Deleting your account is permanent and cannot be undone.</p>
+                  <button
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Account
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Spacing */}
+      <div className="h-6"></div>
 
       </div> {/* Close Scrollable Content Container */}
 

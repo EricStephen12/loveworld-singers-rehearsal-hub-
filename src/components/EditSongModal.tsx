@@ -25,7 +25,7 @@ interface EditSongModalProps {
   onClose: () => void;
   song: PraiseNightSong | null;
   categories: Category[];
-  praiseNightCategories: Array<{id: number, name: string, description: string, date: string, location: string, icon: string, color: string, isActive: boolean, createdAt: Date, updatedAt: Date, countdown: {days: number, hours: number, minutes: number, seconds: number}}>;
+  praiseNightCategories: Array<{id: string, name: string, description: string, date: string, location: string, icon: string, color: string, isActive: boolean, createdAt: Date, updatedAt: Date, countdown: {days: number, hours: number, minutes: number, seconds: number}}>;
   onUpdate: (updatedSong: PraiseNightSong) => void;
 }
 
@@ -589,10 +589,19 @@ export default function EditSongModal({
     setSongComments((Array.isArray(songComments) ? songComments : []).filter(comment => comment.id !== commentId));
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('🎵 EditSongModal: isOpen is false, not rendering');
+    return null;
+  }
 
   // Don't render form until song data is properly loaded (for editing mode)
-  if (song && !song.title) return null;
+  // Only check this for existing songs (has id), not for new songs
+  if (song && song.id && !song.title) {
+    console.log('🎵 EditSongModal: Existing song without title, not rendering');
+    return null;
+  }
+
+  console.log('🎵 EditSongModal: Rendering modal with song:', song);
 
   return (
     <>

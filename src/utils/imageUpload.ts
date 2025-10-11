@@ -142,7 +142,7 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
 // Ultra-fast banner image upload function for admin pages
 export async function uploadBannerImage(
   file: File,
-  pageId: number
+  pageId: number | string
 ): Promise<UploadResult> {
   try {
     console.log('⚡ Starting ULTRA-FAST banner image upload...');
@@ -152,7 +152,7 @@ export async function uploadBannerImage(
       type: file.type
     });
     console.log('📄 Page ID:', pageId);
-    
+
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
@@ -181,9 +181,10 @@ export async function uploadBannerImage(
       reduction: `${Math.round((1 - compressedFile.size / file.size) * 100)}%`
     });
 
-    // Create unique filename
+    // Create unique filename (sanitize pageId for filename)
     const fileExt = 'webp'; // Use WebP for better compression
-    const fileName = `page-${pageId}-banner-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    const sanitizedPageId = String(pageId).replace(/[^a-zA-Z0-9-]/g, '_');
+    const fileName = `page-${sanitizedPageId}-banner-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     const filePath = `banner-images/${fileName}`;
 
     console.log('📤 Uploading compressed image to path:', filePath);

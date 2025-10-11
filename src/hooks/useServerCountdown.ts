@@ -138,8 +138,16 @@ export function useServerCountdown({
           
           // Use the countdown data as-is from Firebase
           target = new Date(serverTime.getTime() + totalMs);
+          
+          console.log('🕐 Countdown data processing:', {
+            countdownData,
+            totalMs,
+            serverTime: serverTime.toISOString(),
+            target: target.toISOString()
+          });
         } else {
           // If no countdown data, don't show countdown
+          console.log('🕐 No countdown data available');
           setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
           setIsLoading(false);
           return;

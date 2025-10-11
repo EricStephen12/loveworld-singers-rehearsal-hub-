@@ -75,39 +75,13 @@ export class OfflineManager {
 
   // Cache data for offline use
   public async cacheData(key: string, data: any): Promise<void> {
-    try {
-      // Store in memory cache
-      this.dataCache.set(key, {
-        data,
-        timestamp: Date.now(),
-        version: '1.0'
-      });
-
-      // Store in localStorage as backup
-      await this.saveCachedData();
-
-      // If service worker is available, cache there too
-      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          type: 'CACHE_DATA',
-          key: `/api/${key}`,
-          data
-        });
-      }
-
-      console.log(`Data cached for offline use: ${key}`);
-    } catch (error) {
-      console.error(`Failed to cache data for ${key}:`, error);
-    }
+    // No caching - always fetch fresh data
+    return;
   }
 
-  // Get cached data
+  // Get cached data - DISABLED (no caching)
   public getCachedData(key: string): any | null {
-    const cached = this.dataCache.get(key);
-    if (cached) {
-      console.log(`Retrieved cached data: ${key}`);
-      return cached.data;
-    }
+    // No caching - always return null to force fresh data
     return null;
   }
 

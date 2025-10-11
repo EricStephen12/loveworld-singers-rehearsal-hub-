@@ -9,7 +9,7 @@ export interface HomeSearchResult {
   subtitle?: string;
   description?: string;
   url: string;
-  pageId?: number;
+  pageId?: string;
   category?: string;
   status?: 'heard' | 'unheard';
   icon?: string;

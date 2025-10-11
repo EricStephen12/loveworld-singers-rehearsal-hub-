@@ -31,11 +31,15 @@ function PraiseNightPageContent() {
   const songParam = searchParams.get('song');
 
   // Use real-time Supabase data for instant updates
-  const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, preloadData, refreshData } = useRealtimeData();
+  const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, refreshData } = useRealtimeData();
   const { signOut } = useAuth();
   const [currentPraiseNight, setCurrentPraiseNightState] = useState<PraiseNight | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Load songs on demand like admin does
+  const [allSongsFromFirebase, setAllSongsFromFirebase] = useState<PraiseNightSong[]>([]);
+  const [songsLoading, setSongsLoading] = useState(false);
 
   // Filter praise nights by category if specified
   const filteredPraiseNights = useMemo(() => {
@@ -49,10 +53,7 @@ function PraiseNightPageContent() {
   }, [allPraiseNights, categoryFilter, loading]);
 
   // Preload data for instant access
-  useEffect(() => {
-    // Start preloading immediately for instant navigation
-    preloadData();
-  }, [preloadData]);
+  // No preloading needed - data loads fresh on each request
 
   // Refresh data when page becomes visible (after admin updates)
   useEffect(() => {
@@ -92,26 +93,32 @@ function PraiseNightPageContent() {
   // Handle page parameter from search results
   useEffect(() => {
     if (pageParam && allPraiseNights.length > 0) {
-      const pageId = parseInt(pageParam);
-      const targetPage = allPraiseNights.find(page => page.id === pageId);
+      // Handle both number IDs and Firebase document IDs
+      const targetPage = allPraiseNights.find(page => 
+        page.id === pageParam || 
+        page.id === pageParam.toString() || 
+        page.id === parseInt(pageParam).toString()
+      );
       if (targetPage) {
         setCurrentPraiseNightState(targetPage);
-        console.log('🎯 Navigated to page from search:', targetPage.name);
+        console.log('🎯 Navigated to page from search:', targetPage.name, 'ID:', targetPage.id);
+      } else {
+        console.log('❌ Page not found for param:', pageParam, 'Available pages:', allPraiseNights.map(p => ({ id: p.id, name: p.name })));
       }
     }
   }, [pageParam, allPraiseNights]);
 
   // Handle song parameter from search results
   useEffect(() => {
-    if (songParam && currentPraiseNight?.songs) {
-      const targetSong = currentPraiseNight.songs.find(song => song.title === decodeURIComponent(songParam));
+    if (songParam && currentPraiseNight && allSongsFromFirebase.length > 0) {
+      const targetSong = allSongsFromFirebase.find(song => song.title === decodeURIComponent(songParam));
       if (targetSong) {
-        const songIndex = currentPraiseNight.songs.indexOf(targetSong);
+        const songIndex = allSongsFromFirebase.indexOf(targetSong);
         handleSongClick(targetSong, songIndex);
         console.log('🎯 Opened song from search:', targetSong.title);
       }
     }
-  }, [songParam, currentPraiseNight]);
+  }, [songParam, currentPraiseNight, allSongsFromFirebase]);
 
   // Auto-select first page only when no page is selected and no page parameter
   useEffect(() => {
@@ -168,7 +175,7 @@ function PraiseNightPageContent() {
 
 
   // ✅ Reset filter to 'heard' only when switching to a different page (not when just loading)
-  const [previousPageId, setPreviousPageId] = useState<number | null>(null);
+  const [previousPageId, setPreviousPageId] = useState<string | null>(null);
   useEffect(() => {
     if (currentPraiseNight && currentPraiseNight.id !== previousPageId) {
       setActiveFilter('heard');
@@ -222,15 +229,8 @@ function PraiseNightPageContent() {
 
     console.log('⚠️ No banner image in database, using fallback');
 
-    // Fallback to hardcoded images for specific pages
-    switch (currentPraiseNight.id) {
-      case 16:
-        return "/Ecards/1000876785.png";
-      case 17:
-        return "/Ecards/1000876785.png"; // TODO: replace with PN17 e-card when available
-      default:
-        return "/Ecards/1000876785.png";
-    }
+    // Fallback to default image
+    return "/Ecards/1000876785.png";
   }, [currentPraiseNight]);
 
   const toggleMenu = () => {
@@ -278,6 +278,14 @@ function PraiseNightPageContent() {
     filteredPraiseNightsNames: filteredPraiseNights.map(p => p.name)
   });
 
+  // Debug countdown timer output
+  console.log('🕐 Countdown Timer Output:', {
+    timeLeft,
+    countdownLoading,
+    countdownError,
+    hasTimeLeft: timeLeft.days > 0 || timeLeft.hours > 0 || timeLeft.minutes > 0 || timeLeft.seconds > 0
+  });
+
   // Debug countdown and rehearsal count data
   useEffect(() => {
     console.log('🔍 Debug - Current Praise Night:', {
@@ -304,8 +312,13 @@ function PraiseNightPageContent() {
 
   // Handle category selection and close drawer
   const handleCategorySelect = (category: string) => {
+    console.log('🎯 Category selected:', category);
+    console.log('🎯 Current active category:', activeCategory);
+    console.log('🎯 Modal open:', isSongDetailOpen);
+    console.log('🎯 Song playing:', isPlaying);
     setActiveCategory(category);
     setIsCategoryDrawerOpen(false);
+    console.log('🎯 Category set to:', category);
   };
 
   // Handle song card click - opens song detail modal
@@ -414,9 +427,23 @@ function PraiseNightPageContent() {
     return categoryIconMap[normalizedCategory] || Music; // Default icon
   };
 
-  // Use songs from the useRealtimeData hook instead of fetching separately
-  const allSongsFromFirebase = currentPraiseNight?.songs || [];
-  const songsLoading = false; // No separate loading since we use the hook data
+  // Load songs when a page is selected (same as admin)
+  useEffect(() => {
+    if (currentPraiseNight) {
+      setSongsLoading(true);
+      getCurrentSongs(currentPraiseNight.id).then(songs => {
+        console.log(`📊 Loaded ${songs.length} songs for page ${currentPraiseNight.id}`);
+        setAllSongsFromFirebase(songs);
+        setSongsLoading(false);
+      }).catch(error => {
+        console.error('Error loading songs:', error);
+        setAllSongsFromFirebase([]);
+        setSongsLoading(false);
+      });
+    } else {
+      setAllSongsFromFirebase([]);
+    }
+  }, [currentPraiseNight, getCurrentSongs]);
   
   // Use the songs directly since they're already filtered by page
   const finalSongData = useMemo(() => {
@@ -448,7 +475,10 @@ function PraiseNightPageContent() {
     songs: finalSongData.map(song => ({
       title: song.title,
       category: song.category,
-      status: song.status
+      status: song.status,
+      leadSinger: song.leadSinger,
+      rehearsalCount: song.rehearsalCount,
+      allFields: Object.keys(song)
     }))
   });
 
@@ -492,11 +522,11 @@ function PraiseNightPageContent() {
 
   // ✅ Update active category when categories change (e.g., switching pages)
   useEffect(() => {
-    if (songCategories.length > 0) {
-      // Always set to first category when categories change
+    if (songCategories.length > 0 && !activeCategory) {
+      // Only set to first category if no category is currently selected
       setActiveCategory(songCategories[0]);
     }
-  }, [songCategories]);
+  }, [songCategories, activeCategory]);
 
   // Fallback data if no centralized songs available
   const fallbackSongData = [
@@ -787,8 +817,8 @@ function PraiseNightPageContent() {
                    categoryFilter === 'pre-rehearsal' && filteredPraiseNights.length === 0 ? 'Pre-Rehearsal' :
                    (currentPraiseNight?.name || '')}
                 </h1>
-                {/* Always show countdown for debugging - remove this condition later */}
-                {currentPraiseNight && (
+                {/* Show countdown only when there's actual countdown data and not on archives */}
+                {currentPraiseNight && currentPraiseNight.countdown && categoryFilter !== 'archive' && (timeLeft.days > 0 || timeLeft.hours > 0 || timeLeft.minutes > 0 || timeLeft.seconds > 0) && (
                   <div className="mt-0.5">
                     {/* Countdown Display */}
                     <div className="flex items-center gap-0.5 text-xs">
@@ -1315,7 +1345,7 @@ function PraiseNightPageContent() {
                             {song.title}
                           </h3>
                           <p className="text-xs lg:text-sm text-slate-500 mt-0.5 leading-tight font-bold">
-                            Singer: {song.leadSinger ? song.leadSinger.split(',')[0].trim() : 'Unknown'}
+                            Singer: {song.leadSinger || 'Unknown'}
                           </p>
                         </div>
                       </div>

@@ -1,318 +1,124 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Search, 
-  Calendar, 
-  FileText, 
-  ShoppingCart, 
-  Settings,
-  Bookmark,
-  ChevronRight,
-  Filter,
-  Download,
-  Printer,
-  Plus,
-  MoreHorizontal,
-  ChevronLeft,
-  ChevronDown,
-  Edit,
-  Trash2,
-  Play,
-  Pause,
-  Music,
-  Tag,
-  X,
-  Check,
-  Save,
-  ExternalLink,
-  RefreshCw,
-  Send,
-  Users
-} from "lucide-react";
+import { FileText, Music, Tag, Users } from "lucide-react";
 import { PraiseNightSong, Comment, PraiseNight, Category } from '../../types/supabase';
-import { useRealtimeData } from '../../hooks/useRealtimeData';
+import { useAdminData } from '../../hooks/useAdminData';
 import { FirebaseDatabaseService } from '@/lib/firebase-database';
 import { FirebaseAuthService } from '@/lib/firebase-auth';
 import { logAdminAction } from '@/lib/admin-activity-logger';
 import { versionManager } from '@/utils/versionManager';
 import { uploadBannerImage } from '@/utils/imageUpload';
-import EditSongModal from '../../components/EditSongModal';
-import MediaManager from '../../components/MediaManager';
-import Members from '../../components/Members';
-// Support components removed - will create proper support system later
 import { ToastContainer, Toast } from '../../components/Toast';
 
-// Admin users database (in production, this should be in Supabase)
-interface AdminUser {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-  fullName: string;
-  role: 'admin'; // All admins have full access
-  createdAt: string;
-}
-
-const ADMIN_USERS: AdminUser[] = [
-  {
-    id: 'admin-1',
-    username: 'superadmin',
-    email: 'superadmin@lwsrhp.com',
-    password: '@superadmin2024@',
-    fullName: 'Super Administrator',
-    role: 'admin',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'admin-2',
-    username: 'admin1',
-    email: 'admin1@lwsrhp.com',
-    password: '@admin1_2024@',
-    fullName: 'Admin User 1',
-    role: 'admin',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'admin-3',
-    username: 'admin2',
-    email: 'admin2@lwsrhp.com',
-    password: '@admin2_2024@',
-    fullName: 'Admin User 2',
-    role: 'admin',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'admin-4',
-    username: 'admin3',
-    email: 'admin3@lwsrhp.com',
-    password: '@admin3_2024@',
-    fullName: 'Admin User 3',
-    role: 'admin',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'admin-5',
-    username: 'admin4',
-    email: 'admin4@lwsrhp.com',
-    password: '@admin4_2024@',
-    fullName: 'Admin User 4',
-    role: 'admin',
-    createdAt: new Date().toISOString()
-  }
-];
+// Import admin components
+import AdminAuth, { AdminUser, ADMIN_USERS } from '../../components/admin/AdminAuth';
+import AdminSidebar from '../../components/admin/AdminSidebar';
+import PagesSection from '../../components/admin/PagesSection';
+import CategoriesSection from '../../components/admin/CategoriesSection';
+import MediaSection from '../../components/admin/MediaSection';
+import MembersSection from '../../components/admin/MembersSection';
+import NotificationsSection from '../../components/admin/NotificationsSection';
+import AdminModals from '../../components/admin/AdminModals';
 
 export default function AdminPage() {
   // Admin authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
-  const [loginData, setLoginData] = useState({ username: '', password: '' });
-  const [loginError, setLoginError] = useState('');
 
-  // Initialize Supabase client
-  // Use shared Supabase client to avoid multiple instances
-
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  // UI state
   const [activeSection, setActiveSection] = useState('Pages');
   const [selectedPage, setSelectedPage] = useState<PraiseNight | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-
-  // Check if user is already authenticated
-  useEffect(() => {
-    const adminSession = localStorage.getItem('admin_session');
-    if (adminSession) {
-      try {
-        const session = JSON.parse(adminSession);
-        const admin = ADMIN_USERS.find(u => u.id === session.adminId);
-        if (admin && session.expiresAt > Date.now()) {
-          setCurrentAdmin(admin);
-          setIsAuthenticated(true);
-          console.log('✅ Admin session restored:', admin.fullName);
-        } else {
-          // Session expired or invalid
-          console.log('❌ Admin session expired or invalid');
-          localStorage.removeItem('admin_session');
-        }
-      } catch (error) {
-        console.error('Invalid admin session:', error);
-        localStorage.removeItem('admin_session');
-      }
-    } else {
-      console.log('❌ No admin session found');
-    }
-  }, []);
-
-  // Admin login function
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-
-    const admin = ADMIN_USERS.find(
-      u => u.username === loginData.username && u.password === loginData.password
-    );
-
-    if (admin) {
-      setIsAuthenticated(true);
-      setCurrentAdmin(admin);
-
-      // Create session with 24 hour expiry
-      const session = {
-        adminId: admin.id,
-        username: admin.username,
-        fullName: admin.fullName,
-        role: admin.role,
-        loginTime: Date.now(),
-        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
-      };
-
-      localStorage.setItem('admin_session', JSON.stringify(session));
-
-      // Log the login activity
-      logAdminAction.login({
-        id: admin.id,
-        username: admin.username,
-        fullName: admin.fullName
-      });
-
-      console.log(`✅ Admin logged in: ${admin.fullName} (${admin.username})`);
-    } else {
-      setLoginError('Invalid username or password');
-    }
-  };
-
-  // Admin logout function
-  const handleAdminLogout = () => {
-    // Log the logout activity before clearing session
-    if (currentAdmin) {
-      logAdminAction.logout({
-        id: currentAdmin.id,
-        username: currentAdmin.username,
-        fullName: currentAdmin.fullName
-      });
-    }
-
-    console.log(`👋 Admin logged out: ${currentAdmin?.fullName}`);
-
-    // Clear session
-    localStorage.removeItem('admin_session');
-
-    // Clear state
-    setIsAuthenticated(false);
-    setCurrentAdmin(null);
-
-    // Force page reload to show login screen
-    window.location.reload();
-  };
-
-  
-  // Use real-time Supabase data for instant updates
-  const { pages: allPraiseNights, loading, error, getCurrentPage, getCurrentSongs, refreshData } = useRealtimeData();
-  
-  // Categories from database
-  const [dbCategories, setDbCategories] = useState<Category[]>([]);
-  
-  // Song data and filtering state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'heard' | 'unheard'>('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  // Get all songs from Supabase data
-  const allSongs = useMemo(() => {
-    if (loading || !allPraiseNights) return [];
-    
-    console.log('🎵 Admin - All Praise Nights:', allPraiseNights.length);
-    allPraiseNights.forEach((page, index) => {
-      console.log(`🎵 Page ${index}:`, {
-        id: page.id,
-        name: page.name,
-        songsCount: page.songs.length
-      });
-    });
-    
-    // Get all songs from all praise nights
-    const allSongsWithIds: PraiseNightSong[] = [];
-    
-    allPraiseNights.forEach(praiseNight => {
-      praiseNight.songs.forEach(song => {
-        allSongsWithIds.push({
-          ...song,
-          praiseNightId: praiseNight.id
-        });
-      });
-    });
-    
-    console.log('🎵 Admin - All Songs Total:', allSongsWithIds.length);
-    console.log('🎵 Admin - Selected Page:', selectedPage?.id, selectedPage?.name);
-    console.log('🎵 Admin - All Songs Details:', allSongsWithIds.map(song => ({
-      id: song.id,
-      firebaseId: song.firebaseId,
-      title: song.title,
-      praiseNightId: song.praiseNightId
-    })));
-    
-    return allSongsWithIds;
-  }, [allPraiseNights, loading, selectedPage]);
-
-  // Management state
+  // Modal states
   const [showPageModal, setShowPageModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showSongModal, setShowSongModal] = useState(false);
   const [editingPage, setEditingPage] = useState<PraiseNight | null>(null);
-  const [editingPageCategory, setEditingPageCategory] = useState<any | null>(null);
-  
-  // Delete confirmation dialogs
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [pageToDelete, setPageToDelete] = useState<PraiseNight | null>(null);
-  const [showDeleteSongDialog, setShowDeleteSongDialog] = useState(false);
-  const [songToDelete, setSongToDelete] = useState<PraiseNightSong | null>(null);
-  const [showDeleteCategoryDialog, setShowDeleteCategoryDialog] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingPageCategory, setEditingPageCategory] = useState<any | null>(null);
+  const [editingSong, setEditingSong] = useState<PraiseNightSong | null>(null);
+
+  // Form states for new page
   const [newPageName, setNewPageName] = useState('');
   const [newPageDate, setNewPageDate] = useState('');
   const [newPageLocation, setNewPageLocation] = useState('');
   const [newPageDescription, setNewPageDescription] = useState('');
+  const [newPageCategory, setNewPageCategory] = useState<'unassigned' | 'pre-rehearsal' | 'ongoing' | 'archive'>('unassigned');
   const [newPageDays, setNewPageDays] = useState(0);
   const [newPageHours, setNewPageHours] = useState(0);
   const [newPageMinutes, setNewPageMinutes] = useState(0);
   const [newPageSeconds, setNewPageSeconds] = useState(0);
-  const [newPageCategoryName, setNewPageCategoryName] = useState('');
-  const [newPageCategoryDescription, setNewPageCategoryDescription] = useState('');
-  const [newPageCategory, setNewPageCategory] = useState<'unassigned' | 'pre-rehearsal' | 'ongoing' | 'archive'>('unassigned');
   const [newPageBannerImage, setNewPageBannerImage] = useState('');
   const [newPageBannerFile, setNewPageBannerFile] = useState<File | null>(null);
+  const [isCreatingPage, setIsCreatingPage] = useState(false);
 
-  // Song editing state
-  const [showSongModal, setShowSongModal] = useState(false);
-  const [editingSong, setEditingSong] = useState<PraiseNightSong | null>(null);
-  
+  // Form states for new category
+  const [newPageCategoryName, setNewPageCategoryName] = useState('');
+
+  // Delete confirmation states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteSongDialog, setShowDeleteSongDialog] = useState(false);
+  const [showDeleteCategoryDialog, setShowDeleteCategoryDialog] = useState(false);
+  const [pageToDelete, setPageToDelete] = useState<PraiseNight | null>(null);
+  const [songToDelete, setSongToDelete] = useState<PraiseNightSong | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'heard' | 'unheard'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Toast notifications
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  // User management state
-  // Users section removed
+  // Get admin data (optimized for fast loading)
+  const {
+    pages: allPraiseNights,
+    loading,
+    error,
+    getCurrentPage,
+    getCurrentSongs,
+    refreshData
+  } = useAdminData();
 
-  // Notifications and Users sections removed
+  // Songs for the selected page (loaded on demand)
+  const [allSongs, setAllSongs] = useState<PraiseNightSong[]>([]);
+  const [loadingSongs, setLoadingSongs] = useState(false);
 
-  // Support section removed - will create proper support system later
-  // Reply functionality removed with support section
+  // Load songs when a page is selected
+  useEffect(() => {
+    if (selectedPage) {
+      setLoadingSongs(true);
+      // Force refresh songs (don't use cache) to avoid showing deleted songs
+      getCurrentSongs(selectedPage.id, true).then(songs => {
+        console.log(`📊 Loaded ${songs.length} songs for page ${selectedPage.id}`);
+        setAllSongs(songs);
+        setLoadingSongs(false);
+      }).catch(error => {
+        console.error('Error loading songs:', error);
+        setAllSongs([]);
+        setLoadingSongs(false);
+      });
+    } else {
+      setAllSongs([]);
+    }
+  }, [selectedPage, getCurrentSongs]);
 
-  // Toast helper functions
-  const addToast = (toast: Omit<Toast, 'id'>) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setToasts(prev => [...prev, { ...toast, id }]);
-  };
+  // Categories from database
+  const [dbCategories, setDbCategories] = useState<Category[]>([]);
 
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
-
-  // Get all available categories from Supabase songs only
+  // Get all available categories from songs (only when songs are loaded)
   const allAvailableCategories = useMemo(() => {
+    if (allSongs.length === 0) return [];
     const songCategoryNames = allSongs.map((song: PraiseNightSong) => song.category);
-    // Remove duplicates and return unique category names from Supabase
+    // Remove duplicates and return unique category names
     return [...new Set(songCategoryNames)];
   }, [allSongs]);
 
@@ -320,7 +126,7 @@ export default function AdminPage() {
   const allCategories = useMemo(() => {
     // Start with database categories
     const combinedCategories = [...dbCategories];
-    
+
     // Add song-based categories that don't exist in database
     allAvailableCategories.forEach((categoryName: string) => {
       const existsInDb = dbCategories.some(cat => cat.name === categoryName);
@@ -337,7 +143,7 @@ export default function AdminPage() {
         });
       }
     });
-    
+
     return combinedCategories;
   }, [dbCategories, allAvailableCategories]);
 
@@ -347,7 +153,7 @@ export default function AdminPage() {
       try {
         const categories = await FirebaseDatabaseService.getCollection('categories');
         console.log('🔥 Raw categories from Firebase:', categories);
-        
+
         // Map categories to include both Firebase ID and Supabase ID
         const mappedCategories = categories.map(category => ({
           ...category,
@@ -355,7 +161,7 @@ export default function AdminPage() {
           id: category.id, // Keep Firebase ID as primary ID
           supabaseId: category.id // This will be the Firebase ID for now
         }));
-        
+
         console.log('🔥 Mapped categories:', mappedCategories);
         setDbCategories(mappedCategories as any);
       } catch (error) {
@@ -366,744 +172,453 @@ export default function AdminPage() {
     loadCategories();
   }, []);
 
-  // Get pages from Firebase (includes unassigned for admin)
-  const pages = useMemo(() => {
-    if (loading || !allPraiseNights) return [];
-    console.log('📄 Admin pages loaded:', allPraiseNights.length, 'pages');
-    console.log('📄 All pages data:', allPraiseNights);
-    allPraiseNights.forEach((page, index) => {
-      console.log(`📄 Page ${index}:`, {
-        id: page.id,
-        firebaseId: page.firebaseId,
-        name: page.name
-      });
-    });
-    return allPraiseNights; // Firebase data includes all pages
-  }, [allPraiseNights, loading, showPageModal]); // Refresh when data changes
-
-  // Get page categories for selected page (extract from songs)
-  const pageCategories = useMemo(() => {
-    if (!selectedPage) return [];
-    const pageSongs = allSongs.filter(song => song.praiseNightId === selectedPage.id);
-    const uniqueCategories = [...new Set(pageSongs.map(song => song.category))];
-    return uniqueCategories.map((categoryName, index) => ({
-      id: `cat-${selectedPage.id}-${index}`,
-      pageId: selectedPage.id,
-      name: categoryName,
-      description: `Songs in ${categoryName} category`,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
-  }, [selectedPage, allSongs, showCategoryModal]);
-
-  // Get category content for selected category (songs in that category)
-  const categoryContent = useMemo(() => {
-    if (!selectedCategory || !selectedPage) return [];
-    return allSongs.filter(song => 
-      song.praiseNightId === selectedPage.id && 
-      song.category === selectedCategory
-    );
-  }, [selectedCategory, selectedPage, allSongs]);
-
-  // Get unique categories for filter dropdown (from songs)
-  const songCategories = useMemo(() => {
-    const uniqueCategories = Array.from(new Set(allSongs.map(song => song.category)));
-    return uniqueCategories;
-  }, [allSongs]);
-
-  // Filter and search songs
-  const filteredSongs = useMemo(() => {
-    return allSongs.filter(song => {
-      const matchesSearch = song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (song.leadSinger || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (song.writer || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || song.status === statusFilter;
-      const matchesCategory = categoryFilter === 'all' || song.category === categoryFilter;
-      
-      return matchesSearch && matchesStatus && matchesCategory;
-    });
-  }, [allSongs, searchTerm, statusFilter, categoryFilter]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredSongs.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSongs = filteredSongs.slice(startIndex, startIndex + itemsPerPage);
-
-  // Counts for tabs
-  const heardCount = allSongs.filter(song => song.status === 'heard').length;
-  const unheardCount = allSongs.filter(song => song.status === 'unheard').length;
-
-  // Category management functions (Supabase-based)
-  const handleAddCategory = async () => {
-    if (newPageCategoryName.trim()) {
+  // Check for existing admin session on component mount
+  useEffect(() => {
+    const savedSession = localStorage.getItem('adminSession');
+    if (savedSession) {
       try {
-        const newCategory: Omit<Category, 'id' | 'createdAt' | 'updatedAt'> = {
-          name: newPageCategoryName.trim(),
-          description: '',
-          icon: 'Music',
-          color: '#3B82F6',
-          isActive: true
-        };
-
-        const success = await FirebaseDatabaseService.createCategory(newCategory);
-        
-        if (success) {
-          // Reload categories from database
-          const categories = await FirebaseDatabaseService.getCollection('categories');
-          setDbCategories(categories as any);
-          
-          addToast({
-            type: 'success',
-            message: `Category "${newPageCategoryName.trim()}" created successfully!`
-          });
-          
-          setNewPageCategoryName('');
-          setShowCategoryModal(false);
+        const sessionData = JSON.parse(savedSession);
+        const admin = ADMIN_USERS.find(u => u.id === sessionData.adminId);
+        if (admin && sessionData.timestamp && (Date.now() - sessionData.timestamp < 24 * 60 * 60 * 1000)) {
+          setCurrentAdmin(admin);
+          setIsAuthenticated(true);
+          console.log('🔐 Admin session restored:', admin.username);
         } else {
-          throw new Error('Failed to create category');
+          localStorage.removeItem('adminSession');
         }
       } catch (error) {
-        console.error('Error creating category:', error);
-        addToast({
-          type: 'error',
-          message: `Failed to create category: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
+        console.error('Error parsing admin session:', error);
+        localStorage.removeItem('adminSession');
       }
+    }
+  }, []);
+
+  // Get pages from Firebase (includes unassigned for admin)
+  const pages = useMemo(() => {
+    console.log('🔍 Pages useMemo triggered:', { loading, allPraiseNights: allPraiseNights?.length, showPageModal });
+    
+    if (loading) {
+      console.log('⏳ Still loading...');
+      return [];
+    }
+    
+    if (!allPraiseNights) {
+      console.log('❌ No allPraiseNights data');
+      return [];
+    }
+    
+    console.log('📄 Admin pages loaded:', allPraiseNights.length, 'pages');
+    console.log('📄 All pages data:', allPraiseNights);
+    return allPraiseNights;
+  }, [allPraiseNights, loading]);
+
+  // Toast helper functions
+  const addToast = (toast: Omit<Toast, 'id'>) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { ...toast, id }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  // Note: Authentication is now handled by the AdminAuth component
+  // But we still need handleAdminLogout for the sidebar
+  const handleAdminLogout = () => {
+    if (currentAdmin) {
+      console.log('🔐 Admin logged out:', currentAdmin.username);
+    }
+
+    setCurrentAdmin(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('admin_session');
+
+    addToast({
+      type: 'info',
+      message: 'You have been successfully logged out.'
+    });
+
+    // Force page reload to show login screen
+    window.location.reload();
+  };
+
+  // Category management functions
+  const handleAddCategory = async () => {
+    console.log('🎯 handleAddCategory called with name:', newPageCategoryName);
+
+    if (!newPageCategoryName.trim()) {
+      addToast({
+        type: 'error',
+        message: 'Please enter a category name'
+      });
+      return;
+    }
+
+    try {
+      const newCategory: Omit<Category, 'id'> = {
+        name: newPageCategoryName.trim(),
+        description: `Category: ${newPageCategoryName.trim()}`,
+        icon: 'Tag',
+        color: '#8B5CF6',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const result = await FirebaseDatabaseService.createCategory(newCategory);
+
+      if (result.success) {
+        console.log('✅ Category added successfully');
+        addToast({
+          type: 'success',
+          message: 'Category added successfully'
+        });
+
+        // Reload categories from database
+        const categories = await FirebaseDatabaseService.getCollection('categories');
+        setDbCategories(categories as any);
+
+        setNewPageCategoryName('');
+        setShowCategoryModal(false);
+        refreshData(); // Refresh all data to ensure UI is updated
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.createCategory(currentAdmin, newCategory.name);
+        }
+      } else {
+        throw new Error(result.error || 'Failed to create category');
+      }
+    } catch (error) {
+      console.error('❌ Error adding category:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to add category'
+      });
     }
   };
 
   const handleEditCategory = (categoryName: string) => {
-    // Editing category from Supabase songs
-    setEditingCategory({ 
-      id: `cat-${categoryName}`, 
-      name: categoryName, 
-      description: '', 
-      icon: 'Music', 
-      color: '#3B82F6', 
-      isActive: true, 
-      createdAt: new Date(), 
-      updatedAt: new Date() 
-    });
-    setNewPageCategoryName(categoryName);
-    setShowCategoryModal(true);
-  };
+    const category = allCategories.find(c => c.name === categoryName);
+    if (category) {
+      // Check if this is a real database category or a song-based category
+      const isDbCategory = dbCategories.some(dbCat => dbCat.id === category.id);
 
-  const handleUpdateCategory = async () => {
-    if (editingCategory && newPageCategoryName.trim()) {
-      const oldCategoryName = editingCategory.name;
-      const newCategoryName = newPageCategoryName.trim();
-      
-      try {
-        // Check if this is a database category or song-based category
-        const dbCategory = dbCategories.find(cat => cat.name === oldCategoryName);
-        
-        if (dbCategory) {
-          // Update database category using Firebase document ID
-          console.log('🔄 Updating category:', {
-            oldName: oldCategoryName,
-            newName: newCategoryName,
-            categoryId: dbCategory.id,
-            firebaseId: (dbCategory as any).firebaseId
-          });
-          
-          const categoryId = (dbCategory as any).firebaseId || dbCategory.id;
-          const success = await FirebaseDatabaseService.updateCategory(categoryId, {
-            name: newCategoryName
-          });
-          
-          if (success) {
-            // Reload categories from database
-            const categories = await FirebaseDatabaseService.getCollection('categories');
-            const mappedCategories = categories.map(category => ({
-              ...category,
-              firebaseId: category.id,
-              id: category.id,
-              supabaseId: category.id
-            }));
-            setDbCategories(mappedCategories as any);
-            
-            // Also update songs that use this category
-            await FirebaseDatabaseService.updateSongsCategory(oldCategoryName, newCategoryName);
-            await refreshData();
-            
-            addToast({
-              type: 'success',
-              message: `Category "${oldCategoryName}" updated to "${newCategoryName}" successfully!`
-            });
-          } else {
-            throw new Error('Failed to update category in database');
-          }
-        } else {
-          // Update song-based category (legacy behavior)
-          const success = await FirebaseDatabaseService.updateSongsCategory(oldCategoryName, newCategoryName);
-          if (success) {
-            await refreshData();
-            
-            addToast({
-              type: 'success',
-              message: `Category "${oldCategoryName}" updated to "${newCategoryName}" successfully!`
-            });
-          } else {
-            throw new Error('Failed to update category');
-          }
-        }
-      } catch (error) {
-        console.error('Error updating category:', error);
+      if (!isDbCategory) {
+        // This is a song-based category that doesn't exist in the database yet
         addToast({
           type: 'error',
-          message: `Failed to update category: ${error instanceof Error ? error.message : 'Unknown error'}`
+          message: 'This category only exists in songs. Please create it in the database first to edit it.'
         });
-      }
-      
-      setEditingCategory(null);
-      setNewPageCategoryName('');
-      setShowCategoryModal(false);
-    }
-  };
-
-
-
-  // Song management functions
-  const handleEditSong = (song: PraiseNightSong) => {
-    setEditingSong(song);
-    setShowSongModal(true);
-  };
-
-  const handleSaveSong = async (songData: PraiseNightSong & { id?: number; firebaseId?: string }) => {
-    try {
-      console.log('🎵 handleSaveSong called with:', {
-        hasId: !!songData.id,
-        hasFirebaseId: !!songData.firebaseId,
-        id: songData.id,
-        firebaseId: songData.firebaseId,
-        title: songData.title
-      });
-      
-      // If songData has an ID, it's an existing song being updated
-      if (songData.id) {
-        console.log('🔄 Updating existing song with ID:', songData.id, 'Firebase ID:', songData.firebaseId);
-        // Use firebaseId for Firebase operations
-        const firebaseId = songData.firebaseId;
-        console.log('🔥 Using Firebase ID for update:', firebaseId);
-        const success = await FirebaseDatabaseService.updateSong(firebaseId || songData.id, songData);
-        
-        if (success) {
-          console.log('✅ Song updated successfully, refreshing data...');
-
-          // Clear all caches
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('cached_pages_data');
-            localStorage.removeItem('cached_pages_timestamp');
-            localStorage.removeItem('cached_songs_data');
-            localStorage.removeItem('cached_songs_timestamp');
-          }
-
-          await refreshData();
-          setTimeout(async () => {
-            await refreshData();
-            console.log('✅ Second refresh completed');
-          }, 500);
-
-          // Handle category changes
-          if (selectedCategory && songData.category && selectedCategory !== songData.category) {
-            console.log('🔄 Song moved from', selectedCategory, 'to', songData.category);
-            setSelectedCategory(null);
-            setTimeout(() => {
-              const newCategoryExists = pageCategories.some(cat => cat.name === songData.category);
-              if (newCategoryExists) {
-                setSelectedCategory(songData.category);
-              }
-            }, 100);
-          }
-
-          // Close modal
-          setShowSongModal(false);
-          setEditingSong(null);
-
-          addToast({
-            type: 'success',
-            message: 'Song updated successfully! All admins will see changes.'
-          });
-        } else {
-          throw new Error('Failed to update song in database');
-        }
         return;
       }
 
-      // Check if this is a new song (no existing song with same title and praiseNightId)
-      const songs = await FirebaseDatabaseService.getCollection('songs') as any[];
-      const existingSong = songs.find(song => 
-        song.praisenightid === songData.praiseNightId && song.title === songData.title
-      );
+      setEditingCategory(category);
+      setNewPageCategoryName(category.name);
+      setShowCategoryModal(true);
+    }
+  };
 
-
-      if (existingSong) {
-        // Song exists, update it
-        console.log('🔄 Updating existing song:', {
-          songId: existingSong.id,
-          title: songData.title,
-          newCategory: songData.category
-        });
-        const success = await FirebaseDatabaseService.updateSong(existingSong.id, songData);
-        
-        if (success) {
-          console.log('✅ Song updated successfully, refreshing data...');
-          
-          // Force a complete refresh to ensure UI updates
-          await refreshData();
-          
-          // Add a small delay and refresh again to ensure state is updated
-          setTimeout(async () => {
-            await refreshData();
-            console.log('✅ Second refresh completed');
-          }, 500);
-          
-          console.log('✅ Data refreshed after song update');
-          
-          // If we're viewing a specific category and the song's category changed,
-          // navigate to show the change
-          if (selectedCategory && songData.category && selectedCategory !== songData.category) {
-            console.log('🔄 Song moved from', selectedCategory, 'to', songData.category);
-            
-            // Force clear the current category view first
-            setSelectedCategory(null);
-            
-            // Wait a moment then navigate to new category or stay at page level
-            setTimeout(() => {
-              const newCategoryExists = pageCategories.some(cat => cat.name === songData.category);
-              
-              if (newCategoryExists) {
-                // Navigate to the new category to show where the song moved
-                setSelectedCategory(songData.category);
-                addToast({
-                  type: 'success',
-                  message: `Song "${songData.title}" moved from "${selectedCategory}" to "${songData.category}"!`
-                });
-              } else {
-                // Stay at page level
-                addToast({
-                  type: 'success',
-                  message: `Song "${songData.title}" moved to "${songData.category}" (category updated)!`
-                });
-              }
-            }, 1000); // Give time for data to refresh
-          } else {
-            // Show regular success toast
-            addToast({
-              type: 'success',
-              message: `Song "${songData.title}" updated successfully!`
-            });
-          }
-
-          // Reset form
-          setEditingSong(null);
-          setShowSongModal(false);
-        } else {
-          throw new Error('Failed to update song in database');
-        }
-      } else {
-        // Song doesn't exist, create it
-        console.log('🎵 Creating new song:', songData.title);
-        console.log('🎵 Song data being created:', {
-          title: songData.title,
-          praiseNightId: songData.praiseNightId,
-          selectedPageId: selectedPage?.id,
-          selectedPageName: selectedPage?.name
-        });
-        const createdSong = await FirebaseDatabaseService.createSong(songData);
-        console.log('🎵 Song creation result:', createdSong);
-        
-        if (createdSong) {
-          console.log('✅ Song created successfully, refreshing data...');
-          // Refresh data from Supabase
-          await refreshData();
-          console.log('✅ Data refreshed');
-          
-          // Show success toast
-          addToast({
-            type: 'success',
-            message: `Song "${songData.title}" added successfully!`
-          });
-
-          // Reset form
-          setEditingSong(null);
-          setShowSongModal(false);
-        } else {
-          console.error('❌ Song creation returned null');
-          throw new Error('Failed to create song in database');
-        }
-      }
-    } catch (error) {
-      console.error('Error saving song:', error);
+  const handleUpdateCategory = async () => {
+    if (!editingCategory || !newPageCategoryName.trim()) {
       addToast({
         type: 'error',
-        message: `Failed to save song: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: 'Please enter a category name'
       });
+      return;
     }
-  };
 
-  const handleDeleteSong = (song: PraiseNightSong) => {
-    setSongToDelete(song);
-    setShowDeleteSongDialog(true);
-  };
-
-  const confirmDeleteSong = async () => {
-    if (!songToDelete) return;
-    
     try {
-      console.log('🗑️ Deleting song:', songToDelete.title);
-      console.log('🗑️ Song details:', {
-        id: songToDelete.id,
-        firebaseId: songToDelete.firebaseId,
-        title: songToDelete.title,
-        praiseNightId: songToDelete.praiseNightId
-      });
-      
-      // Delete from Firebase using the Firebase ID
-      const firebaseId = songToDelete.firebaseId || songToDelete.id?.toString() || '';
-      console.log('🗑️ Using Firebase ID for deletion:', firebaseId);
-      const success = await FirebaseDatabaseService.deleteSong(firebaseId);
-        
-        if (success) {
-        console.log('✅ Song deleted successfully');
-        
-        // Simple refresh without aggressive cache clearing
-          await refreshData();
-        console.log('🔄 Data refreshed after deletion');
-          
-          // Show success toast
-          addToast({
-            type: 'success',
-          message: `Song "${songToDelete.title}" deleted successfully!`
-          });
-        
-        // Close dialog
-        setShowDeleteSongDialog(false);
-        setSongToDelete(null);
-        } else {
-        console.log('❌ Song deletion failed in Firebase');
-          throw new Error('Failed to delete song from database');
-        }
-      } catch (error) {
-        console.error('Error deleting song:', error);
-        addToast({
-          type: 'error',
-          message: `Failed to delete song: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
-    }
-  };
+      console.log('🔄 Updating category with ID:', editingCategory.id, 'Name:', newPageCategoryName.trim());
 
-  const cancelDeleteSong = () => {
-    setShowDeleteSongDialog(false);
-    setSongToDelete(null);
-  };
+      // Prepare update data (only the fields that can be updated)
+      const updateData = {
+        name: newPageCategoryName.trim(),
+        description: `Category: ${newPageCategoryName.trim()}`,
+        updatedAt: new Date().toISOString()
+      };
 
-  const handleToggleSongStatus = async (song: PraiseNightSong) => {
-    try {
-      const newStatus = song.status === 'heard' ? 'unheard' : 'heard';
-      
-      // Get the song ID from the database
-      const allSongs = await FirebaseDatabaseService.getCollection('songs') as any[];
-      const songRecord = allSongs.find(s => 
-        s.praisenightid === song.praiseNightId && s.title === song.title
-      );
+      // Use the Firebase document ID directly
+      const result = await FirebaseDatabaseService.updateCategory(editingCategory.id, updateData);
 
-      if (!songRecord) {
-        throw new Error(`Could not find song "${song.title}" in database`);
-      }
-
-      // Update in Firebase using the song ID
-      const success = await FirebaseDatabaseService.updateSong(songRecord.id, { status: newStatus });
-      
-      if (success) {
-        // Refresh data from Supabase
-        await refreshData();
-        
-        // Show success toast
+      if (result.success) {
+        console.log('✅ Category updated successfully');
         addToast({
           type: 'success',
-          message: `Song "${song.title}" marked as ${newStatus}!`
+          message: 'Category updated successfully'
         });
+
+        // Reload categories from database
+        const categories = await FirebaseDatabaseService.getCollection('categories');
+        setDbCategories(categories as any);
+
+        setEditingCategory(null);
+        setNewPageCategoryName('');
+        setShowCategoryModal(false);
+        refreshData();
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.updateCategory(currentAdmin, `Updated category: ${newPageCategoryName.trim()}`);
+        }
       } else {
-        throw new Error('Failed to update song status in database');
+        throw new Error('Failed to update category');
       }
     } catch (error) {
-      console.error('Error toggling song status:', error);
+      console.error('❌ Error updating category:', error);
       addToast({
         type: 'error',
-        message: `Failed to update song status: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: error instanceof Error ? error.message : 'Failed to update category'
       });
     }
+  };
+
+  const handleDeleteCategory = (category: Category) => {
+    // Check if this is a real database category or a song-based category
+    const isDbCategory = dbCategories.some(dbCat => dbCat.id === category.id);
+
+    if (!isDbCategory) {
+      // This is a song-based category that doesn't exist in the database
+      addToast({
+        type: 'error',
+        message: 'This category only exists in songs and cannot be deleted from here. Update the songs to remove this category.'
+      });
+      return;
+    }
+
+    setCategoryToDelete(category);
+    setShowDeleteCategoryDialog(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+
+    try {
+      console.log('🗑️ Deleting category with ID:', categoryToDelete.id);
+
+      // Use the Firebase document ID directly
+      const result = await FirebaseDatabaseService.deleteCategory(categoryToDelete.id);
+
+      if (result.success) {
+        console.log('✅ Category deleted successfully');
+        addToast({
+          type: 'success',
+          message: 'Category deleted successfully'
+        });
+
+        // Reload categories from database
+        const categories = await FirebaseDatabaseService.getCollection('categories');
+        setDbCategories(categories as any);
+
+        setShowDeleteCategoryDialog(false);
+        setCategoryToDelete(null);
+        refreshData();
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.deleteCategory(currentAdmin, `Deleted category: ${categoryToDelete.name}`);
+        }
+      } else {
+        throw new Error('Failed to delete category');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting category:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to delete category'
+      });
+    }
+  };
+
+  const cancelDeleteCategory = () => {
+    setShowDeleteCategoryDialog(false);
+    setCategoryToDelete(null);
   };
 
   // Page management functions
   const handleAddPage = async () => {
-    if (newPageName.trim()) {
-      try {
-        let bannerImageUrl = '';
-        
-        // Upload banner image to Supabase if file is selected (WAIT for upload)
+    if (!newPageName.trim() || !newPageDate.trim() || !newPageLocation.trim()) {
+      addToast({
+        type: 'error',
+        message: 'Please fill in all required fields'
+      });
+      return;
+    }
+
+    setIsCreatingPage(true);
+
+    try {
+      // Create the page first to get a Firebase-generated ID for banner upload
+      const newPage: Omit<PraiseNight, 'id'> = {
+        name: newPageName.trim(),
+        date: newPageDate.trim(),
+        location: newPageLocation.trim(),
+        category: newPageCategory,
+        countdown: {
+          days: newPageDays,
+          hours: newPageHours,
+          minutes: newPageMinutes,
+          seconds: newPageSeconds
+        },
+        songs: [],
+        bannerImage: newPageBannerImage,
+        firebaseId: ''
+      };
+
+      console.log('🔥 Creating page with data:', newPage);
+      const result = await FirebaseDatabaseService.addPraiseNight(newPage);
+
+      if (result.success && result.id) {
+        console.log('✅ Page created with Firebase-generated ID:', result.id);
+
+        // Upload banner image if a new file was selected
+        let bannerImageUrl = newPageBannerImage;
         if (newPageBannerFile) {
-          console.log('🚀 Starting banner image upload for new page...');
-
-          addToast({
-            type: 'info',
-            message: 'Uploading banner image...'
-          });
-
-          // WAIT for upload to complete - use timestamp as temporary ID
-          const tempPageId = Date.now(); // Use timestamp as temporary ID
-          const uploadResult = await uploadBannerImage(newPageBannerFile, tempPageId);
-
+          console.log('📤 Uploading banner image for Firebase ID:', result.id);
+          const uploadResult = await uploadBannerImage(newPageBannerFile, result.id);
           if (uploadResult.success && uploadResult.url) {
-            console.log('✅ Banner image uploaded successfully:', uploadResult.url);
-            bannerImageUrl = uploadResult.url; // Use the uploaded URL
-            addToast({
-              type: 'success',
-              message: 'Banner image uploaded successfully!'
+            bannerImageUrl = uploadResult.url;
+            console.log('✅ Banner image uploaded:', bannerImageUrl);
+
+            // Update the page with the banner image URL
+            await FirebaseDatabaseService.updatePraiseNight(result.id, {
+              bannerImage: bannerImageUrl
             });
           } else {
-            console.error('❌ Banner image upload failed:', uploadResult.error);
-            addToast({
-              type: 'error',
-              message: `Banner image upload failed: ${uploadResult.error || 'Unknown error'}`
-            });
-            // Don't create the page if image upload failed
-            return;
+            console.warn('⚠️ Banner image upload failed:', uploadResult.error);
           }
         }
-        
-        const newPage = await FirebaseDatabaseService.createPage({
-          id: 0, // Will be set by database
-          name: newPageName.trim(),
-          date: newPageDate || 'TBD',
-          location: newPageLocation || 'TBD',
-          category: newPageCategory,
-          bannerImage: bannerImageUrl,
-          countdown: {
-            days: newPageDays,
-            hours: newPageHours,
-            minutes: newPageMinutes,
-            seconds: newPageSeconds
-          }
-        });
 
-        if (newPage) {
-          // Clear all caches to ensure fresh data for all admins
-          console.log('🧹 Clearing all caches...');
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('cached_pages_data');
-            localStorage.removeItem('cached_pages_timestamp');
-            localStorage.removeItem('cached_songs_data');
-            localStorage.removeItem('cached_songs_timestamp');
-          }
-
-          // Refresh data from Supabase
-          console.log('🔄 Refreshing data from Supabase...');
-          await refreshData();
-
-          // Force a second refresh after a short delay to ensure all admins see changes
-          setTimeout(async () => {
-            console.log('🔄 Second refresh for real-time sync...');
-            await refreshData();
-          }, 500);
-
-          // Show success toast
-          addToast({
-            type: 'success',
-            message: `Page "${newPageName.trim()}" added successfully! All admins will see changes.`
-          });
-
-          setNewPageName('');
-          setNewPageDate('');
-          setNewPageLocation('');
-          setNewPageDescription('');
-          setNewPageCategory('unassigned');
-          setNewPageBannerImage('');
-          setNewPageBannerFile(null);
-          setNewPageDays(0);
-          setNewPageHours(0);
-          setNewPageMinutes(0);
-          setNewPageSeconds(0);
-          setShowPageModal(false);
-        } else {
-          throw new Error('Failed to create page');
-        }
-      } catch (error) {
-        console.error('Error adding page:', error);
         addToast({
-          type: 'error',
-          message: `Failed to add page: ${error instanceof Error ? error.message : 'Unknown error'}`
+          type: 'success',
+          message: 'Page created successfully!'
         });
+
+        // Reset form
+        setNewPageName('');
+        setNewPageDate('');
+        setNewPageLocation('');
+        setNewPageDescription('');
+        setNewPageCategory('unassigned');
+        setNewPageDays(0);
+        setNewPageHours(0);
+        setNewPageMinutes(0);
+        setNewPageSeconds(0);
+        setNewPageBannerImage('');
+        setNewPageBannerFile(null);
+        setShowPageModal(false);
+        refreshData();
+
+        console.log('✅ Page creation completed successfully');
+      } else {
+        throw new Error('Failed to add page');
       }
+    } catch (error) {
+      console.error('❌ Error adding page:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to add page'
+      });
+    } finally {
+      setIsCreatingPage(false);
     }
   };
 
   const handleEditPage = (page: PraiseNight) => {
-    console.log('✏️ handleEditPage called with page:', page);
-    console.log('📄 Page countdown data:', page.countdown);
     setEditingPage(page);
     setNewPageName(page.name);
     setNewPageDate(page.date);
     setNewPageLocation(page.location);
-    setNewPageDescription(''); // PraiseNight doesn't have description field
-    setNewPageCategory(page.category || 'unassigned'); // Default to unassigned if not set
+    setNewPageDescription(''); // Description not supported in PraiseNight type
+    setNewPageCategory(page.category);
+
+    // Use countdown object directly
+    setNewPageDays(page.countdown.days);
+    setNewPageHours(page.countdown.hours);
+    setNewPageMinutes(page.countdown.minutes);
+    setNewPageSeconds(page.countdown.seconds);
     setNewPageBannerImage(page.bannerImage || '');
-    
-    // Load countdown data - check both nested and flat structure
-    const countdown = page.countdown || {};
-    setNewPageDays(countdown.days || 0);
-    setNewPageHours(countdown.hours || 0);
-    setNewPageMinutes(countdown.minutes || 0);
-    setNewPageSeconds(countdown.seconds || 0);
-    
-    console.log('📄 Loaded countdown values:', {
-      days: countdown.days || 0,
-      hours: countdown.hours || 0,
-      minutes: countdown.minutes || 0,
-      seconds: countdown.seconds || 0
-    });
-    
+    setNewPageBannerFile(null);
     setShowPageModal(true);
-    console.log('✅ Edit page modal opened, editingPage set to:', page);
   };
 
   const handleUpdatePage = async () => {
-    console.log('🔄 handleUpdatePage called');
-    console.log('editingPage:', editingPage);
-    console.log('newPageName:', newPageName);
+    if (!editingPage || !newPageName.trim() || !newPageDate.trim() || !newPageLocation.trim()) {
+      addToast({
+        type: 'error',
+        message: 'Please fill in all required fields'
+      });
+      return;
+    }
 
-    if (editingPage && newPageName.trim()) {
-      try {
-        console.log('🚀 Starting page update...');
-        let bannerImageUrl = newPageBannerImage; // Keep existing image by default
+    setIsCreatingPage(true);
 
-        // Upload new banner image to Supabase if file is selected (WAIT for upload)
-        if (newPageBannerFile) {
-          console.log('🚀 Starting banner image upload...');
+    try {
+      let bannerImageUrl = newPageBannerImage;
 
-          addToast({
-            type: 'info',
-            message: 'Uploading banner image...'
-          });
-
-          // WAIT for upload to complete
-          const uploadResult = await uploadBannerImage(newPageBannerFile, parseInt(editingPage.firebaseId || editingPage.id.toString()));
-
-          if (uploadResult.success && uploadResult.url) {
-            console.log('✅ Banner image uploaded successfully:', uploadResult.url);
-            bannerImageUrl = uploadResult.url; // Use the new uploaded URL
-            addToast({
-              type: 'success',
-              message: 'Banner image uploaded successfully!'
-            });
-          } else {
-            console.error('❌ Banner image upload failed:', uploadResult.error);
-            addToast({
-              type: 'error',
-              message: `Banner image upload failed: ${uploadResult.error || 'Unknown error'}`
-            });
-            // Don't update the page if image upload failed
-            return;
-          }
-        }
-        
-        console.log('📝 Updating page with data:', {
-          id: editingPage.id,
-          name: newPageName.trim(),
-          date: newPageDate,
-          location: newPageLocation,
-          category: newPageCategory,
-          bannerImage: bannerImageUrl,
-          countdown: {
-            days: newPageDays,
-            hours: newPageHours,
-            minutes: newPageMinutes,
-            seconds: newPageSeconds
-          }
-        });
-        
-        console.log('🔍 Admin Update Debug:');
-        console.log('editingPage:', editingPage);
-        console.log('editingPage.firebaseId:', editingPage.firebaseId);
-        console.log('editingPage.id:', editingPage.id);
-        console.log('Using ID:', editingPage.firebaseId || editingPage.id.toString());
-        
-        const updateData = {
-          name: newPageName.trim(),
-          date: newPageDate,
-          location: newPageLocation,
-          category: newPageCategory,
-          bannerImage: bannerImageUrl,
-          countdownDays: newPageDays,
-          countdownHours: newPageHours,
-          countdownMinutes: newPageMinutes,
-          countdownSeconds: newPageSeconds
-        };
-        
-        console.log('🔍 Update Data:', updateData);
-        console.log('🔍 Countdown Values:', {
-            days: newPageDays,
-            hours: newPageHours,
-            minutes: newPageMinutes,
-            seconds: newPageSeconds
-        });
-        
-        const success = await FirebaseDatabaseService.updatePage(editingPage.firebaseId || editingPage.id.toString(), updateData);
-        
-        console.log('✅ Page update result:', success);
-
-        if (success) {
-          // Clear all caches to ensure fresh data for all admins
-          console.log('🧹 Clearing all caches...');
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('cached_pages_data');
-            localStorage.removeItem('cached_pages_timestamp');
-            localStorage.removeItem('cached_songs_data');
-            localStorage.removeItem('cached_songs_timestamp');
-          }
-
-          // Refresh data from Supabase
-          console.log('🔄 Refreshing data from Supabase...');
-          await refreshData();
-
-          // Force a second refresh after a short delay to ensure all admins see changes
-          setTimeout(async () => {
-            console.log('🔄 Second refresh for real-time sync...');
-            await refreshData();
-          }, 500);
-
-          // Show success toast
-          addToast({
-            type: 'success',
-            message: `Page "${newPageName.trim()}" updated successfully! All admins will see changes.`
-          });
-
-          setEditingPage(null);
-          setNewPageName('');
-          setNewPageDate('');
-          setNewPageLocation('');
-          setNewPageDescription('');
-          setNewPageCategory('unassigned');
-          setNewPageBannerImage('');
-          setNewPageBannerFile(null);
-          setNewPageDays(0);
-          setNewPageHours(0);
-          setNewPageMinutes(0);
-          setNewPageSeconds(0);
-          setShowPageModal(false);
+      // Upload banner image if a new file was selected
+      if (newPageBannerFile) {
+        console.log('📤 Uploading banner image...');
+        const uploadResult = await uploadBannerImage(newPageBannerFile, editingPage.id);
+        if (uploadResult.success && uploadResult.url) {
+          bannerImageUrl = uploadResult.url;
+          console.log('✅ Banner image uploaded:', bannerImageUrl);
         } else {
-          throw new Error('Failed to update page');
+          throw new Error(uploadResult.error || 'Failed to upload banner image');
         }
-      } catch (error) {
-        console.error('Error updating page:', error);
-        addToast({
-          type: 'error',
-          message: `Failed to update page: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
       }
+
+      const updatedPageData = {
+        name: newPageName.trim(),
+        date: newPageDate.trim(),
+        location: newPageLocation.trim(),
+        category: newPageCategory,
+        countdown: {
+          days: newPageDays,
+          hours: newPageHours,
+          minutes: newPageMinutes,
+          seconds: newPageSeconds
+        },
+        bannerImage: bannerImageUrl
+      };
+
+      const result = await FirebaseDatabaseService.updatePraiseNight(editingPage.firebaseId || editingPage.id.toString(), updatedPageData);
+
+      if (result.success) {
+        console.log('✅ Page updated successfully');
+        addToast({
+          type: 'success',
+          message: 'Page updated successfully'
+        });
+
+        // Reset form
+        setEditingPage(null);
+        setNewPageName('');
+        setNewPageDate('');
+        setNewPageLocation('');
+        setNewPageDescription('');
+        setNewPageCategory('unassigned');
+        setNewPageDays(0);
+        setNewPageHours(0);
+        setNewPageMinutes(0);
+        setNewPageSeconds(0);
+        setNewPageBannerImage('');
+        setNewPageBannerFile(null);
+        setShowPageModal(false);
+        refreshData();
+
+        console.log('✅ Page update completed successfully');
+      } else {
+        throw new Error('Failed to update page');
+      }
+    } catch (error) {
+      console.error('❌ Error updating page:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to update page'
+      });
+    } finally {
+      setIsCreatingPage(false);
     }
   };
 
@@ -1114,32 +629,37 @@ export default function AdminPage() {
 
   const confirmDeletePage = async () => {
     if (!pageToDelete) return;
-    
-    try {
-      const success = await FirebaseDatabaseService.deletePage(pageToDelete.firebaseId || pageToDelete.id.toString());
 
-        if (success) {
-        // Refresh data from Firebase
-          await refreshData();
-          
-          // Show success toast
-          addToast({
-            type: 'success',
-          message: `Page "${pageToDelete.name}" deleted successfully!`
-          });
-        
-        // Close dialog
+    try {
+      const result = await FirebaseDatabaseService.deletePraiseNight(pageToDelete.firebaseId || pageToDelete.id.toString());
+
+      if (result.success) {
+        console.log('✅ Page deleted successfully');
+        addToast({
+          type: 'success',
+          message: 'Page deleted successfully'
+        });
+
         setShowDeleteDialog(false);
         setPageToDelete(null);
-        } else {
-          throw new Error('Failed to delete page');
+        if (selectedPage?.id === pageToDelete.id) {
+          setSelectedPage(null);
         }
-      } catch (error) {
-        console.error('Error deleting page:', error);
-        addToast({
-          type: 'error',
-          message: `Failed to delete page: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
+        refreshData();
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.deletePage(currentAdmin, `Deleted page: ${pageToDelete.name}`);
+        }
+      } else {
+        throw new Error('Failed to delete page');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting page:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to delete page'
+      });
     }
   };
 
@@ -1148,141 +668,266 @@ export default function AdminPage() {
     setPageToDelete(null);
   };
 
-  // Category content management functions (simplified for Supabase)
-  const handleAddPageCategory = () => {
-    addToast({
-      type: 'info',
-      message: 'Categories are now managed through songs. Add a song to create categories.'
-    });
+  // Song management functions
+  const handleEditSong = (song: PraiseNightSong) => {
+    console.log('🎵 handleEditSong called with:', song);
+    console.log('🎵 Setting editingSong and showSongModal to true');
+    setEditingSong(song);
+    setShowSongModal(true);
+    console.log('🎵 Modal should now be open');
   };
 
-  const handleEditPageCategory = (category: any) => {
-    addToast({
-      type: 'info',
-      message: 'Categories are now managed through songs. Edit songs instead.'
-    });
+  const handleDeleteSong = (song: PraiseNightSong) => {
+    setSongToDelete(song);
+    setShowDeleteSongDialog(true);
   };
 
-  const handleUpdatePageCategory = () => {
-    addToast({
-      type: 'info',
-      message: 'Categories are now managed through songs. Edit songs instead.'
-    });
-  };
-
-  const handleDeleteCategory = (category: Category) => {
-    setCategoryToDelete(category);
-    setShowDeleteCategoryDialog(true);
-  };
-
-  const confirmDeleteCategory = async () => {
-    if (!categoryToDelete) return;
-    
+  const handleToggleSongStatus = async (song: PraiseNightSong) => {
     try {
-      console.log('🗑️ Deleting category:', categoryToDelete);
-      console.log('🗑️ Category Firebase ID:', (categoryToDelete as any).firebaseId || categoryToDelete.id);
-      
-      // Use Firebase document ID for deletion
-      const firebaseId = (categoryToDelete as any).firebaseId || categoryToDelete.id;
-      const success = await FirebaseDatabaseService.deleteCategory(firebaseId);
-      
-      if (success) {
-        // Reload categories from database
-        const categories = await FirebaseDatabaseService.getCollection('categories');
-        const mappedCategories = categories.map(category => ({
-          ...category,
-          firebaseId: category.id,
-          id: category.id,
-          supabaseId: category.id
-        }));
-        setDbCategories(mappedCategories as any);
-        
-        // Move songs to uncategorized
-        await FirebaseDatabaseService.handleCategoryDeletion(categoryToDelete.name, 'Uncategorized');
-        await refreshData();
-        
+      const newStatus = song.status === 'heard' ? 'unheard' : 'heard';
+      const updatedSong = { ...song, status: newStatus };
+
+      const result = await FirebaseDatabaseService.updateSong(song.id || 0, updatedSong);
+
+      if (result.success) {
+        console.log('✅ Song status updated successfully');
         addToast({
           type: 'success',
-          message: `Category "${categoryToDelete.name}" deleted successfully! Songs moved to "Uncategorized".`
+          message: `Song marked as ${newStatus}`
         });
-        
-        // Close dialog
-        setShowDeleteCategoryDialog(false);
-        setCategoryToDelete(null);
+        refreshData();
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.updateSong(currentAdmin, `Updated song status: ${song.title} -> ${newStatus}`);
+        }
       } else {
-        throw new Error('Failed to delete category from database');
+        throw new Error('Failed to update song status');
       }
     } catch (error) {
-      console.error('Error deleting category:', error);
+      console.error('❌ Error updating song status:', error);
       addToast({
         type: 'error',
-        message: `Failed to delete category: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: error instanceof Error ? error.message : 'Failed to update song status'
       });
     }
   };
 
-  const cancelDeleteCategory = () => {
-    setShowDeleteCategoryDialog(false);
-    setCategoryToDelete(null);
+  const handleSaveSong = async (songData: PraiseNightSong) => {
+    try {
+      console.log('💾 handleSaveSong called with:', {
+        editingSong: editingSong,
+        editingSongId: editingSong?.id,
+        editingSongFirebaseId: editingSong?.firebaseId,
+        songData: songData,
+        songDataId: songData.id,
+        songDataFirebaseId: songData.firebaseId
+      });
+
+      let result;
+
+      // Check if we're editing an existing song
+      // Use firebaseId as the primary identifier since that's the actual document ID
+      const isEditingExistingSong = editingSong && (editingSong.firebaseId || (editingSong.id && editingSong.id.length > 0));
+
+      if (isEditingExistingSong) {
+        // Update existing song - use firebaseId if available, otherwise use id
+        const songIdToUpdate = editingSong.firebaseId || editingSong.id!;
+        console.log('🔄 Updating existing song');
+        console.log('📊 editingSong.firebaseId:', editingSong.firebaseId);
+        console.log('📊 editingSong.id:', editingSong.id);
+        console.log('📊 songIdToUpdate (will use this):', songIdToUpdate);
+        console.log('📊 songIdToUpdate type:', typeof songIdToUpdate);
+        console.log('📊 songData.praiseNightId:', songData.praiseNightId);
+        console.log('📊 songData.title:', songData.title);
+
+        if (!songIdToUpdate) {
+          throw new Error('No valid song ID found for update');
+        }
+
+        // Detect what changed for notifications
+        const changes: string[] = [];
+        const existingSong = allSongs.find(s => s.id === editingSong.id || s.firebaseId === editingSong.firebaseId);
+
+        if (existingSong) {
+          if (existingSong.lyrics !== songData.lyrics) {
+            changes.push('lyrics');
+          }
+          if (existingSong.audioFile !== songData.audioFile && songData.audioFile) {
+            changes.push('audio');
+          }
+          if (existingSong.key !== songData.key) {
+            changes.push(`key changed from ${existingSong.key} to ${songData.key}`);
+          }
+          if (existingSong.tempo !== songData.tempo) {
+            changes.push(`tempo changed to ${songData.tempo}`);
+          }
+          if (existingSong.leadSinger !== songData.leadSinger) {
+            changes.push(`lead singer: ${songData.leadSinger}`);
+          }
+        }
+
+        result = await FirebaseDatabaseService.updateSong(songIdToUpdate, songData);
+
+        if (result.success) {
+          console.log('✅ Song updated successfully');
+          addToast({
+            type: 'success',
+            message: 'Song updated successfully'
+          });
+
+          // Log admin action
+          if (currentAdmin) {
+            logAdminAction.updateSong(currentAdmin, `Updated song: ${songData.title}`);
+          }
+        } else {
+          console.error('❌ Song update failed:', result.error);
+          addToast({
+            type: 'error',
+            message: result.error || 'Failed to update song'
+          });
+        }
+      } else {
+        // Add new song
+        console.log('➕ Creating new song');
+        
+        // Ensure we use the correct page ID format (Firebase document ID)
+        const updatedSongData = {
+          ...songData,
+          praiseNightId: selectedPage?.firebaseId || selectedPage?.id || songData.praiseNightId
+        };
+        
+        console.log('🎵 Song data with correct praiseNightId:', {
+          originalPraiseNightId: songData.praiseNightId,
+          selectedPageId: selectedPage?.id,
+          selectedPageFirebaseId: selectedPage?.firebaseId,
+          finalPraiseNightId: updatedSongData.praiseNightId
+        });
+        
+        result = await FirebaseDatabaseService.createSong(updatedSongData);
+
+        if (result.success) {
+          console.log('✅ Song added successfully');
+          addToast({
+            type: 'success',
+            message: 'Song added successfully'
+          });
+
+          // Log admin action
+          if (currentAdmin) {
+            logAdminAction.addSong(currentAdmin, songData.title, songData.category);
+          }
+        } else {
+          console.error('❌ Song creation failed:', result.error);
+          addToast({
+            type: 'error',
+            message: result.error || 'Failed to create song'
+          });
+        }
+      }
+
+      if (result?.success) {
+        setEditingSong(null);
+        setShowSongModal(false);
+        refreshData();
+      } else {
+        throw new Error('Failed to save song');
+      }
+    } catch (error) {
+      console.error('❌ Error saving song:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to save song'
+      });
+    }
   };
 
-  const handleDeletePageCategory = (id: string) => {
-    addToast({
-      type: 'info',
-      message: 'Categories are now managed through songs. Delete songs instead.'
-    });
+  const confirmDeleteSong = async () => {
+    if (!songToDelete) return;
+
+    try {
+      // Use firebaseId if available, otherwise use id
+      const songIdToDelete = songToDelete.firebaseId || songToDelete.id;
+
+      console.log('🗑️ Deleting song:', {
+        title: songToDelete.title,
+        firebaseId: songToDelete.firebaseId,
+        id: songToDelete.id,
+        usingId: songIdToDelete
+      });
+
+      if (!songIdToDelete) {
+        throw new Error('No valid song ID found for deletion');
+      }
+
+      const result = await FirebaseDatabaseService.deleteSong(songIdToDelete);
+
+      if (result.success) {
+        console.log('✅ Song deleted successfully');
+        addToast({
+          type: 'success',
+          message: 'Song deleted successfully'
+        });
+
+        setShowDeleteSongDialog(false);
+        setSongToDelete(null);
+        refreshData();
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.deleteSong(currentAdmin, songToDelete.title);
+        }
+      } else {
+        throw new Error(result.error || 'Failed to delete song');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting song:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to delete song'
+      });
+    }
+  };
+
+  const cancelDeleteSong = () => {
+    setShowDeleteSongDialog(false);
+    setSongToDelete(null);
+  };
+
+  // Additional category functions for page categories
+  const handleAddPageCategory = async () => {
+    // Same as handleAddCategory but for page-specific categories
+    await handleAddCategory();
+  };
+
+  const handleUpdatePageCategory = async () => {
+    // Same as handleUpdateCategory but for page-specific categories
+    await handleUpdateCategory();
   };
 
   const handleEditCategoryContent = (content: any) => {
-    // Convert to PraiseNightSong for editing
-    const song: PraiseNightSong = {
-      title: content.title,
-      status: content.status,
-      category: selectedCategory || '',
-      praiseNightId: selectedPage?.id || 0,
-      lyrics: content.lyrics || '',
-      leadSinger: content.leadSinger || '',
-      writer: content.writer || '',
-      conductor: content.conductor || '',
-      key: content.key || '',
-      tempo: content.tempo || '',
-      leadKeyboardist: content.leadKeyboardist || '',
-      // leadGuitarist field kept for data structure
-      drummer: content.drummer || '',
-      comments: content.comments || [],
-      audioFile: content.audioFile || '',
-      history: content.history || []
-    };
-    setEditingSong(song);
-    setShowSongModal(true);
+    // Handle editing category content (songs)
+    if (content && content.id) {
+      handleEditSong(content);
+    }
   };
 
   const handleDeleteCategoryContent = (id: string) => {
-    addToast({
-      type: 'info',
-      message: 'Content is now managed through songs. Delete songs instead.'
-    });
+    // Handle deleting category content (songs)
+    const song = allSongs.find(s => s.id?.toString() === id);
+    if (song) {
+      handleDeleteSong(song);
+    }
   };
 
-  // User management functions - REMOVED
-
- 
-
-
-  const sidebarItems = [
-    { icon: FileText, label: 'Pages', active: activeSection === 'Pages' },
-    { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
-    { icon: Users, label: 'Members', active: activeSection === 'Members' },
-    { icon: Music, label: 'Media', active: activeSection === 'Media' },
-  ];
-
-  // Show loading state
-  if (loading) {
+  // Show loading state only for initial page load
+  if (loading && allPraiseNights.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading admin data...</p>
+          <p className="text-slate-600">Loading admin dashboard...</p>
+          <p className="text-slate-400 text-sm mt-2">This should be much faster now!</p>
         </div>
       </div>
     );
@@ -1294,11 +939,11 @@ export default function AdminPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <X className="w-8 h-8 text-red-600" />
+            <FileText className="w-8 h-8 text-red-600" />
           </div>
           <p className="text-red-600 font-medium mb-2">Error loading admin data</p>
           <p className="text-slate-600 text-sm mb-4">{error}</p>
-          <button 
+          <button
             onClick={refreshData}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
@@ -1312,1297 +957,200 @@ export default function AdminPage() {
   // Show admin login form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center">
-        <div className="w-full max-w-md mx-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Settings className="w-8 h-8 text-purple-600" />
-              </div>
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">Admin Login</h1>
-              <p className="text-gray-600 text-sm">Enter your credentials to access the admin panel</p>
-            </div>
-
-            <form onSubmit={handleAdminLogin} className="space-y-6">
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  value={loginData.username}
-                  onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
-                  placeholder="Enter username"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
-                  placeholder="Enter password"
-                  required
-                />
-              </div>
-
-              {loginError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-                  <p className="text-red-600 text-sm">{loginError}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-purple-600 text-white font-semibold rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl hover:bg-purple-700 active:scale-95"
-              >
-                Login
-              </button>
-            </form>
-
-          </div>
-        </div>
-      </div>
+      <AdminAuth
+        isAuthenticated={isAuthenticated}
+        setIsAuthenticated={setIsAuthenticated}
+        currentAdmin={currentAdmin}
+        setCurrentAdmin={setCurrentAdmin}
+      />
     );
   }
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex flex-col lg:flex-row">
-      {/* Mobile Menu Button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="w-10 h-10 rounded-lg bg-white/90 backdrop-blur-xl border border-slate-200 shadow-sm flex items-center justify-center"
-        >
-          <ChevronRight className={`w-5 h-5 text-purple-600 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} />
-        </button>
-      </div>
-
-      {/* Mobile Overlay */}
-      {!sidebarCollapsed && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-white/20 backdrop-blur-md z-40"
-          onClick={() => setSidebarCollapsed(true)}
-        />
-      )}
-
-      {/* Left Sidebar */}
-      <div className={`bg-white/80 backdrop-blur-xl border-r border-slate-200 shadow-sm transition-all duration-300 ${
-        sidebarCollapsed ? 'w-0 lg:w-16' : 'w-64 lg:w-64'
-      } ${sidebarCollapsed ? 'lg:block' : 'block'} ${
-        sidebarCollapsed ? 'hidden lg:block' : 'block'
-      } fixed lg:relative top-0 left-0 h-full z-50 lg:z-auto`}>
-        <div className="p-4">
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="hidden lg:flex w-8 h-8 rounded-lg bg-purple-50 hover:bg-purple-100 items-center justify-center transition-colors"
-          >
-            <ChevronRight className={`w-4 h-4 text-purple-600 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
-
-        <nav className="px-3 space-y-1">
-          {sidebarItems.map((item, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                if (item.label === 'Pages') setActiveSection('Pages');
-                else if (item.label === 'Categories') setActiveSection('Categories');
-                else if (item.label === 'Members') setActiveSection('Members');
-                else if (item.label === 'Media') setActiveSection('Media');
-                // Auto-close sidebar on mobile after clicking
-                setSidebarCollapsed(true);
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                item.active 
-                  ? 'bg-purple-600 text-white' 
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && (
-                <span className="text-sm font-medium">{item.label}</span>
-              )}
-            </button>
-          ))}
-          
-          {/* Current Admin Info */}
-          {!sidebarCollapsed && currentAdmin && (
-            <div className="pt-4 border-t border-slate-200 mb-4">
-              <div className="px-3 py-2 bg-purple-50 rounded-lg">
-                <p className="text-xs text-purple-600 font-medium mb-1">Logged in as:</p>
-                <p className="text-sm font-semibold text-gray-900">{currentAdmin.fullName}</p>
-                <p className="text-xs text-gray-500">@{currentAdmin.username}</p>
-                <div className="mt-2 flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-xs text-gray-600 capitalize">{currentAdmin.role.replace('_', ' ')}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Logout Button */}
-          <div className="pt-4 border-t border-slate-200">
-            <button
-              onClick={handleAdminLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-red-600 hover:bg-red-50"
-            >
-              <X className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && (
-                <span className="text-sm font-medium">Logout</span>
-              )}
-            </button>
-          </div>
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-0 overflow-hidden">
-        {/* Top Header */}
-        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 sm:px-6 py-4 mt-16 lg:mt-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <button
-                onClick={() => {
-                  setSelectedPage(null);
-                  setSelectedCategory(null);
-                }}
-                className="hover:text-purple-600"
-              >
-                Admin
-              </button>
-              {!selectedPage && activeSection !== 'Pages' && (
-                <>
-                  <ChevronRight className="w-4 h-4" />
-                  <span className="text-slate-900 font-medium">{activeSection}</span>
-                </>
-              )}
-              {selectedPage && (
-                <>
-                  <ChevronRight className="w-4 h-4" />
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className="hover:text-purple-600"
-                  >
-                    {selectedPage.name}
-                  </button>
-                </>
-              )}
-              {selectedCategory && (
-                <>
-                  <ChevronRight className="w-4 h-4" />
-                  <span className="text-slate-900 font-medium">{selectedCategory}</span>
-                </>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Current Admin Badge */}
-              {currentAdmin && (
-                <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-purple-50 rounded-lg border border-purple-200">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-purple-900">{currentAdmin.fullName}</span>
-                  <span className="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full capitalize">
-                    {currentAdmin.role.replace('_', ' ')}
-                  </span>
-                </div>
-              )}
-
-              <a
-                href="/home"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm font-medium">View Site</span>
-              </a>
-              <button className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-600 hover:bg-gray-100 rounded-lg transition-colors">
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm font-medium">Export</span>
-              </button>
-              <button className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-600 hover:bg-gray-100 rounded-lg transition-colors">
-                <Printer className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm font-medium">Print</span>
-              </button>
-            </div>
-          </div>
-
-          <h1 className="text-2xl font-bold text-slate-900 mt-4">
-            {selectedPage ? (selectedCategory ? selectedCategory : selectedPage.name) : 
-             activeSection === 'Categories' ? 'Categories' : 
-             activeSection === 'Members' ? 'Members' :
-             activeSection === 'Media' ? 'Media Library' :
-             activeSection === 'Pages' ? 'Pages' : 
-             'Admin Dashboard'}
-          </h1>
-        </header>
-
-        {/* Main Content Area */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-6 pb-20 overflow-x-auto overflow-y-auto min-h-0">
-          {activeSection === 'Categories' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-4 sm:p-6 max-h-full overflow-y-auto">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                <h2 className="text-lg font-semibold text-slate-900">Manage Categories</h2>
-                <button
-                  onClick={() => setShowCategoryModal(true)}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-colors w-full sm:w-auto"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-sm font-medium">Add Category</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {allCategories.map((category) => (
-                  <div key={category.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-slate-900">{category.name}</h3>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleEditCategory(category.name)}
-                          className="p-1 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCategory(category)}
-                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-2">{category.description || 'No description'}</p>
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                        category.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {category.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        {new Date(category.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeSection === 'Members' && (
-            <div className="h-full">
-              <Members />
-            </div>
-          )}
-
-          {activeSection === 'Media' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6 max-h-full overflow-y-auto">
-              <MediaManager />
-                </div>
-              )}
-
-
-
-          {activeSection === 'Pages' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-lg shadow-sm border border-slate-200 p-6 max-h-full overflow-y-auto">
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                  {!selectedPage && (
-                    <button
-                      onClick={() => setShowPageModal(true)}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors w-full sm:w-auto"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Page
-                    </button>
-                  )}
-                  {selectedPage && !selectedCategory && (
-                    <button
-                      onClick={() => {
-                        setEditingSong(null);
-                        setShowSongModal(true);
-                      }}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Song
-                    </button>
-                  )}
-                  {selectedCategory && (
-                    <button
-                      onClick={() => {
-                        setEditingSong(null);
-                        setShowSongModal(true);
-                      }}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors w-full sm:w-auto"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Content
-                    </button>
-                  )}
-              </div>
-
-              {/* Main Content Area */}
-              {!selectedPage && (
-                /* Pages List */
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                  {pages.map((page) => (
-                    <div 
-                      key={page.id} 
-                      className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 hover:shadow-lg hover:border-purple-200 transition-all duration-200 cursor-pointer group"
-                      onClick={() => setSelectedPage(page)}
-                    >
-                      {/* Header with Icon and Title */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div 
-                            className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm"
-                            style={{ backgroundColor: '#8B5CF6' }}
-                          >
-                            <Calendar className="w-6 h-6 sm:w-7 sm:h-7" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-slate-900 text-base sm:text-lg truncate group-hover:text-purple-700 transition-colors">
-                              {page.name}
-                            </h3>
-                            <p className="text-sm text-slate-600 truncate mt-0.5">{page.date}</p>
-                          </div>
-                        </div>
-                        
-                        {/* Action Buttons */}
-                        <div className="flex gap-1 sm:gap-2 flex-shrink-0">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedPage(page);
-                            }}
-                            className="p-2 sm:p-2.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                            title="View Songs"
-                          >
-                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditPage(page);
-                            }}
-                            className="p-2 sm:p-2.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Edit Page"
-                          >
-                            <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeletePage(page);
-                            }}
-                            className="p-2 sm:p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Page"
-                          >
-                            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                          <p className="text-sm text-slate-600 font-medium">Praise Night Event</p>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-sm text-slate-500">
-                            <div className="w-4 h-4 bg-slate-200 rounded-full flex items-center justify-center">
-                              <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
-                            </div>
-                            <span className="truncate">{page.location}</span>
-                          </div>
-                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap flex-shrink-0">
-                            Active
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {selectedPage && !selectedCategory && (
-                <div>
-                  {/* Page Songs View */}
-                  <div className="mb-8">
-                    {/* Filters */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
-                      <select 
-                        className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as 'all' | 'heard' | 'unheard')}
-                      >
-                        <option value="all">All Status</option>
-                        <option value="heard">Heard</option>
-                        <option value="unheard">Unheard</option>
-                      </select>
-                      <select 
-                        className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                        value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                      >
-                        <option value="all">All Categories</option>
-                        {pageCategories.map(category => (
-                          <option key={category.id} value={category.name}>{category.name}</option>
-                        ))}
-                      </select>
-                      <button className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-slate-50 w-full sm:w-auto">
-                        <Bookmark className="w-4 h-4 text-slate-400" />
-                        <span className="text-sm text-slate-600">Saved filters</span>
-                      </button>
-                    </div>
-
-                    {/* Tabs */}
-                    <div className="flex items-center gap-6 border-b border-slate-200 mb-6">
-                      <button 
-                        className={`pb-3 font-medium transition-colors ${
-                          statusFilter === 'all' 
-                            ? 'border-b-2 border-purple-600 text-purple-600' 
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                        onClick={() => setStatusFilter('all')}
-                      >
-                        All Songs {(() => {
-                          const filteredSongs = allSongs.filter(song => song.praiseNightId === selectedPage.id);
-                          console.log('🎵 Admin - Filtered Songs for Page', selectedPage?.id, ':', filteredSongs.length, filteredSongs.map(s => s.title));
-                          return filteredSongs.length;
-                        })()}
-                      </button>
-                      <button 
-                        className={`pb-3 font-medium transition-colors ${
-                          statusFilter === 'heard' 
-                            ? 'border-b-2 border-purple-600 text-purple-600' 
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                        onClick={() => setStatusFilter('heard')}
-                      >
-                        Heard {allSongs.filter(song => song.praiseNightId === selectedPage.id && song.status === 'heard').length}
-                      </button>
-                      <button 
-                        className={`pb-3 font-medium transition-colors ${
-                          statusFilter === 'unheard' 
-                            ? 'border-b-2 border-purple-600 text-purple-600' 
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                        onClick={() => setStatusFilter('unheard')}
-                      >
-                        Unheard {allSongs.filter(song => song.praiseNightId === selectedPage.id && song.status === 'unheard').length}
-                      </button>
-                    </div>
-
-                    {/* Songs Table - Desktop */}
-                    <div className="hidden lg:block overflow-x-auto overflow-y-auto max-h-[60vh]">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-slate-200">
-                            <th className="text-left py-3 px-4 font-medium text-slate-900">Song</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-900">Category</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-900">Status</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-900">Lead Singer</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-900">Writer</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-900">Conductor</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-900">Key</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-900">Tempo</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-900">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {allSongs
-                            .filter(song => song.praiseNightId === selectedPage.id)
-                            .filter(song => {
-                              const matchesSearch = song.title.toLowerCase().includes(searchTerm.toLowerCase());
-                              const matchesStatus = statusFilter === 'all' || song.status === statusFilter;
-                              const matchesCategory = categoryFilter === 'all' || song.category === categoryFilter;
-                              return matchesSearch && matchesStatus && matchesCategory;
-                            })
-                            .slice(startIndex, startIndex + itemsPerPage)
-                            .map((song, index) => (
-                            <tr key={index} className="border-b border-gray-100 hover:bg-slate-50">
-                              <td className="py-4 px-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                    <Music className="w-5 h-5 text-purple-600" />
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-slate-900">{song.title}</div>
-                                    <div className="text-sm text-gray-500">
-                                      {song.leadKeyboardist} • {song.leadGuitarist} • {song.drummer}
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-4 px-4">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-blue-800 whitespace-nowrap">
-                                  {song.category}
-                                </span>
-                              </td>
-                              <td className="py-4 px-4">
-                                <button
-                                  onClick={() => handleToggleSongStatus(song)}
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
-                                    song.status === 'heard' 
-                                      ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                      : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                                  }`}
-                                >
-                                  {song.status === 'heard' ? 'Heard' : 'Unheard'}
-                                </button>
-                              </td>
-                              <td className="py-4 px-4 text-sm text-slate-900">{song.leadSinger}</td>
-                              <td className="py-4 px-4 text-sm text-slate-900">{song.writer}</td>
-                              <td className="py-4 px-4 text-sm text-slate-900">{song.conductor}</td>
-                              <td className="py-4 px-4 text-sm text-slate-900">{song.key}</td>
-                              <td className="py-4 px-4 text-sm text-slate-900">{song.tempo}</td>
-                              <td className="py-4 px-4">
-                                <div className="flex items-center gap-2">
-                                  <button 
-                                    onClick={() => handleEditSong(song)}
-                                    className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleDeleteSong(song)}
-                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Songs Cards - Mobile */}
-                    <div className="lg:hidden space-y-4 overflow-y-auto max-h-[60vh]">
-                      {allSongs
-                        .filter(song => song.praiseNightId === selectedPage.id)
-                        .filter(song => {
-                          const matchesSearch = song.title.toLowerCase().includes(searchTerm.toLowerCase());
-                          const matchesStatus = statusFilter === 'all' || song.status === statusFilter;
-                          const matchesCategory = categoryFilter === 'all' || song.category === categoryFilter;
-                          return matchesSearch && matchesStatus && matchesCategory;
-                        })
-                        .slice(startIndex, startIndex + itemsPerPage)
-                        .map((song, index) => (
-                        <div key={index} className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                                <Music className="w-5 h-5 text-purple-600" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <h3 className="font-semibold text-slate-900 truncate">{song.title}</h3>
-                                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-blue-800 whitespace-nowrap">
-                                    {song.category}
-                                  </span>
-                                  <button
-                                    onClick={() => handleToggleSongStatus(song)}
-                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
-                                      song.status === 'heard' 
-                                        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                        : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                                    }`}
-                                  >
-                                    {song.status === 'heard' ? 'Heard' : 'Unheard'}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => handleEditSong(song)}
-                                className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteSong(song)}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                              <span className="text-slate-500">Lead Singer:</span>
-                              <p className="font-medium text-slate-900 truncate">{song.leadSinger}</p>
-                            </div>
-                            <div>
-                              <span className="text-slate-500">Writer:</span>
-                              <p className="font-medium text-slate-900 truncate">{song.writer}</p>
-                            </div>
-                            <div>
-                              <span className="text-slate-500">Conductor:</span>
-                              <p className="font-medium text-slate-900 truncate">{song.conductor}</p>
-                            </div>
-                            <div>
-                              <span className="text-slate-500">Key:</span>
-                              <p className="font-medium text-slate-900">{song.key}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="mt-3 pt-3 border-t border-slate-100">
-                            <div className="text-sm text-slate-500">
-                              <span className="font-medium">Musicians:</span> {song.leadKeyboardist} • {song.leadGuitarist} • {song.drummer}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Pagination */}
-                    {Math.ceil(allSongs.filter(song => song.praiseNightId === selectedPage.id).length / itemsPerPage) > 1 && (
-                      <div className="mt-6 flex items-center justify-between">
-                        <div className="text-sm text-gray-500">
-                          Page {currentPage} of {Math.ceil(allSongs.filter(song => song.praiseNightId === selectedPage.id).length / itemsPerPage)}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
-                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Previous
-                          </button>
-                          <div className="flex items-center gap-1">
-                            {Array.from({ length: Math.ceil(allSongs.filter(song => song.praiseNightId === selectedPage.id).length / itemsPerPage) }, (_, i) => i + 1).map(page => (
-                              <button
-                                key={page}
-                                onClick={() => setCurrentPage(page)}
-                                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                                  page === currentPage 
-                                    ? 'bg-purple-600 text-white' 
-                                    : 'text-slate-600 hover:bg-gray-100'
-                                }`}
-                              >
-                                {page}
-                              </button>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() => setCurrentPage(Math.min(Math.ceil(allSongs.filter(song => song.praiseNightId === selectedPage.id).length / itemsPerPage), currentPage + 1))}
-                            disabled={currentPage === Math.ceil(allSongs.filter(song => song.praiseNightId === selectedPage.id).length / itemsPerPage)}
-                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Category Pills */}
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Categories in this Page</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {pageCategories.map((category) => (
-                        <div
-                          key={category.id}
-                          className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm font-medium text-gray-700 transition-colors cursor-pointer"
-                          onClick={() => setSelectedCategory(category.name)}
-                          title={`${allSongs.filter(song => song.praiseNightId === selectedPage.id && song.category === category.name).length} items in this category`}
-                        >
-                          <div 
-                            className="w-3 h-3 rounded-full bg-purple-500"
-                          ></div>
-                          <span>{category.name}</span>
-                          <span className="text-xs text-gray-500">
-                            ({allSongs.filter(song => song.praiseNightId === selectedPage.id && song.category === category.name).length})
-                          </span>
-                        </div>
-                      ))}
-                      {pageCategories.length === 0 && (
-                        <div className="text-sm text-gray-500 italic">
-                          No categories found. Use the Categories section to create categories.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {selectedCategory && (
-                /* Content List */
-                <div className="space-y-4">
-                  {categoryContent.map((content, index) => (
-                    <div key={`${content.title}-${index}`} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-slate-900">{content.title}</h3>
-                            <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
-                              <span>Lead: {content.leadSinger || 'N/A'}</span>
-                              <span>Writer: {content.writer || 'N/A'}</span>
-                              <span>Key: {content.key || 'N/A'}</span>
-                              <span>Tempo: {content.tempo || 'N/A'}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`px-2 py-1 rounded-full text-xs whitespace-nowrap ${
-                            content.status === 'heard' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {content.status}
-                          </span>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditCategoryContent(content)}
-                              className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Edit Content"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCategoryContent(content.title)}
-                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete Content"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {categoryContent.length === 0 && (
-                    <div className="text-center py-12 text-gray-500">
-                      <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                      <p>No content in this category yet.</p>
-                      <p className="text-sm">Click "Add Song" to get started.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-
-
-
-
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* Category Modal */}
-      {showCategoryModal && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          <div className="bg-white w-full h-full overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-200 flex-shrink-0">
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900">
-                {(editingPageCategory || editingCategory) ? 'Edit Category' : 'Add New Category'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowCategoryModal(false);
-                  setEditingPageCategory(null);
-                  setEditingCategory(null);
-                  setNewPageCategoryName('');
-                }}
-                className="text-slate-400 hover:text-slate-600 p-2 -mr-2"
-              >
-                <X className="w-6 h-6 sm:w-8 sm:h-8" />
-              </button>
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-              <div className="space-y-4 sm:space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                    Category Name
-                </label>
-                <input
-                  type="text"
-                value={newPageCategoryName}
-                onChange={(e) => setNewPageCategoryName(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                  placeholder="Enter category name"
-                />
-              </div>
-              
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-4">
-                  <button
-                    onClick={(editingPageCategory || editingCategory) ? (editingPageCategory ? handleUpdatePageCategory : handleUpdateCategory) : (activeSection === 'Categories' ? handleAddCategory : handleAddPageCategory)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-colors font-medium"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span className="text-sm sm:text-base">{(editingPageCategory || editingCategory) ? 'Update' : 'Add'} Category</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowCategoryModal(false);
-                      setEditingPageCategory(null);
-                      setEditingCategory(null);
-                      setNewPageCategoryName('');
-                    }}
-                    className="w-full sm:w-auto px-4 py-3 border border-gray-300 text-gray-700 hover:bg-slate-50 rounded-lg transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Praise Night Modal */}
-      {/* Page Modal */}
-      {showPageModal && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          <div className="bg-white w-full h-full overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-200 flex-shrink-0">
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900">
-                {editingPage ? 'Edit Page' : 'Add New Page'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowPageModal(false);
-                  setEditingPage(null);
-                  setNewPageName('');
-                  setNewPageDate('');
-                  setNewPageLocation('');
-                  setNewPageDescription('');
-                  setNewPageCategory('unassigned');
-                  setNewPageBannerImage('');
-                  setNewPageBannerFile(null);
-                  setNewPageDays(0);
-                  setNewPageHours(0);
-                  setNewPageMinutes(0);
-                  setNewPageSeconds(0);
-                  // Reset file input
-                  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-                  if (fileInput) fileInput.value = '';
-                }}
-                className="text-slate-400 hover:text-slate-600 p-2 -mr-2"
-              >
-                <X className="w-6 h-6 sm:w-8 sm:h-8" />
-              </button>
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-              <div className="space-y-4 sm:space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                  Page Name
-                </label>
-                <input
-                  type="text"
-                  value={newPageName}
-                  onChange={(e) => setNewPageName(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                  placeholder="e.g., Your Loveworld Special"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                  Date
-                </label>
-                <input
-                  type="text"
-                  value={newPageDate}
-                  onChange={(e) => setNewPageDate(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                  placeholder="e.g., 21st September 2025"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  value={newPageLocation}
-                  onChange={(e) => setNewPageLocation(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                  placeholder="e.g., Oasis Studio"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                  Description
-                </label>
-                <textarea
-                  value={newPageDescription}
-                  onChange={(e) => setNewPageDescription(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                  placeholder="Enter description for this page"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                  Banner Image
-                </label>
-
-                {/* Hidden file input */}
-                <input
-                  id="banner-image-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      // Store the actual file for upload
-                      setNewPageBannerFile(file);
-                      // Create a preview URL for the uploaded image
-                      const previewUrl = URL.createObjectURL(file);
-                      setNewPageBannerImage(previewUrl);
-                    }
-                  }}
-                  className="hidden"
-                />
-
-                {/* Choose Image Button */}
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('banner-image-input')?.click()}
-                  className="w-full px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium rounded-lg border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  {newPageBannerFile ? 'Change Image' : 'Choose Image'}
-                </button>
-
-                {newPageBannerImage && (
-                  <div className="mt-3">
-                    <img
-                      src={newPageBannerImage}
-                      alt="Banner preview"
-                      className="w-full h-40 object-cover rounded-lg border-2 border-purple-200 shadow-sm"
-                    />
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-xs text-gray-600">
-                        {newPageBannerFile ? `Selected: ${newPageBannerFile.name}` : 'Current banner image'}
-                      </p>
-                      {newPageBannerFile && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewPageBannerFile(null);
-                            setNewPageBannerImage(editingPage?.bannerImage || '');
-                            const fileInput = document.getElementById('banner-image-input') as HTMLInputElement;
-                            if (fileInput) fileInput.value = '';
-                          }}
-                          className="text-xs text-red-600 hover:text-red-700 font-medium"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-                <p className="text-xs text-gray-500 mt-2">
-                  Upload a banner image for this page (JPG, PNG, WebP - Max 5MB)
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                  Category
-                </label>
-                <select
-                  value={newPageCategory}
-                  onChange={(e) => setNewPageCategory(e.target.value as 'unassigned' | 'pre-rehearsal' | 'ongoing' | 'archive')}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                >
-                  <option value="unassigned">Unassigned</option>
-                  <option value="pre-rehearsal">Pre-Rehearsal</option>
-                  <option value="ongoing">Ongoing</option>
-                  <option value="archive">Archive</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Countdown Timer Section */}
-            <div className="mt-6">
-              <h4 className="text-lg font-medium text-slate-900 mb-4">Countdown Timer</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                    Days
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={newPageDays}
-                    onChange={(e) => setNewPageDays(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                    Hours
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={newPageHours}
-                    onChange={(e) => setNewPageHours(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                    Minutes
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={newPageMinutes}
-                    onChange={(e) => setNewPageMinutes(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
-                    Seconds
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={newPageSeconds}
-                    onChange={(e) => setNewPageSeconds(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            </div>
-            </div>
-              
-            {/* Footer */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-4">
-              <button
-                onClick={() => {
-                  console.log('🔘 Update/Add button clicked');
-                  console.log('editingPage:', editingPage);
-                  if (editingPage) {
-                    console.log('🔄 Calling handleUpdatePage');
-                    handleUpdatePage();
-                  } else {
-                    console.log('➕ Calling handleAddPage');
-                    handleAddPage();
-                  }
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-colors font-medium"
-              >
-                <Save className="w-4 h-4" />
-                <span className="text-sm sm:text-base">{editingPage ? 'Update' : 'Add'} Page</span>
-              </button>
-              <button
-                onClick={() => {
-                  setShowPageModal(false);
-                  setEditingPage(null);
-                  setNewPageName('');
-                  setNewPageDate('');
-                  setNewPageLocation('');
-                  setNewPageDescription('');
-                  setNewPageCategory('unassigned');
-                  setNewPageBannerImage('');
-                  setNewPageBannerFile(null);
-                  setNewPageDays(0);
-                  setNewPageHours(0);
-                  setNewPageMinutes(0);
-                  setNewPageSeconds(0);
-                  // Reset file input
-                  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-                  if (fileInput) fileInput.value = '';
-                }}
-                className="w-full sm:w-auto px-4 py-3 border border-gray-300 text-gray-700 hover:bg-slate-50 rounded-lg transition-colors font-medium"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Support Message Reply Modal - REMOVED */}
-
-
-      {/* Song Edit Modal */}
-      <EditSongModal
-        isOpen={showSongModal}
-        onClose={() => {
-          setShowSongModal(false);
-          setEditingSong(null);
-        }}
-        song={editingSong}
-        categories={allCategories}
-         praiseNightCategories={pages.map(page => ({ id: page.id, name: page.name, description: 'Praise Night Event', date: page.date, location: page.location, icon: 'Music', color: '#8B5CF6', isActive: true, createdAt: new Date(), updatedAt: new Date(), countdown: page.countdown }))}
-        onUpdate={handleSaveSong}
+      {/* Sidebar */}
+      <AdminSidebar
+        sidebarCollapsed={!isSidebarOpen}
+        setSidebarCollapsed={(collapsed) => setIsSidebarOpen(!collapsed)}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
       />
 
-      {/* Delete Confirmation Dialog */}
-      {showDeleteDialog && pageToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Delete Page</h3>
-                <p className="text-sm text-gray-500">This action cannot be undone</p>
-              </div>
-            </div>
-            
-            <div className="mb-6">
-              <p className="text-gray-700 mb-2">
-                Are you sure you want to delete the page:
-              </p>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="font-medium text-gray-900">{pageToDelete.name}</p>
-                <p className="text-sm text-gray-500">{pageToDelete.location}</p>
-                <p className="text-sm text-gray-500">{pageToDelete.date}</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={cancelDeletePage}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeletePage}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Delete Page
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        {activeSection === 'Pages' && (
+          <PagesSection
+            allPraiseNights={allPraiseNights}
+            loading={loading}
+            selectedPage={selectedPage}
+            setSelectedPage={setSelectedPage}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            allSongs={allSongs}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            showPageModal={showPageModal}
+            setShowPageModal={setShowPageModal}
+            editingPage={editingPage}
+            setEditingPage={setEditingPage}
+            newPageName={newPageName}
+            setNewPageName={setNewPageName}
+            newPageDate={newPageDate}
+            setNewPageDate={setNewPageDate}
+            newPageLocation={newPageLocation}
+            setNewPageLocation={setNewPageLocation}
+            newPageDescription={newPageDescription}
+            setNewPageDescription={setNewPageDescription}
+            newPageCategory={newPageCategory}
+            setNewPageCategory={setNewPageCategory}
+            newPageDays={newPageDays}
+            setNewPageDays={setNewPageDays}
+            newPageHours={newPageHours}
+            setNewPageHours={setNewPageHours}
+            newPageMinutes={newPageMinutes}
+            setNewPageMinutes={setNewPageMinutes}
+            newPageSeconds={newPageSeconds}
+            setNewPageSeconds={setNewPageSeconds}
+            newPageBannerImage={newPageBannerImage}
+            setNewPageBannerImage={setNewPageBannerImage}
+            newPageBannerFile={newPageBannerFile}
+            setNewPageBannerFile={setNewPageBannerFile}
+            isCreatingPage={isCreatingPage}
+            showDeleteDialog={showDeleteDialog}
+            setShowDeleteDialog={setShowDeleteDialog}
+            pageToDelete={pageToDelete}
+            setPageToDelete={setPageToDelete}
+            handleAddPage={handleAddPage}
+            handleEditPage={handleEditPage}
+            handleUpdatePage={handleUpdatePage}
+            handleDeletePage={handleDeletePage}
+            confirmDeletePage={confirmDeletePage}
+            cancelDeletePage={cancelDeletePage}
+            handleEditSong={handleEditSong}
+            handleDeleteSong={handleDeleteSong}
+            handleToggleSongStatus={handleToggleSongStatus}
+            allCategories={allCategories}
+            addToast={addToast}
+          />
+        )}
 
-      {/* Delete Song Confirmation Dialog */}
-      {showDeleteSongDialog && songToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600" />
-                  </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Delete Song</h3>
-                <p className="text-sm text-gray-500">This action cannot be undone</p>
-                </div>
-              </div>
+        {activeSection === 'Categories' && (
+          <CategoriesSection
+            allCategories={allCategories}
+            allSongs={allSongs}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            showCategoryModal={showCategoryModal}
+            setShowCategoryModal={setShowCategoryModal}
+            editingCategory={editingCategory}
+            setEditingCategory={setEditingCategory}
+            newPageCategoryName={newPageCategoryName}
+            setNewPageCategoryName={setNewPageCategoryName}
+            showDeleteCategoryDialog={showDeleteCategoryDialog}
+            setShowDeleteCategoryDialog={setShowDeleteCategoryDialog}
+            categoryToDelete={categoryToDelete}
+            setCategoryToDelete={setCategoryToDelete}
+            handleAddCategory={handleAddCategory}
+            handleEditCategory={handleEditCategory}
+            handleUpdateCategory={handleUpdateCategory}
+            handleDeleteCategory={handleDeleteCategory}
+            confirmDeleteCategory={confirmDeleteCategory}
+            cancelDeleteCategory={cancelDeleteCategory}
+            handleEditCategoryContent={handleEditCategoryContent}
+            handleDeleteCategoryContent={handleDeleteCategoryContent}
+            addToast={addToast}
+          />
+        )}
 
-                <div className="mb-6">
-              <p className="text-gray-700 mb-2">
-                Are you sure you want to delete the song:
-              </p>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="font-medium text-gray-900">{songToDelete.title}</p>
-                <p className="text-sm text-gray-500">Lead Singer: {songToDelete.leadSinger || 'Not specified'}</p>
-                <p className="text-sm text-gray-500">Status: {songToDelete.status}</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={cancelDeleteSong}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteSong}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Delete Song
-              </button>
-            </div>
-                  </div>
-                </div>
-              )}
+        {activeSection === 'Members' && <MembersSection />}
+        {activeSection === 'Media' && <MediaSection />}
+        {activeSection === 'Notifications' && <NotificationsSection />}
+      </div>
 
-      {/* Delete Category Confirmation Dialog */}
-      {showDeleteCategoryDialog && categoryToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Delete Category</h3>
-                <p className="text-sm text-gray-500">This action cannot be undone</p>
-              </div>
-            </div>
+      {/* Modals */}
+      <AdminModals
+        showPageModal={showPageModal}
+        setShowPageModal={setShowPageModal}
+        editingPage={editingPage}
+        setEditingPage={setEditingPage}
+        newPageName={newPageName}
+        setNewPageName={setNewPageName}
+        newPageDate={newPageDate}
+        setNewPageDate={setNewPageDate}
+        newPageLocation={newPageLocation}
+        setNewPageLocation={setNewPageLocation}
+        newPageDescription={newPageDescription}
+        setNewPageDescription={setNewPageDescription}
+        newPageCategory={newPageCategory}
+        setNewPageCategory={setNewPageCategory}
+        newPageDays={newPageDays}
+        setNewPageDays={setNewPageDays}
+        newPageHours={newPageHours}
+        setNewPageHours={setNewPageHours}
+        newPageMinutes={newPageMinutes}
+        setNewPageMinutes={setNewPageMinutes}
+        newPageSeconds={newPageSeconds}
+        setNewPageSeconds={setNewPageSeconds}
+        newPageBannerImage={newPageBannerImage}
+        setNewPageBannerImage={setNewPageBannerImage}
+        newPageBannerFile={newPageBannerFile}
+        setNewPageBannerFile={setNewPageBannerFile}
+        handleAddPage={handleAddPage}
+        handleUpdatePage={handleUpdatePage}
+        showCategoryModal={showCategoryModal}
+        setShowCategoryModal={setShowCategoryModal}
+        editingCategory={editingCategory}
+        setEditingCategory={setEditingCategory}
+        editingPageCategory={editingPageCategory}
+        setEditingPageCategory={setEditingPageCategory}
+        newPageCategoryName={newPageCategoryName}
+        setNewPageCategoryName={setNewPageCategoryName}
+        handleAddCategory={handleAddCategory}
+        handleUpdateCategory={handleUpdateCategory}
+        handleAddPageCategory={handleAddPageCategory}
+        handleUpdatePageCategory={handleUpdatePageCategory}
+        activeSection={activeSection}
+        showSongModal={showSongModal}
+        setShowSongModal={setShowSongModal}
+        editingSong={editingSong}
+        setEditingSong={setEditingSong}
+        allCategories={allCategories}
+        pages={pages}
+        handleSaveSong={handleSaveSong}
+        showDeleteDialog={showDeleteDialog}
+        setShowDeleteDialog={setShowDeleteDialog}
+        pageToDelete={pageToDelete}
+        setPageToDelete={setPageToDelete}
+        confirmDeletePage={confirmDeletePage}
+        cancelDeletePage={cancelDeletePage}
+        showDeleteSongDialog={showDeleteSongDialog}
+        setShowDeleteSongDialog={setShowDeleteSongDialog}
+        songToDelete={songToDelete}
+        setSongToDelete={setSongToDelete}
+        confirmDeleteSong={confirmDeleteSong}
+        cancelDeleteSong={cancelDeleteSong}
+        showDeleteCategoryDialog={showDeleteCategoryDialog}
+        setShowDeleteCategoryDialog={setShowDeleteCategoryDialog}
+        categoryToDelete={categoryToDelete}
+        setCategoryToDelete={setCategoryToDelete}
+        confirmDeleteCategory={confirmDeleteCategory}
+        cancelDeleteCategory={cancelDeleteCategory}
+      />
 
-            <div className="mb-6">
-              <p className="text-gray-700 mb-2">
-                Are you sure you want to delete the category:
-              </p>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="font-medium text-gray-900">{categoryToDelete.name}</p>
-                <p className="text-sm text-gray-500">{categoryToDelete.description}</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={cancelDeleteCategory}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteCategory}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Delete Category
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

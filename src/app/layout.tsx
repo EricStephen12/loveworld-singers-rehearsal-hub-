@@ -8,14 +8,17 @@ import VersionChecker from '@/components/VersionChecker'
 import ScreenshotPrevention from '@/components/ScreenshotPrevention'
 import SuperFastServiceWorker from '@/components/SuperFastServiceWorker'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import OfflineIndicator from '@/components/OfflineIndicator'
 import { PerformanceOptimizer } from '@/lib/performance-optimizer'
 import { ViewportHeightFix } from '@/utils/viewport-height-fix'
 import { NavigationManager } from '@/utils/navigation'
 import { SafeAreaUtils } from '@/utils/safe-area-utils'
 import { DeviceSafeArea } from '@/utils/device-safe-area'
 import { FirebaseAuthService } from '@/lib/firebase-auth'
+import { AuthPersistenceTest } from '@/utils/auth-persistence-test'
+import { lowDataOptimizer } from '@/utils/low-data-optimizer'
+import { EmergencyRecovery } from '@/utils/emergency-recovery'
 import FeatureUpdateChecker from '@/components/FeatureUpdateChecker'
+import OfflineIndicator from '@/components/OfflineIndicator'
 import '@/utils/auth-debug'
 
 // Auto-optimize for low data on app startup
@@ -26,17 +29,32 @@ if (typeof window !== 'undefined') {
   SafeAreaUtils.init()
   DeviceSafeArea.getInstance().init()
   FirebaseAuthService.ensurePersistence()
+  lowDataOptimizer.init()
   
-  // Check persistence status and make it globally available
-  FirebaseAuthService.checkPersistenceStatus().then(status => {
-    console.log('🔐 Auth Persistence Status:', status)
-  })
+        // Check persistence status and make it globally available
+        FirebaseAuthService.checkPersistenceStatus().then(status => {
+          console.log('🔐 Auth Persistence Status:', status)
+        })
+        
+        // Test login persistence and low data optimization
+        setTimeout(() => {
+          AuthPersistenceTest.runAllTests().then(results => {
+            console.log('🎯 Auth Persistence Test Results:', results)
+            if (results.overall) {
+              console.log('✅ Login persistence is working perfectly!')
+            } else {
+              console.log('⚠️ Login persistence needs attention')
+            }
+          })
+        }, 2000) // Wait 2 seconds for auth to initialize
   
   // Make utilities globally available for debugging
   ;(window as any).ViewportHeightFix = ViewportHeightFix
   ;(window as any).SafeAreaUtils = SafeAreaUtils
   ;(window as any).DeviceSafeArea = DeviceSafeArea
   ;(window as any).FirebaseAuthService = FirebaseAuthService
+  ;(window as any).lowDataOptimizer = lowDataOptimizer
+  ;(window as any).EmergencyRecovery = EmergencyRecovery
 }
 // import GlobalMiniPlayer from '@/components/GlobalMiniPlayer'
 
@@ -185,7 +203,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <AuthProvider>
             <AudioProvider>
-              <ScreenshotPrevention />
+              {/* <ScreenshotPrevention /> */}
               <main className="h-full w-full bg-gray-50">
                 {children}
               </main>

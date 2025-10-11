@@ -26,21 +26,21 @@ export function useSupabaseData() {
     loadData();
   }, []);
 
-  const getCurrentPage = (id: number): PraiseNight | null => {
+  const getCurrentPage = (id: string): PraiseNight | null => {
     return pages.find(page => page.id === id) || null;
   };
 
-  const getCurrentSongs = (pageId: number): PraiseNightSong[] => {
+  const getCurrentSongs = (pageId: string): PraiseNightSong[] => {
     const page = pages.find(p => p.id === pageId);
     return page?.songs || [];
   };
 
-  const loadSongsForPage = async (pageId: number): Promise<void> => {
+  const loadSongsForPage = async (pageId: string): Promise<void> => {
     try {
       const songs = await getSongsByPageId(pageId);
-      setPages(prevPages => 
-        prevPages.map(page => 
-          page.id === pageId 
+      setPages(prevPages =>
+        prevPages.map(page =>
+          page.id === pageId
             ? { ...page, songs }
             : page
         )

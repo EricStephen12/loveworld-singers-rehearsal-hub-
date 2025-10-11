@@ -17,35 +17,10 @@ class DataPrefetcher {
     return DataPrefetcher.instance;
   }
 
-  // Prefetch data in background
+  // Prefetch data in background - DISABLED (no caching)
   async prefetchData(): Promise<void> {
-    const now = Date.now();
-    
-    // Don't prefetch if we already did it recently
-    if (now - this.lastPrefetchTime < this.PREFETCH_INTERVAL) {
-      return;
-    }
-
-    // Don't start multiple prefetch operations
-    if (this.prefetchPromise) {
-      return this.prefetchPromise;
-    }
-
-    console.log('🚀 Starting background data prefetch...');
-    const startTime = performance.now();
-
-    this.prefetchPromise = this.performPrefetch();
-    
-    try {
-      await this.prefetchPromise;
-      this.lastPrefetchTime = now;
-      const duration = performance.now() - startTime;
-      console.log(`⚡ Background prefetch completed in ${duration.toFixed(2)}ms`);
-    } catch (error) {
-      console.error('Background prefetch failed:', error);
-    } finally {
-      this.prefetchPromise = null;
-    }
+    // No prefetching - always fetch fresh data
+    return;
   }
 
   private async performPrefetch(): Promise<void> {

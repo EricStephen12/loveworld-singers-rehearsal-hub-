@@ -44,13 +44,14 @@ export class FirebaseDatabaseService {
         collection(db, 'songs'),
         where('praiseNightId', '==', praiseNightId)
       )
-      
+
       const querySnapshot = await getDocs(q)
       const results = querySnapshot.docs.map(doc => ({
-        id: doc.id,
+        id: doc.id, // Firebase document ID (string)
+        firebaseId: doc.id, // Also store as firebaseId for clarity
         ...doc.data()
       }))
-      
+
       // Sort by orderIndex in JavaScript to avoid index requirement
       return results.sort((a, b) => {
         const indexA = (a as any).orderIndex || 0
@@ -96,18 +97,26 @@ export class FirebaseDatabaseService {
     })
   }
 
-  // Add new praise night
+  // Add new praise night with Firebase-generated ID
   static async addPraiseNight(data: any) {
     try {
-      const docRef = await addDoc(collection(db, 'praise_nights'), {
+      console.log('🔥 Creating praise night with Firebase-generated ID...');
+
+      const pageData = {
         ...data,
         createdAt: new Date(),
         updatedAt: new Date()
-      })
-      return { id: docRef.id, success: true }
+      };
+
+      // Use addDoc to let Firebase generate a unique ID
+      const docRef = await addDoc(collection(db, 'praise_nights'), pageData);
+
+      console.log('✅ Page created with Firebase-generated ID:', docRef.id);
+
+      return { id: docRef.id, firebaseId: docRef.id, success: true }
     } catch (error) {
-      console.error('Error adding praise night:', error)
-      return { id: null, success: false }
+      console.error('❌ Error adding praise night:', error)
+      return { id: null, firebaseId: null, success: false }
     }
   }
 
@@ -259,10 +268,11 @@ export class FirebaseDatabaseService {
   static async createCategory(categoryData: any) {
     try {
       const docRef = await addDoc(collection(db, 'categories'), categoryData)
-      return { id: docRef.id, ...categoryData }
+      console.log('✅ Category created successfully with ID:', docRef.id);
+      return { success: true, id: docRef.id, ...categoryData }
     } catch (error) {
-      console.error('Error creating category:', error)
-      return null
+      console.error('❌ Error creating category:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
 
@@ -271,10 +281,10 @@ export class FirebaseDatabaseService {
       console.log('🔄 Updating category with ID:', categoryId, 'Data:', data);
       await updateDoc(doc(db, 'categories', categoryId.toString()), data)
       console.log('✅ Category updated successfully');
-      return true
+      return { success: true }
     } catch (error) {
       console.error('❌ Error updating category:', error)
-      return false
+      return { success: false }
     }
   }
 
@@ -283,10 +293,10 @@ export class FirebaseDatabaseService {
       console.log('🔥 Deleting category with ID:', categoryId);
       await deleteDoc(doc(db, 'categories', categoryId.toString()))
       console.log('✅ Category deleted successfully');
-      return true
+      return { success: true }
     } catch (error) {
       console.error('❌ Error deleting category:', error)
-      return false
+      return { success: false }
     }
   }
 
@@ -297,13 +307,13 @@ export class FirebaseDatabaseService {
       const cleanData = Object.fromEntries(
         Object.entries(songData).filter(([_, value]) => value !== undefined)
       )
-      
+
       console.log('🔥 Creating song with clean data:', cleanData)
       const docRef = await addDoc(collection(db, 'songs'), cleanData)
-      return { id: docRef.id, ...cleanData }
+      return { success: true, id: docRef.id, ...cleanData }
     } catch (error) {
       console.error('Error creating song:', error)
-      return null
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
 
@@ -312,54 +322,102 @@ export class FirebaseDatabaseService {
       console.log('🔥 Firebase updateSong called with:', {
         songId: songId,
         songIdType: typeof songId,
+        collection: 'songs',
         dataKeys: Object.keys(data),
         hasId: !!data.id,
         hasFirebaseId: !!data.firebaseId,
+        hasPraiseNightId: !!data.praiseNightId,
+        praiseNightId: data.praiseNightId,
         hasComments: !!data.comments,
-        commentsCount: data.comments?.length || 0
+        commentsCount: data.comments?.length || 0,
+        title: data.title
       });
-      
+
       // Filter out undefined values (Firebase doesn't allow them)
       const cleanData = Object.fromEntries(
         Object.entries(data).filter(([_, value]) => value !== undefined)
       )
-      
-      console.log('🔥 Updating song with ID:', songId, 'clean data:', cleanData)
+
+      // Remove id and firebaseId from update data (these shouldn't be updated)
+      delete cleanData.id;
+      delete cleanData.firebaseId;
+
+      // Check if document exists first
+      const docRef = doc(db, 'songs', songId.toString());
+      console.log('🔍 Checking if song document exists in Firebase songs collection...');
+      console.log('📍 Document path:', `songs/${songId.toString()}`);
+
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        console.warn('⚠️ Song document not found in Firebase songs collection:', songId);
+        console.log('📊 Document path checked:', `songs/${songId.toString()}`);
+        console.log('🔄 Creating new document with this ID instead...');
+
+        // Document doesn't exist, create it with setDoc using the provided ID
+        await setDoc(docRef, {
+          ...cleanData,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+
+        console.log('✅ Song document created successfully in songs collection with ID:', songId);
+        return { success: true };
+      }
+
+      console.log('✅ Song document exists in songs collection, proceeding with update');
+      console.log('📊 Existing document data:', docSnap.data());
+      console.log('🔥 Updating song with ID:', songId, 'clean data keys:', Object.keys(cleanData))
+      console.log('🔥 Clean data to update:', cleanData);
       console.log('🔥 Comments being saved:', {
         comments: data.comments,
         commentsType: typeof data.comments,
         commentsIsArray: Array.isArray(data.comments),
-        commentsLength: data.comments?.length || 0,
-        commentsStringified: JSON.stringify(data.comments)
+        commentsLength: data.comments?.length || 0
       })
-      await updateDoc(doc(db, 'songs', songId.toString()), cleanData)
-      console.log('✅ Firebase updateSong successful');
-      return true
+
+      // Add updatedAt timestamp
+      cleanData.updatedAt = new Date();
+
+      await updateDoc(docRef, cleanData)
+      console.log('✅ Firebase updateSong successful for songs collection');
+      return { success: true }
     } catch (error) {
       console.error('❌ Firebase updateSong error:', error)
-      return false
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        success: false,
+        error: errorMessage
+      }
     }
   }
 
   static async deleteSong(songId: string | number) {
     try {
-      console.log('🔥 Deleting song from Firebase:', songId);
-      
+      console.log('🔥 Deleting song from Firebase songs collection');
+      console.log('📊 Song ID:', songId);
+      console.log('📊 Song ID type:', typeof songId);
+      console.log('📍 Document path:', `songs/${songId.toString()}`);
+
       // Check if document exists before deleting
       const docRef = doc(db, 'songs', songId.toString());
       const docSnap = await getDoc(docRef);
-      
+
       if (!docSnap.exists()) {
-        console.error('❌ Song not found in Firebase:', songId);
-        return false;
+        console.error('❌ Song document not found in Firebase songs collection');
+        console.error('📍 Checked path:', `songs/${songId.toString()}`);
+        return { success: false, error: `Song not found in database (ID: ${songId})` };
       }
-      
+
+      console.log('✅ Song document found, deleting...');
+      console.log('📊 Document data:', docSnap.data());
+
       await deleteDoc(docRef);
-      console.log('✅ Song deleted from Firebase');
-      return true
+      console.log('✅ Song deleted successfully from Firebase songs collection');
+      return { success: true }
     } catch (error) {
       console.error('❌ Firebase delete error:', error)
-      return false
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
 

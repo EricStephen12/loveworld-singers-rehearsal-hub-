@@ -1,100 +1,161 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase-client';
+import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { useAuth } from '@/contexts/AuthContext';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase-setup';
 
 export interface NotificationData {
   id: string;
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
-  category: 'rehearsal' | 'announcement' | 'reminder' | 'system' | 'admin';
+  category: 'rehearsal' | 'announcement' | 'reminder' | 'system' | 'admin' | 'song' | 'praise_night';
   priority: 'low' | 'medium' | 'high';
   sender_id?: string;
+  sender_name?: string;
   action_url?: string;
   created_at: string;
   read_at?: string;
   is_read: boolean;
+  target_audience: 'all' | 'group' | 'individual';
+  target_group?: string;
+  target_user_id?: string;
 }
 
 export function useRealtimeNotifications() {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user, profile } = useAuth();
 
-  // Load initial notifications
+  // Load notifications with real-time updates
   useEffect(() => {
-    loadNotifications();
+    if (!user?.uid) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
 
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('notifications_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications'
-        },
-        (payload) => {
-          console.log('🔔 Real-time notification update:', payload);
-          loadNotifications(); // Reload all notifications when any change occurs
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_notifications'
-        },
-        (payload) => {
-          console.log('👤 User notification status update:', payload);
-          loadNotifications(); // Reload when read status changes
-        }
-      )
-      .subscribe();
+    console.log('🔔 Setting up Firebase notifications listener for user:', user.uid);
+    setLoading(true);
+
+    // Query notifications for this user
+    // Get notifications where:
+    // 1. target_audience = 'all' OR
+    // 2. target_audience = 'individual' AND target_user_id = user.uid OR
+    // 3. target_audience = 'group' AND target_group matches user's group
+
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(
+      notificationsRef,
+      orderBy('created_at', 'desc')
+    );
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(q,
+      (snapshot) => {
+        console.log('📬 Received notifications update:', snapshot.size, 'notifications');
+
+        const allNotifications = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as NotificationData));
+
+        // Filter notifications for current user
+        const userNotifications = allNotifications.filter(notif => {
+          // All users notification
+          if (notif.target_audience === 'all') return true;
+
+          // Individual notification
+          if (notif.target_audience === 'individual' && notif.target_user_id === user.uid) return true;
+
+          // Group notification - check if user is in the group
+          if (notif.target_audience === 'group' && notif.target_group && profile) {
+            // Check user's groups from profile or user_groups collection
+            return checkUserInGroup(notif.target_group);
+          }
+
+          return false;
+        });
+
+        // Load read status for each notification
+        loadReadStatus(userNotifications);
+      },
+      (err) => {
+        console.error('❌ Error in notifications listener:', err);
+        setError('Failed to load notifications');
+        setLoading(false);
+      }
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log('🔕 Cleaning up notifications listener');
+      unsubscribe();
     };
-  }, []);
+  }, [user?.uid, profile]);
 
-  const loadNotifications = async () => {
+  // Check if user is in a specific group
+  const checkUserInGroup = async (groupName: string): Promise<boolean> => {
+    if (!user?.uid) return false;
+
     try {
-      setLoading(true);
-      setError(null);
+      const userGroups = await FirebaseDatabaseService.getCollectionWhere('user_groups', 'user_id', '==', user.uid);
+      return userGroups.some((ug: any) => ug.group_name === groupName);
+    } catch (error) {
+      console.error('Error checking user group:', error);
+      return false;
+    }
+  };
 
-      // Get user notifications with read status
-      const { data, error } = await supabase
-        .rpc('get_user_notifications')
-        .order('created_at', { ascending: false });
+  // Load read status for notifications
+  const loadReadStatus = async (notifs: NotificationData[]) => {
+    if (!user?.uid) return;
 
-      if (error) {
-        console.error('❌ Error loading notifications:', error);
-        setError(error.message);
-        return;
-      }
+    try {
+      // Get user's read notifications
+      const readNotifications = await FirebaseDatabaseService.getCollectionWhere(
+        'user_notifications',
+        'user_id',
+        '==',
+        user.uid
+      );
 
-      setNotifications(data || []);
+      const readMap = new Map(
+        readNotifications.map((rn: any) => [rn.notification_id, rn.read_at])
+      );
+
+      // Update notifications with read status
+      const updatedNotifications = notifs.map(notif => ({
+        ...notif,
+        is_read: readMap.has(notif.id),
+        read_at: readMap.get(notif.id) || undefined
+      }));
+
+      setNotifications(updatedNotifications);
+      setLoading(false);
     } catch (err) {
-      console.error('❌ Unexpected error loading notifications:', err);
-      setError('Failed to load notifications');
-    } finally {
+      console.error('❌ Error loading read status:', err);
+      setNotifications(notifs);
       setLoading(false);
     }
   };
 
   const markAsRead = async (notificationId: string) => {
+    if (!user?.uid) return false;
+
     try {
-      const { error } = await supabase.rpc('mark_notification_read', {
-        notification_uuid: notificationId
+      console.log('✅ Marking notification as read:', notificationId);
+
+      // Create or update user_notification record
+      const userNotificationId = `${user.uid}_${notificationId}`;
+      await FirebaseDatabaseService.createDocument('user_notifications', userNotificationId, {
+        user_id: user.uid,
+        notification_id: notificationId,
+        read_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
       });
 
-      if (error) {
-        console.error('❌ Error marking notification as read:', error);
-        return false;
-      }
-
-      // Update local state
+      // Update local state immediately
       setNotifications(prev =>
         prev.map(n =>
           n.id === notificationId ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
@@ -103,13 +164,16 @@ export function useRealtimeNotifications() {
 
       return true;
     } catch (err) {
-      console.error('❌ Unexpected error marking notification as read:', err);
+      console.error('❌ Error marking notification as read:', err);
       return false;
     }
   };
 
   const markAllAsRead = async () => {
+    if (!user?.uid) return false;
+
     try {
+      console.log('✅ Marking all notifications as read');
       const unreadNotifications = notifications.filter(n => !n.is_read);
 
       for (const notification of unreadNotifications) {
@@ -124,17 +188,27 @@ export function useRealtimeNotifications() {
   };
 
   const deleteNotification = async (notificationId: string) => {
-    try {
-      // Note: We don't actually delete notifications from the database
-      // as they might be needed for admin tracking. Instead, we mark them as read.
-      // If deletion is needed, it should be done by admins only.
+    if (!user?.uid) return false;
 
+    try {
+      console.log('🗑️ Deleting notification:', notificationId);
+
+      // Mark as read first
       await markAsRead(notificationId);
+
+      // Remove from local state
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+
       return true;
     } catch (err) {
       console.error('❌ Error deleting notification:', err);
       return false;
     }
+  };
+
+  const refresh = async () => {
+    // Refresh is handled automatically by the real-time listener
+    console.log('🔄 Notifications refresh triggered (handled by real-time listener)');
   };
 
   return {
@@ -144,40 +218,48 @@ export function useRealtimeNotifications() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    refresh: loadNotifications
+    refresh
   };
 }
 
 // Hook for admins to create notifications
 export function useNotificationActions() {
+  const { user } = useAuth();
+
   const createNotificationForAll = async (data: {
     title: string;
     message: string;
     type?: 'info' | 'success' | 'warning' | 'error';
-    category?: 'rehearsal' | 'announcement' | 'reminder' | 'system' | 'admin';
+    category?: 'rehearsal' | 'announcement' | 'reminder' | 'system' | 'admin' | 'song' | 'praise_night';
     priority?: 'low' | 'medium' | 'high';
     actionUrl?: string;
     expiresAt?: string;
   }) => {
     try {
-      const { data: result, error } = await supabase.rpc('create_notification_for_all_users', {
-        p_title: data.title,
-        p_message: data.message,
-        p_type: data.type || 'info',
-        p_category: data.category || 'system',
-        p_priority: data.priority || 'medium',
-        p_action_url: data.actionUrl || null,
-        p_expires_at: data.expiresAt || null
-      });
+      console.log('📢 Creating notification for all users:', data.title);
 
-      if (error) {
-        console.error('❌ Error creating notification:', error);
-        return { success: false, error: error.message };
-      }
+      const notificationData = {
+        title: data.title,
+        message: data.message,
+        type: data.type || 'info',
+        category: data.category || 'system',
+        priority: data.priority || 'medium',
+        sender_id: user?.uid || 'system',
+        sender_name: user?.email || 'System',
+        action_url: data.actionUrl || null,
+        target_audience: 'all',
+        created_at: new Date().toISOString(),
+        is_read: false
+      };
 
-      return { success: true, notificationId: result };
+      // Create notification in Firebase
+      const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await FirebaseDatabaseService.createDocument('notifications', notificationId, notificationData);
+
+      console.log('✅ Notification created successfully:', notificationId);
+      return { success: true, notificationId };
     } catch (err) {
-      console.error('❌ Unexpected error creating notification:', err);
+      console.error('❌ Error creating notification:', err);
       return { success: false, error: 'Failed to create notification' };
     }
   };
@@ -187,38 +269,84 @@ export function useNotificationActions() {
     message: string;
     groupName: string;
     type?: 'info' | 'success' | 'warning' | 'error';
-    category?: 'rehearsal' | 'announcement' | 'reminder' | 'system' | 'admin';
+    category?: 'rehearsal' | 'announcement' | 'reminder' | 'system' | 'admin' | 'song' | 'praise_night';
     priority?: 'low' | 'medium' | 'high';
     actionUrl?: string;
     expiresAt?: string;
   }) => {
     try {
-      const { data: result, error } = await supabase.rpc('create_notification_for_group', {
-        p_title: data.title,
-        p_message: data.message,
-        p_group_name: data.groupName,
-        p_type: data.type || 'info',
-        p_category: data.category || 'system',
-        p_priority: data.priority || 'medium',
-        p_action_url: data.actionUrl || null,
-        p_expires_at: data.expiresAt || null
-      });
+      console.log('📢 Creating notification for group:', data.groupName);
 
-      if (error) {
-        console.error('❌ Error creating group notification:', error);
-        return { success: false, error: error.message };
-      }
+      const notificationData = {
+        title: data.title,
+        message: data.message,
+        type: data.type || 'info',
+        category: data.category || 'system',
+        priority: data.priority || 'medium',
+        sender_id: user?.uid || 'system',
+        sender_name: user?.email || 'System',
+        action_url: data.actionUrl || null,
+        target_audience: 'group',
+        target_group: data.groupName,
+        created_at: new Date().toISOString(),
+        is_read: false
+      };
 
-      return { success: true, notificationId: result };
+      // Create notification in Firebase
+      const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await FirebaseDatabaseService.createDocument('notifications', notificationId, notificationData);
+
+      console.log('✅ Group notification created successfully:', notificationId);
+      return { success: true, notificationId };
     } catch (err) {
-      console.error('❌ Unexpected error creating group notification:', err);
+      console.error('❌ Error creating group notification:', err);
       return { success: false, error: 'Failed to create group notification' };
+    }
+  };
+
+  const createNotificationForUser = async (data: {
+    title: string;
+    message: string;
+    targetUserId: string;
+    type?: 'info' | 'success' | 'warning' | 'error';
+    category?: 'rehearsal' | 'announcement' | 'reminder' | 'system' | 'admin' | 'song' | 'praise_night';
+    priority?: 'low' | 'medium' | 'high';
+    actionUrl?: string;
+  }) => {
+    try {
+      console.log('📢 Creating notification for user:', data.targetUserId);
+
+      const notificationData = {
+        title: data.title,
+        message: data.message,
+        type: data.type || 'info',
+        category: data.category || 'system',
+        priority: data.priority || 'medium',
+        sender_id: user?.uid || 'system',
+        sender_name: user?.email || 'System',
+        action_url: data.actionUrl || null,
+        target_audience: 'individual',
+        target_user_id: data.targetUserId,
+        created_at: new Date().toISOString(),
+        is_read: false
+      };
+
+      // Create notification in Firebase
+      const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await FirebaseDatabaseService.createDocument('notifications', notificationId, notificationData);
+
+      console.log('✅ User notification created successfully:', notificationId);
+      return { success: true, notificationId };
+    } catch (err) {
+      console.error('❌ Error creating user notification:', err);
+      return { success: false, error: 'Failed to create user notification' };
     }
   };
 
   return {
     createNotificationForAll,
-    createNotificationForGroup
+    createNotificationForGroup,
+    createNotificationForUser
   };
 }
 

@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react';
 import { PraiseNight, PraiseNightSong } from '@/types/supabase';
-import { offlineManager } from '@/utils/offlineManager';
-import { dataPrefetcher } from '@/utils/dataPrefetcher';
 import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { lowDataOptimizer } from '@/utils/low-data-optimizer';
 
 // Firebase data fetching function using the service
 async function fetchFirebaseData(): Promise<PraiseNight[]> {
   try {
     console.log('🔍 Fetching pages from Firebase using service...');
     
-    // Use the FirebaseDatabaseService to get pages (try praise_nights first since that's where the data is)
+    // Use the FirebaseDatabaseService to get pages from praise_nights collection (main collection)
     let pages = await FirebaseDatabaseService.getCollection('praise_nights');
-    console.log('🔥 Firebase praise_nights fetched:', pages.length, 'praise_nights');
-    
-    // If no pages found, try pages collection as fallback
+    console.log('🔥 Firebase praise_nights fetched:', pages.length, 'pages');
+
+    // If no pages found, try other collections as fallback
+    if (pages.length === 0) {
+      pages = await FirebaseDatabaseService.getCollection('praisenight');
+      console.log('🔥 Firebase praisenight fetched:', pages.length, 'praisenight');
+    }
+
     if (pages.length === 0) {
       pages = await FirebaseDatabaseService.getCollection('pages');
       console.log('🔥 Firebase pages fetched:', pages.length, 'pages');
@@ -21,6 +25,15 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
     
     console.log('📄 Pages data:', pages);
     console.log('📄 Sample page structure:', pages[0]);
+    console.log('📄 Total pages found:', pages.length);
+    
+    if (pages.length === 0) {
+      console.error('❌ NO PAGES FOUND! This is the problem!');
+      console.log('🔍 Available collections to check:');
+      console.log('- praise_nights');
+      console.log('- praisenight'); 
+      console.log('- pages');
+    }
     
     // Get songs for each page
     const allSongs = await FirebaseDatabaseService.getCollection('songs');
@@ -50,7 +63,7 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
       
       
       return {
-        id: parseInt((page as any).page_id) || parseInt(page.id) || index + 1, // Use page_id, fallback to Firebase ID, then index
+        id: page.id, // Use Firebase document ID directly (string)
         firebaseId: page.id, // This is the actual Firebase document ID (string)
         name: (page as any).name || (page as any).title || (page as any).page_title || 'Untitled Page', // Use name or title
         date: (page as any).date || new Date().toISOString(),
@@ -78,76 +91,7 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
           });
           return countdownData;
         })(),
-        songs: allSongs.filter(song => {
-          const songPageId = (song as any).praisenightid || (song as any).praiseNightId;
-          const pageId = (page as any).page_id || parseInt(page.id) || index + 1;
-          
-          // Convert both to strings for comparison to handle type mismatches
-          const songPageIdStr = String(songPageId);
-          const pageIdStr = String(pageId);
-          const matches = songPageIdStr === pageIdStr;
-          
-          // Debug logging for song filtering
-          console.log('🎵 Song filtering debug:', {
-            songTitle: (song as any).title,
-            songPageId: songPageId,
-            songPageIdStr: songPageIdStr,
-            pageId: pageId,
-            pageIdStr: pageIdStr,
-            matches: matches,
-            songCategory: (song as any).category
-          });
-          
-          return matches;
-        }).map(song => {
-          console.log('🎵 Mapping song:', {
-            songId: song.id,
-            songFirebaseId: song.firebaseId,
-            songTitle: (song as any).title,
-            rehearsalCount: (song as any).rehearsalcount || (song as any).rehearsalCount,
-            allKeys: Object.keys(song),
-            songData: song
-          });
-          
-          // Check if we have a valid Firebase document ID
-          if (!song.firebaseId || song.firebaseId === '0' || (song.firebaseId as any) === 0) {
-            console.error('❌ Invalid Firebase document ID for song:', song);
-            return null; // Skip this song
-          }
-          return {
-          id: song.supabaseId || Math.floor(Math.random() * 1000000), // Use Supabase ID if available, otherwise generate random
-          firebaseId: song.firebaseId, // Use Firebase document ID (string) for Firebase operations
-          title: (song as any).title || 'Untitled Song',
-          status: (song as any).status || 'unheard',
-          category: (song as any).category || '',
-          praiseNightId: parseInt((song as any).praisenightid || (song as any).praiseNightId) || 0,
-          leadSinger: (song as any).leadsinger || (song as any).leadSinger || '',
-          writer: (song as any).writer || '',
-          conductor: (song as any).conductor || '',
-          key: (song as any).key || '',
-          tempo: (song as any).tempo || '',
-          leadKeyboardist: (song as any).leadkeyboardist || (song as any).leadKeyboardist || '',
-          leadGuitarist: (song as any).leadguitarist || (song as any).leadGuitarist || '',
-          drummer: (song as any).drummer || '',
-          lyrics: (song as any).lyrics || '',
-          solfas: (song as any).solfas || '',
-          rehearsalCount: (song as any).rehearsalcount || (song as any).rehearsalCount || 0,
-          audioFile: (song as any).audiofile || (song as any).audioFile || '',
-          comments: (() => {
-            const comments = (song as any).comments || [];
-            console.log('🔍 Comments Debug in useRealtimeData:', {
-              songTitle: (song as any).title,
-              hasComments: !!comments,
-              commentsType: typeof comments,
-              commentsIsArray: Array.isArray(comments),
-              commentsLength: comments?.length || 0,
-              commentsData: comments
-            });
-            return comments;
-          })(),
-          history: (song as any).history || []
-        };
-        }).filter(song => song !== null) // Filter out null songs
+        songs: [] // Load songs on demand like admin does
       };
     });
     
@@ -161,135 +105,154 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
 
 export function useRealtimeData() {
   const [pages, setPages] = useState<PraiseNight[]>([]);
-  const [loading, setLoading] = useState(false); // Start with false for instant display
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  
-  // Memory optimization - limit pages in memory
-  const MAX_PAGES_IN_MEMORY = 5;
 
-  // Load initial data with ultra-fast cache-first approach
+  // Low-data optimized loading
   useEffect(() => {
-    async function loadInitialData() {
+    async function loadData() {
       try {
-        console.log('🚀 Starting ultra-fast data load...');
-        const startTime = performance.now();
+        setError(null);
         
-        // Clear cache to ensure fresh data (temporary fix for ID mapping issues)
-        await dataPrefetcher.clearCache();
-        console.log('🧹 Cleared cache to ensure fresh data');
+        // Check cache first for instant loading
+        const cacheKey = 'praise-nights-data';
+        const cachedData = lowDataOptimizer.get(cacheKey);
         
-        // INSTANT: Load cached data immediately for zero loading time
-        const cachedData = await dataPrefetcher.getCachedData();
-        if (cachedData && cachedData.length > 0) {
-          console.log('⚡ Loading cached data instantly (0ms)');
+        if (cachedData) {
+          console.log('⚡ Instant load from cache - super fast!');
           setPages(cachedData);
-          setError(null);
-          setIsInitialLoad(false);
+          setLoading(false);
         } else {
-          // Only show loading if no cache available
           setLoading(true);
         }
         
-        // Fetch fresh data from Firebase
-        const dataPromise = fetchFirebaseData();
+        // Only fetch from Firebase if we don't have cached data or cache is expired
+        if (lowDataOptimizer.shouldFetch(cacheKey)) {
+          console.log('🔥 Fetching fresh data from Firebase...');
+          const startTime = performance.now();
+          
+          const firebasePages = await fetchFirebaseData();
+          setPages(firebasePages);
+          
+          // Cache the data for future instant loading
+          lowDataOptimizer.set(cacheKey, firebasePages);
+          
+          const duration = performance.now() - startTime;
+          console.log(`⚡ Data loaded in ${duration.toFixed(2)}ms (cached for future)`);
+        }
         
-        // Wait for fresh data
-        const firebasePages = await dataPromise;
-        
-        // Update with fresh data - limit memory usage
-        const limitedPages = firebasePages.slice(0, MAX_PAGES_IN_MEMORY);
-        setPages(limitedPages);
-        setError(null);
-        setIsInitialLoad(false);
-        
-        const totalTime = performance.now() - startTime;
-        console.log(`🎯 Total load time: ${totalTime.toFixed(2)}ms`);
       } catch (err) {
-        console.error('Error loading initial data:', err);
-        setError('Failed to load data');
+        console.error('❌ Failed to load data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+        
+        // Try to use cached data as fallback
+        const cacheKey = 'praise-nights-data';
+        const cachedData = lowDataOptimizer.get(cacheKey);
+        if (cachedData) {
+          console.log('🔄 Using cached fallback data');
+          setPages(cachedData);
+        }
       } finally {
         setLoading(false);
       }
     }
 
-    loadInitialData();
+    loadData();
   }, []);
 
-  // Instagram-style refresh strategy - different intervals for different content
+  // No automatic refresh - data is fetched fresh on each request
   useEffect(() => {
-    console.log('🔄 Setting up Instagram-style refresh strategy...');
+    console.log('🔄 No automatic refresh - data fetched fresh on each request...');
+  }, []);
 
-    // Real-time refresh for all data (every 1 second)
-    const realTimeInterval = setInterval(async () => {
-      try {
-        console.log('🔄 Real-time refresh for all data...');
-        const updatedPages = await fetchFirebaseData();
-        const limitedPages = updatedPages.slice(0, MAX_PAGES_IN_MEMORY);
-        setPages(limitedPages);
-      } catch (error) {
-        console.error('Error refreshing data:', error);
-      }
-    }, 1000); // 1 second for real-time features
-
-    // Cleanup interval on unmount
-    return () => {
-      console.log('🔄 Cleaning up refresh interval...');
-      clearInterval(realTimeInterval);
-    };
-  }, [MAX_PAGES_IN_MEMORY]);
-
-  const getCurrentPage = (id: number): PraiseNight | null => {
-    return pages.find(page => page.id === id) || null;
+  const getCurrentPage = (id: number | string): PraiseNight | null => {
+    return pages.find(page => page.id === id || page.id === id.toString()) || null;
   };
 
-  const getCurrentSongs = async (pageId: number): Promise<PraiseNightSong[]> => {
+  const getCurrentSongs = async (pageId: number | string): Promise<PraiseNightSong[]> => {
     try {
-      // Use the FirebaseDatabaseService to get songs for a specific page
+      console.log(`🎵 Regular App: Fetching songs for page ${pageId}...`);
+      const startTime = performance.now();
+
+      // Get all songs and filter by page ID (same as admin)
       const allSongs = await FirebaseDatabaseService.getCollection('songs');
-      const pageIdStr = String(pageId);
-      const songs = allSongs.filter(song => {
-        const songPageId = (song as any).praisenightid || (song as any).praiseNightId;
-        const songPageIdStr = String(songPageId);
-        return songPageIdStr === pageIdStr;
+      console.log(`📊 Total songs in Firebase: ${allSongs.length}`);
+
+      const pageSongs = allSongs.filter((song: any) => {
+        // Handle both number IDs and Firebase document IDs (same as admin)
+        const songPraiseNightId = song.praiseNightId || song.praisenightid;
+        const matches = songPraiseNightId === pageId || songPraiseNightId === pageId.toString();
+        
+        if (matches) {
+          console.log(`✅ Song matches page ${pageId}:`, {
+            firebaseId: song.id,
+            title: song.title,
+            praiseNightId: songPraiseNightId,
+            pageId: pageId,
+            pageIdType: typeof pageId
+          });
+        }
+        return matches;
       });
+
+      console.log(`📊 Songs matching page ${pageId}: ${pageSongs.length}`);
+
+      const mappedSongs: PraiseNightSong[] = pageSongs.map((song: any) => ({
+        id: song.id, // Use Firebase document ID directly (string)
+        firebaseId: song.id, // Firebase document ID
+        title: song.title || 'Untitled Song',
+        status: song.status || 'unheard',
+        category: song.category || '',
+        praiseNightId: String(pageId), // Ensure it's a string
+        lyrics: song.lyrics || '',
+        leadSinger: song.leadSinger || '',
+        writer: song.writer || '',
+        conductor: song.conductor || '',
+        key: song.key || '',
+        tempo: song.tempo || '',
+        leadKeyboardist: song.leadKeyboardist || '',
+        drummer: song.drummer || '',
+        comments: song.comments || [],
+        audioFile: song.audioFile || '',
+        history: song.history || [],
+        rehearsalCount: song.rehearsalCount || 1
+      }));
+
+      console.log(`⚡ Regular App: ${mappedSongs.length} songs for page ${pageId} fetched in ${(performance.now() - startTime).toFixed(2)}ms`);
+      return mappedSongs;
       
-      console.log('🔥 Firebase songs fetched for page', pageId, ':', songs.length, 'songs');
-      return songs as unknown as PraiseNightSong[];
     } catch (error) {
-      console.error('Error fetching songs from Firebase:', error);
+      console.error(`❌ Regular App: Error fetching songs for page ${pageId}:`, error);
       return [];
     }
   };
 
-  // Preload function for instant navigation
-  const preloadData = async () => {
-    try {
-      console.log('🔄 Preloading data from Firebase...');
-      const updatedPages = await fetchFirebaseData();
-      const limitedPages = updatedPages.slice(0, MAX_PAGES_IN_MEMORY);
-      setPages(limitedPages);
-    } catch (err) {
-      console.error('Error preloading data:', err);
-    }
-  };
 
   return {
     pages,
     loading,
     error,
-    isInitialLoad,
     getCurrentPage,
     getCurrentSongs,
-    preloadData,
-    // Manual refresh function (still available if needed)
     refreshData: async () => {
       try {
+        console.log('🔄 Low-data optimized refresh...');
+        setLoading(true);
+        setError(null);
+        
         const updatedPages = await fetchFirebaseData();
-        const limitedPages = updatedPages.slice(0, MAX_PAGES_IN_MEMORY);
-        setPages(limitedPages);
+        setPages(updatedPages);
+        
+        // Update cache with fresh data
+        const cacheKey = 'praise-nights-data';
+        lowDataOptimizer.set(cacheKey, updatedPages);
+        
+        console.log('✅ Data refreshed and cached successfully');
       } catch (err) {
-        console.error('Error refreshing data:', err);
+        console.error('❌ Error refreshing data:', err);
+        setError('Failed to refresh data');
+      } finally {
+        setLoading(false);
       }
     }
   };

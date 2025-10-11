@@ -157,8 +157,8 @@ export interface ProfileCompletionData {
 }
 
 export interface PraiseNight {
-  id: number;
-  firebaseId?: string; // Firebase document ID for updates
+  id: string; // Firebase-generated document ID
+  firebaseId?: string; // Deprecated: kept for backward compatibility
   name: string;
   date: string;
   location: string;
@@ -174,12 +174,12 @@ export interface PraiseNight {
 }
 
 export interface PraiseNightSong {
-  id?: number; // Database ID for the song
-  firebaseId?: string; // Firebase document ID for updates
+  id?: string; // Firebase-generated document ID
+  firebaseId?: string; // Deprecated: kept for backward compatibility
   title: string;
   status: 'heard' | 'unheard';
   category: string;
-  praiseNightId: number;
+  praiseNightId: string; // Reference to PraiseNight ID (Firebase-generated)
   leadSinger?: string;
   writer?: string;
   conductor?: string;

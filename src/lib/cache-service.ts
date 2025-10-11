@@ -9,12 +9,12 @@ interface CacheItem<T> {
 
 class CacheService {
   private cache = new Map<string, CacheItem<any>>()
-  // Instagram-style caching strategy
+  // No caching - everything is real-time
   private readonly NO_CACHE = 0 // No cache for real-time features
-  private readonly REAL_TIME_TTL = 1 * 1000 // 1 second for dynamic content
-  private readonly DEFAULT_TTL = 30 * 1000 // 30 seconds for semi-static content
-  private readonly LONG_TTL = 5 * 60 * 1000 // 5 minutes for static content
-  private readonly VERY_LONG_TTL = 30 * 60 * 1000 // 30 minutes for very static content
+  private readonly REAL_TIME_TTL = 0 // No cache for dynamic content
+  private readonly DEFAULT_TTL = 0 // No cache for semi-static content
+  private readonly LONG_TTL = 0 // No cache for static content
+  private readonly VERY_LONG_TTL = 0 // No cache for very static content
 
   // Set cache with TTL
   set<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Bell, BellOff, Settings, Clock, CheckCircle, AlertCircle, Info, X, Filter, Search } from 'lucide-react'
+import { Bell, Clock, X, Search, Music, Calendar, Megaphone, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -12,41 +12,17 @@ import { useAuth } from '@/contexts/AuthContext'
 
 export default function NotificationsPage() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all')
-  const [filterCategory, setFilterCategory] = useState<'all' | 'rehearsal' | 'announcement' | 'reminder' | 'system' | 'admin'>('all')
 
   // Use real-time notifications hook
   const { notifications, loading, error, markAsRead, markAllAsRead, deleteNotification } = useRealtimeNotifications()
   const { user, profile } = useAuth()
   const { createNotificationForAll, createNotificationForGroup } = useNotificationActions()
-  const [showSettings, setShowSettings] = useState(false)
-  const [notificationSettings, setNotificationSettings] = useState({
-    pushEnabled: true,
-    emailEnabled: true,
-    rehearsalReminders: true,
-    announcements: true,
-    systemUpdates: true,
-    soundEnabled: true,
-    vibrationEnabled: true
-  })
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const router = useRouter()
 
-  // Filter notifications based on search and filter criteria (client-side filtering for real-time data)
+  // Filter notifications based on search
   const filteredNotifications = React.useMemo(() => {
     let filtered = notifications
-
-    // Filter by read status
-    if (filterType === 'unread') {
-      filtered = filtered.filter(n => !n.is_read)
-    } else if (filterType === 'read') {
-      filtered = filtered.filter(n => n.is_read)
-    }
-
-    // Filter by category
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter(n => n.category === filterCategory)
-    }
 
     // Filter by search term
     if (searchTerm) {
@@ -58,31 +34,94 @@ export default function NotificationsPage() {
 
     // Sort by created_at (newest first)
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  }, [notifications, filterType, filterCategory, searchTerm])
+  }, [notifications, searchTerm])
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle className="w-5 h-5 text-green-500" />
-      case 'warning':
-        return <AlertCircle className="w-5 h-5 text-yellow-500" />
-      case 'error':
-        return <AlertCircle className="w-5 h-5 text-red-500" />
+  // Count unread notifications
+  const unreadCount = notifications.filter(n => !n.is_read).length
+
+  // Group notifications by date
+  const groupedNotifications = React.useMemo(() => {
+    const groups: { [key: string]: NotificationData[] } = {
+      today: [],
+      yesterday: [],
+      thisWeek: [],
+      older: []
+    }
+
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const weekAgo = new Date(today)
+    weekAgo.setDate(weekAgo.getDate() - 7)
+
+    filteredNotifications.forEach(notif => {
+      const notifDate = new Date(notif.created_at)
+      const notifDay = new Date(notifDate.getFullYear(), notifDate.getMonth(), notifDate.getDate())
+
+      if (notifDay.getTime() === today.getTime()) {
+        groups.today.push(notif)
+      } else if (notifDay.getTime() === yesterday.getTime()) {
+        groups.yesterday.push(notif)
+      } else if (notifDate >= weekAgo) {
+        groups.thisWeek.push(notif)
+      } else {
+        groups.older.push(notif)
+      }
+    })
+
+    return groups
+  }, [filteredNotifications])
+
+  // Get category icon and color
+  const getCategoryStyle = (category: string) => {
+    switch (category) {
+      case 'rehearsal':
+        return {
+          icon: <Calendar className="w-5 h-5" />,
+          gradient: 'from-purple-500 to-pink-500',
+          bg: 'bg-purple-50',
+          text: 'text-purple-700'
+        }
+      case 'song':
+        return {
+          icon: <Music className="w-5 h-5" />,
+          gradient: 'from-blue-500 to-cyan-500',
+          bg: 'bg-blue-50',
+          text: 'text-blue-700'
+        }
+      case 'praise_night':
+        return {
+          icon: <Sparkles className="w-5 h-5" />,
+          gradient: 'from-yellow-500 to-orange-500',
+          bg: 'bg-yellow-50',
+          text: 'text-yellow-700'
+        }
+      case 'announcement':
+        return {
+          icon: <Megaphone className="w-5 h-5" />,
+          gradient: 'from-green-500 to-emerald-500',
+          bg: 'bg-green-50',
+          text: 'text-green-700'
+        }
+      case 'admin':
+        return {
+          icon: <Bell className="w-5 h-5" />,
+          gradient: 'from-red-500 to-pink-500',
+          bg: 'bg-red-50',
+          text: 'text-red-700'
+        }
       default:
-        return <Info className="w-5 h-5 text-blue-500" />
+        return {
+          icon: <Bell className="w-5 h-5" />,
+          gradient: 'from-gray-500 to-gray-600',
+          bg: 'bg-gray-50',
+          text: 'text-gray-700'
+        }
     }
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'border-l-red-500'
-      case 'medium':
-        return 'border-l-yellow-500'
-      default:
-        return 'border-l-gray-300'
-    }
-  }
+
 
   const formatTimestamp = (timestamp: string) => {
     const now = new Date()
@@ -98,8 +137,6 @@ export default function NotificationsPage() {
     return `${days}d ago`
   }
 
-  const unreadCount = notifications.filter(n => !n.is_read).length
-
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-pink-50 overflow-hidden">
       {/* Header */}
@@ -107,92 +144,20 @@ export default function NotificationsPage() {
         title="Notifications"
         onMenuClick={() => setIsMenuOpen(true)}
         rightButtons={
-          <div className="flex items-center gap-2">
-            {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                {unreadCount}
-              </span>
-            )}
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <Settings className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
+          unreadCount > 0 ? (
+            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+              {unreadCount}
+            </span>
+          ) : null
         }
       />
 
       {/* Scrollable Content Container */}
       <div className="flex-1 overflow-y-auto">
-        {/* Notification Settings Panel */}
-        {showSettings && (
-          <div className="bg-white border-b border-gray-200 p-4">
-            <div className="max-w-2xl mx-auto px-3 sm:px-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Notification Settings</h3>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Push Notifications</p>
-                    <p className="text-sm text-gray-500">Receive notifications on your device</p>
-                  </div>
-                  <button
-                    onClick={() => setNotificationSettings(prev => ({ ...prev, pushEnabled: !prev.pushEnabled }))}
-                    className={`w-12 h-6 rounded-full transition-colors ${
-                      notificationSettings.pushEnabled ? 'bg-purple-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      notificationSettings.pushEnabled ? 'translate-x-6' : 'translate-x-0.5'
-                    }`} />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Rehearsal Reminders</p>
-                    <p className="text-sm text-gray-500">Get notified before rehearsals</p>
-                  </div>
-                  <button
-                    onClick={() => setNotificationSettings(prev => ({ ...prev, rehearsalReminders: !prev.rehearsalReminders }))}
-                    className={`w-12 h-6 rounded-full transition-colors ${
-                      notificationSettings.rehearsalReminders ? 'bg-purple-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      notificationSettings.rehearsalReminders ? 'translate-x-6' : 'translate-x-0.5'
-                    }`} />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Sound</p>
-                    <p className="text-sm text-gray-500">Play sound for notifications</p>
-                  </div>
-                  <button
-                    onClick={() => setNotificationSettings(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }))}
-                    className={`w-12 h-6 rounded-full transition-colors ${
-                      notificationSettings.soundEnabled ? 'bg-purple-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      notificationSettings.soundEnabled ? 'translate-x-6' : 'translate-x-0.5'
-                    }`} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Main Content */}
-        <div className="px-3 sm:px-4 py-4 sm:py-6">
-          <div className="max-w-2xl mx-auto">
-          {/* Search and Filters */}
-          <div className="mb-6 space-y-4">
-            {/* Search */}
+        <div className="pb-20">
+          {/* Search Bar */}
+          <div className="px-4 pt-4 pb-3 bg-white border-b border-gray-100">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -200,51 +165,31 @@ export default function NotificationsPage() {
                 placeholder="Search notifications..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all"
               />
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2">
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">All</option>
-                <option value="unread">Unread</option>
-                <option value="read">Read</option>
-              </select>
-
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value as any)}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">All Categories</option>
-                <option value="rehearsal">Rehearsal</option>
-                <option value="announcement">Announcement</option>
-                <option value="reminder">Reminder</option>
-                <option value="system">System</option>
-                <option value="admin">Admin</option>
-              </select>
-
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors"
-                >
-                  Mark All Read
-                </button>
-              )}
             </div>
           </div>
 
+          {/* Quick Actions */}
+          {unreadCount > 0 && (
+            <div className="px-4 py-3 bg-purple-50 border-b border-purple-100">
+              <button
+                onClick={markAllAsRead}
+                className="w-full py-2.5 bg-white text-purple-600 rounded-full text-sm font-medium hover:bg-purple-100 transition-colors shadow-sm"
+              >
+                ✓ Mark all {unreadCount} as read
+              </button>
+            </div>
+          )}
+
           {/* Admin Create Notification Section */}
           {profile?.role === 'admin' && (
-            <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Send Notification</h3>
-              <div className="space-y-3">
+            <div className="mx-4 mt-4 mb-3 p-4 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl shadow-lg">
+              <h3 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
+                <Megaphone className="w-5 h-5" />
+                Admin Controls
+              </h3>
+              <div className="grid grid-cols-2 gap-2 mb-2">
                 <button
                   onClick={async () => {
                     const title = prompt('Enter notification title:')
@@ -264,9 +209,9 @@ export default function NotificationsPage() {
                       }
                     }
                   }}
-                  className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                  className="bg-white text-purple-600 py-2.5 px-3 rounded-xl hover:bg-purple-50 transition-colors font-medium text-sm shadow-md"
                 >
-                  Send to All Users
+                  📢 All Users
                 </button>
                 <button
                   onClick={async () => {
@@ -289,87 +234,225 @@ export default function NotificationsPage() {
                       }
                     }
                   }}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="bg-white text-blue-600 py-2.5 px-3 rounded-xl hover:bg-blue-50 transition-colors font-medium text-sm shadow-md"
                 >
-                  Send to Specific Group
+                  👥 Group
                 </button>
               </div>
+              <button
+                onClick={async () => {
+                  if (confirm('⚠️ Delete ALL notifications? This cannot be undone!')) {
+                    try {
+                      // Delete all notifications from Firebase
+                      const { FirebaseDatabaseService } = await import('@/lib/firebase-database')
+                      const allNotifications = await FirebaseDatabaseService.getCollection('notifications')
+
+                      for (const notif of allNotifications) {
+                        await FirebaseDatabaseService.deleteDocument('notifications', notif.id)
+                      }
+
+                      alert('✅ All notifications deleted!')
+                      window.location.reload()
+                    } catch (error) {
+                      console.error('Error deleting notifications:', error)
+                      alert('❌ Failed to delete notifications')
+                    }
+                  }
+                }}
+                className="w-full bg-red-500 text-white py-2 px-3 rounded-xl hover:bg-red-600 transition-colors font-medium text-sm shadow-md"
+              >
+                🗑️ Delete All Notifications
+              </button>
             </div>
           )}
 
-          {/* Notifications List */}
-          <div className="space-y-3">
+          {/* Notifications List - Grouped by Date */}
+          <div className="px-4 pb-6">
             {filteredNotifications.length === 0 ? (
-              <div className="text-center py-12">
-                <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-                <p className="text-gray-500">
-                  {searchTerm || filterType !== 'all' || filterCategory !== 'all' 
-                    ? 'No notifications match your filters.' 
-                    : 'You\'re all caught up!'}
+              <div className="text-center py-16">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Bell className="w-10 h-10 text-gray-300" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No notifications</h3>
+                <p className="text-gray-500 text-sm">
+                  {searchTerm
+                    ? 'No notifications match your search.'
+                    : 'You\'re all caught up! 🎉'}
                 </p>
               </div>
             ) : (
-              filteredNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`bg-white rounded-xl border-l-4 ${getPriorityColor(notification.priority)} shadow-sm hover:shadow-md transition-shadow ${
-                    !notification.is_read ? 'ring-2 ring-purple-100' : ''
-                  }`}
-                >
-                  <div className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-3 flex-1">
-                        {getNotificationIcon(notification.type)}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h4 className="font-medium text-gray-900 truncate">
-                              {notification.title}
-                            </h4>
-                            {!notification.is_read && (
-                              <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-gray-600 text-sm mb-2 line-clamp-2">
-                            {notification.message}
-                          </p>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{formatTimestamp(notification.created_at)}</span>
-                            </div>
-                            <span className="capitalize bg-gray-100 px-2 py-1 rounded">
-                              {notification.category}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2 ml-4">
-                        {!notification.is_read && (
-                          <button
-                            onClick={() => markAsRead(notification.id)}
-                            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                            title="Mark as read"
+              <div className="space-y-6">
+                {/* Today */}
+                {groupedNotifications.today.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Today</h3>
+                    <div className="space-y-2">
+                      {groupedNotifications.today.map((notification) => {
+                        const categoryStyle = getCategoryStyle(notification.category)
+                        return (
+                          <div
+                            key={notification.id}
+                            onClick={() => !notification.is_read && markAsRead(notification.id)}
+                            className={`bg-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-98 ${
+                              !notification.is_read ? 'ring-2 ring-purple-200' : ''
+                            }`}
                           >
-                            <CheckCircle className="w-4 h-4 text-gray-400" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deleteNotification(notification.id)}
-                          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                          title="Delete"
-                        >
-                          <X className="w-4 h-4 text-gray-400" />
-                        </button>
-                      </div>
+                            <div className="p-4">
+                              <div className="flex items-start gap-3">
+                                {/* Icon */}
+                                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${categoryStyle.gradient} flex items-center justify-center flex-shrink-0 shadow-md`}>
+                                  <div className="text-white">
+                                    {categoryStyle.icon}
+                                  </div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <h4 className={`font-bold text-gray-900 text-sm leading-tight ${!notification.is_read ? 'text-purple-900' : ''}`}>
+                                      {notification.title}
+                                    </h4>
+                                    {!notification.is_read && (
+                                      <div className="w-2.5 h-2.5 bg-purple-600 rounded-full flex-shrink-0 mt-1 animate-pulse" />
+                                    )}
+                                  </div>
+
+                                  <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                                    {notification.message}
+                                  </p>
+
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {formatTimestamp(notification.created_at)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Delete Button */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    deleteNotification(notification.id)
+                                  }}
+                                  className="p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
+                                >
+                                  <X className="w-4 h-4 text-gray-400" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
-                </div>
-              ))
+                )}
+
+                {/* Yesterday */}
+                {groupedNotifications.yesterday.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Yesterday</h3>
+                    <div className="space-y-2">
+                      {groupedNotifications.yesterday.map((notification) => {
+                        const categoryStyle = getCategoryStyle(notification.category)
+                        return (
+                          <div
+                            key={notification.id}
+                            onClick={() => !notification.is_read && markAsRead(notification.id)}
+                            className={`bg-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-98 ${
+                              !notification.is_read ? 'ring-2 ring-purple-200' : ''
+                            }`}
+                          >
+                            <div className="p-4">
+                              <div className="flex items-start gap-3">
+                                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${categoryStyle.gradient} flex items-center justify-center flex-shrink-0 shadow-md`}>
+                                  <div className="text-white">{categoryStyle.icon}</div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <h4 className="font-bold text-gray-900 text-sm leading-tight">{notification.title}</h4>
+                                    {!notification.is_read && <div className="w-2.5 h-2.5 bg-purple-600 rounded-full flex-shrink-0 mt-1" />}
+                                  </div>
+                                  <p className="text-gray-600 text-sm mb-2 line-clamp-2">{notification.message}</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">{formatTimestamp(notification.created_at)}</span>
+                                  </div>
+                                </div>
+                                <button onClick={(e) => { e.stopPropagation(); deleteNotification(notification.id) }} className="p-2 hover:bg-gray-100 rounded-full">
+                                  <X className="w-4 h-4 text-gray-400" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* This Week */}
+                {groupedNotifications.thisWeek.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">This Week</h3>
+                    <div className="space-y-2">
+                      {groupedNotifications.thisWeek.map((notification) => {
+                        const categoryStyle = getCategoryStyle(notification.category)
+                        return (
+                          <div key={notification.id} onClick={() => !notification.is_read && markAsRead(notification.id)} className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all">
+                            <div className="p-4">
+                              <div className="flex items-start gap-3">
+                                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${categoryStyle.gradient} flex items-center justify-center flex-shrink-0`}>
+                                  <div className="text-white">{categoryStyle.icon}</div>
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-gray-900 text-sm mb-1">{notification.title}</h4>
+                                  <p className="text-gray-600 text-sm mb-2 line-clamp-2">{notification.message}</p>
+                                  <span className="text-xs text-gray-500">{formatTimestamp(notification.created_at)}</span>
+                                </div>
+                                <button onClick={(e) => { e.stopPropagation(); deleteNotification(notification.id) }} className="p-2 hover:bg-gray-100 rounded-full">
+                                  <X className="w-4 h-4 text-gray-400" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Older */}
+                {groupedNotifications.older.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Older</h3>
+                    <div className="space-y-2 opacity-75">
+                      {groupedNotifications.older.map((notification) => {
+                        const categoryStyle = getCategoryStyle(notification.category)
+                        return (
+                          <div key={notification.id} className="bg-white rounded-2xl shadow-sm">
+                            <div className="p-4">
+                              <div className="flex items-start gap-3">
+                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${categoryStyle.gradient} flex items-center justify-center flex-shrink-0 opacity-60`}>
+                                  <div className="text-white">{categoryStyle.icon}</div>
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-gray-700 text-sm mb-1">{notification.title}</h4>
+                                  <p className="text-gray-500 text-xs line-clamp-1">{notification.message}</p>
+                                </div>
+                                <button onClick={() => deleteNotification(notification.id)} className="p-2 hover:bg-gray-100 rounded-full">
+                                  <X className="w-4 h-4 text-gray-400" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-          </div> {/* End Scrollable Content */}
         </div>
       </div>
 
