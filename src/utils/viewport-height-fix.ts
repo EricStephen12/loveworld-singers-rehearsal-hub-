@@ -15,9 +15,8 @@ export class ViewportHeightFix {
 
       document.documentElement.style.setProperty('--vh', `${vh}px`)
 
-      // Also set the actual height on html and body
-      document.documentElement.style.height = `${height}px`
-      document.body.style.height = `${height}px`
+      // DON'T set fixed heights on html/body - let them be flexible
+      // This prevents issues when navigating between pages
 
       console.log('📱 Viewport height updated:', {
         innerHeight: window.innerHeight,
