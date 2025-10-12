@@ -4,6 +4,7 @@ import PWAInstall from '@/components/PWAInstall'
 import { AudioProvider } from '@/contexts/AudioContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import RealtimeNotifications from '@/components/RealtimeNotifications'
+import PushNotificationListener from '@/components/PushNotificationListener'
 import VersionChecker from '@/components/VersionChecker'
 import ScreenshotPrevention from '@/components/ScreenshotPrevention'
 import SuperFastServiceWorker from '@/components/SuperFastServiceWorker'
@@ -209,6 +210,7 @@ export default function RootLayout({
               </main>
               <PWAInstall />
               <RealtimeNotifications />
+              <PushNotificationListener />
               <OfflineIndicator />
               <FeatureUpdateChecker />
             </AudioProvider>

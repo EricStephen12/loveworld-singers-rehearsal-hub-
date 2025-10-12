@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRealtimeData } from './useRealtimeData';
 import { PraiseNightSong, PraiseNight } from '@/types/supabase';
-import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { PraiseNightSongsService } from '@/lib/praise-night-songs-service';
 
 export interface HomeSearchResult {
   id: string;
@@ -22,15 +22,17 @@ export function useHomeGlobalSearch() {
   const [allSongs, setAllSongs] = useState<PraiseNightSong[]>([]);
   const [songsLoaded, setSongsLoaded] = useState(false);
 
-  // Load all songs for search
+  // Load all songs for search - FROM NEW TABLE!
   useEffect(() => {
     const loadAllSongs = async () => {
       try {
-        const songs = await FirebaseDatabaseService.getCollection('songs');
+        console.log('🔍 [Home Search] Loading all songs from NEW TABLE (praise_night_songs)...');
+        const songs = await PraiseNightSongsService.getAllSongs();
+        console.log('✅ [Home Search] Loaded', songs.length, 'songs from NEW TABLE');
         setAllSongs(songs as any[]);
         setSongsLoaded(true);
       } catch (error) {
-        console.error('Error loading songs for search:', error);
+        console.error('❌ [Home Search] Error loading songs for search:', error);
         setSongsLoaded(true);
       }
     };

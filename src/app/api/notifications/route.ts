@@ -4,10 +4,10 @@ import { FirebaseDatabaseService } from '@/lib/firebase-database';
 export async function POST(request: NextRequest) {
   try {
     const notificationData = await request.json();
-    
+
     // Validate required fields
     const { title, message, type, category, priority, target_audience, action_url, expires_at } = notificationData;
-    
+
     if (!title || !message) {
       return NextResponse.json({ error: 'Title and message are required' }, { status: 400 });
     }
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Generate a unique ID for the notification
     const notificationId = `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Save to Firebase
     await FirebaseDatabaseService.createDocument('notifications', notificationId, notification);
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     if (target_audience === 'all') {
       try {
         const profiles = await FirebaseDatabaseService.getCollection('profiles');
-        
+
         if (profiles && profiles.length > 0) {
           const userNotifications = profiles.map((profile: any) => ({
             notification_id: notificationId,
@@ -57,10 +57,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    // 🔔 TRIGGER BROWSER PUSH NOTIFICATION (NEW!)
+    // This broadcasts to all connected clients to show a push notification
+    try {
+      // Get the origin from the request
+      const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+      // Broadcast notification event to all clients
+      // This will be picked up by the client-side notification listener
+      console.log('📢 Broadcasting push notification:', { title, message, type });
+
+      // Store in a special collection for real-time push notifications
+      const pushNotificationData = {
+        ...notification,
+        notificationId,
+        timestamp: Date.now(),
+        broadcast: true
+      };
+
+      await FirebaseDatabaseService.createDocument(
+        'push_notifications',
+        `push_${notificationId}`,
+        pushNotificationData
+      );
+
+      console.log('✅ Push notification broadcast stored');
+    } catch (pushError) {
+      console.error('⚠️ Error broadcasting push notification (non-critical):', pushError);
+      // Don't fail the request if push notification fails
+    }
+
+    return NextResponse.json({
+      success: true,
       notification: { id: notificationId, ...notification },
-      message: 'Notification created successfully' 
+      message: 'Notification created successfully'
     });
 
   } catch (error) {
