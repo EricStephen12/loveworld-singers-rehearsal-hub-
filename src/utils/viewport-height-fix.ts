@@ -4,30 +4,60 @@ export class ViewportHeightFix {
 
   static init() {
     if (typeof window === 'undefined' || this.isInitialized) return
-    
+
     this.isInitialized = true
-    
+
     // Set CSS custom property for viewport height
     const setVH = () => {
-      const vh = window.innerHeight * 0.01
+      // Use visualViewport if available (more accurate on mobile)
+      const height = window.visualViewport?.height || window.innerHeight
+      const vh = height * 0.01
+
       document.documentElement.style.setProperty('--vh', `${vh}px`)
-      console.log('📱 Viewport height updated:', window.innerHeight, 'vh:', vh)
+
+      // Also set the actual height on html and body
+      document.documentElement.style.height = `${height}px`
+      document.body.style.height = `${height}px`
+
+      console.log('📱 Viewport height updated:', {
+        innerHeight: window.innerHeight,
+        visualHeight: window.visualViewport?.height,
+        actualHeight: height,
+        vh: vh
+      })
     }
 
-    // Set initial value
+    // Set initial value immediately
     setVH()
 
+    // Set again after a short delay (for iOS)
+    setTimeout(setVH, 100)
+    setTimeout(setVH, 300)
+
     // Update on resize
-    window.addEventListener('resize', setVH)
-    
+    window.addEventListener('resize', () => {
+      setVH()
+      // Double-check after resize completes
+      setTimeout(setVH, 100)
+    })
+
     // Update on orientation change
     window.addEventListener('orientationchange', () => {
       setTimeout(setVH, 100)
+      setTimeout(setVH, 300)
+      setTimeout(setVH, 500)
     })
 
     // Update when visual viewport changes (mobile browsers)
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', setVH)
+      window.visualViewport.addEventListener('resize', () => {
+        setVH()
+        setTimeout(setVH, 100)
+      })
+
+      window.visualViewport.addEventListener('scroll', () => {
+        setVH()
+      })
     }
 
     // Handle app resume from background (iOS Safari issue)
@@ -35,7 +65,8 @@ export class ViewportHeightFix {
       if (!document.hidden) {
         console.log('📱 App resumed from background - fixing viewport')
         setTimeout(setVH, 100)
-        setTimeout(setVH, 500) // Double check after animations
+        setTimeout(setVH, 300)
+        setTimeout(setVH, 500)
       }
     })
 
@@ -43,6 +74,7 @@ export class ViewportHeightFix {
     window.addEventListener('focus', () => {
       console.log('📱 Page focused - fixing viewport')
       setTimeout(setVH, 100)
+      setTimeout(setVH, 300)
     })
 
     // Handle page show (when page becomes visible)
@@ -50,8 +82,16 @@ export class ViewportHeightFix {
       if (event.persisted) {
         console.log('📱 Page restored from cache - fixing viewport')
         setTimeout(setVH, 100)
+        setTimeout(setVH, 300)
       }
     })
+
+    // Handle scroll events (for mobile browsers that hide/show address bar)
+    let scrollTimeout: NodeJS.Timeout
+    window.addEventListener('scroll', () => {
+      clearTimeout(scrollTimeout)
+      scrollTimeout = setTimeout(setVH, 150)
+    }, { passive: true })
 
     console.log('📱 Viewport height fix initialized')
   }
