@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
-import { pushNotificationService } from '@/services/pushNotificationService';
 import { FirebaseDatabaseService } from '@/lib/firebase-database';
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase-setup';
 
 /**
  * PushNotificationListener
- * 
+ *
  * Listens for new notifications in Firebase and triggers browser push notifications
  * This component runs in the background and doesn't render anything
  */
@@ -17,9 +16,17 @@ export default function PushNotificationListener() {
   const isInitialized = useRef(false);
 
   useEffect(() => {
+    // Only run on client-side
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     let unsubscribe: (() => void) | null = null;
 
     const initializePushNotifications = async () => {
+      // Dynamically import pushNotificationService only on client-side
+      const { pushNotificationService } = await import('@/services/pushNotificationService');
+
       // Check if push notifications are supported
       if (!pushNotificationService.isNotificationSupported()) {
         console.log('📵 Push notifications not supported in this browser');
@@ -101,6 +108,9 @@ export default function PushNotificationListener() {
 
   const showPushNotification = async (data: any) => {
     try {
+      // Dynamically import pushNotificationService
+      const { pushNotificationService } = await import('@/services/pushNotificationService');
+
       // Map notification type to emoji
       const typeEmoji: Record<string, string> = {
         success: '✅',

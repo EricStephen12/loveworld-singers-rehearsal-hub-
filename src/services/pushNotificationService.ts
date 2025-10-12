@@ -24,7 +24,12 @@ class PushNotificationService {
   private isSupported: boolean = false
 
   constructor() {
-    this.isSupported = 'Notification' in window && 'serviceWorker' in navigator
+    // Only check for browser APIs on client-side
+    if (typeof window !== 'undefined') {
+      this.isSupported = 'Notification' in window && 'serviceWorker' in navigator
+    } else {
+      this.isSupported = false
+    }
   }
 
   public static getInstance(): PushNotificationService {
