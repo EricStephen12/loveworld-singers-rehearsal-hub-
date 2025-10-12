@@ -1,126 +1,88 @@
 /**
- * Unified ID Manager for handling both Supabase numeric IDs and Firebase string IDs
- * This solves the migration issues between Supabase and Firebase
+ * SIMPLE UNIFIED ID MANAGER
+ * Rule: ALWAYS use firebaseId for Firebase operations. That's it!
  */
 
 export class IDManager {
   /**
-   * Normalize any ID to a consistent string format
-   * Handles both numeric IDs (from Supabase) and string IDs (from Firebase)
+   * Get the Firebase document ID - ALWAYS use this for database operations
+   * Priority: firebaseId ONLY (ignore numeric id from Supabase migration)
+   */
+  static getPrimaryId(song: any): string {
+    if (!song) return '';
+
+    // ONLY use firebaseId - this is the actual Firebase document ID
+    const firebaseId = song.firebaseId;
+
+    if (firebaseId && typeof firebaseId === 'string' && firebaseId.trim() !== '') {
+      return firebaseId.trim();
+    }
+
+    // Fallback: if no firebaseId, check if id is a string (not a number from Supabase)
+    const id = song.id;
+    if (id && typeof id === 'string' && id.trim() !== '') {
+      return id.trim();
+    }
+
+    console.error('🚨 No valid Firebase ID found for song:', {
+      title: song.title,
+      firebaseId: song.firebaseId,
+      id: song.id,
+      idType: typeof song.id
+    });
+    return '';
+  }
+
+  /**
+   * Normalize any ID to string format
    */
   static normalizeId(id: any): string {
-    if (id === null || id === undefined) {
-      return '';
-    }
-    
-    // Convert to string and trim
+    if (!id || id === null || id === undefined) return '';
+
     const stringId = String(id).trim();
-    
-    // Return empty string if invalid
+
     if (stringId === '' || stringId === 'null' || stringId === 'undefined') {
       return '';
     }
-    
+
     return stringId;
   }
 
   /**
-   * Check if an ID is a Firebase document ID (string with letters/numbers)
+   * Check if an ID is valid for Firebase operations
    */
-  static isFirebaseId(id: any): boolean {
-    const normalizedId = this.normalizeId(id);
-    
-    // Firebase IDs are typically 20 characters, alphanumeric
-    // They don't start with just numbers
-    return normalizedId.length >= 15 && 
-           normalizedId.length <= 25 && 
-           /^[a-zA-Z0-9]+$/.test(normalizedId) &&
-           !/^\d+$/.test(normalizedId); // Not just numbers
+  static isValidId(id: any): boolean {
+    const normalized = this.normalizeId(id);
+    return normalized !== '' && normalized !== 'null' && normalized !== 'undefined';
   }
 
   /**
-   * Check if an ID is a Supabase numeric ID
-   */
-  static isSupabaseId(id: any): boolean {
-    const normalizedId = this.normalizeId(id);
-    
-    // Supabase IDs are typically numeric
-    return /^\d+$/.test(normalizedId) && normalizedId.length <= 10;
-  }
-
-  /**
-   * Get the primary ID for database operations
-   * Prioritizes Firebase ID if available, falls back to other ID
-   */
-  static getPrimaryId(song: any): string {
-    // Priority order: firebaseId > id > other possible ID fields
-    const candidates = [
-      song.firebaseId,
-      song.id,
-      song.documentId,
-      song.firebase_document_id
-    ];
-
-    for (const candidate of candidates) {
-      const normalized = this.normalizeId(candidate);
-      if (normalized) {
-        return normalized;
-      }
-    }
-
-    return '';
-  }
-
-  /**
-   * Get the display ID for UI purposes
-   * Always returns a string for consistent display
-   */
-  static getDisplayId(song: any): string {
-    return this.getPrimaryId(song);
-  }
-
-  /**
-   * Check if two IDs are equivalent (handles different formats)
+   * Check if two IDs are the same
    */
   static areIdsEqual(id1: any, id2: any): boolean {
     const normalized1 = this.normalizeId(id1);
     const normalized2 = this.normalizeId(id2);
-    
     return normalized1 === normalized2 && normalized1 !== '';
   }
 
   /**
-   * Create a safe ID for new songs
-   * This will be handled by Firebase when creating documents
-   */
-  static createNewId(): string {
-    // Return empty string - Firebase will generate the actual ID
-    return '';
-  }
-
-  /**
-   * Validate if an ID is suitable for database operations
-   */
-  static isValidId(id: any): boolean {
-    const normalized = this.normalizeId(id);
-    return normalized !== '';
-  }
-
-  /**
-   * Debug helper to log ID information
+   * Debug helper
    */
   static debugIds(song: any, context: string = ''): void {
-    console.log(`🔍 ID Debug ${context}:`, {
-      originalSong: song,
+    console.log(`🔍 [${context}] ID Info:`, {
       firebaseId: song.firebaseId,
       id: song.id,
+      idType: typeof song.id,
       primaryId: this.getPrimaryId(song),
-      displayId: this.getDisplayId(song),
-      isFirebaseId: this.isFirebaseId(this.getPrimaryId(song)),
-      isSupabaseId: this.isSupabaseId(this.getPrimaryId(song)),
-      allFields: Object.keys(song)
+      title: song.title
     });
   }
+
+  // Legacy compatibility methods (not used anymore, but kept to avoid breaking code)
+  static isFirebaseId(id: any): boolean { return true; }
+  static isSupabaseId(id: any): boolean { return false; }
+  static getDisplayId(song: any): string { return this.getPrimaryId(song); }
+  static createNewId(): string { return ''; }
 }
 
 export default IDManager;

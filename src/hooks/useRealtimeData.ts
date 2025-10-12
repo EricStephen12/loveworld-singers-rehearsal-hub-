@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PraiseNight, PraiseNightSong } from '@/types/supabase';
 import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { PraiseNightSongsService } from '@/lib/praise-night-songs-service';
 import { lowDataOptimizer } from '@/utils/low-data-optimizer';
 
 // Firebase data fetching function using the service
@@ -35,10 +36,10 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
       console.log('- pages');
     }
     
-    // Get songs for each page
-    const allSongs = await FirebaseDatabaseService.getCollection('songs');
-    console.log('🔥 Firebase songs fetched:', allSongs.length, 'songs');
-    console.log('🔥 Sample song data:', allSongs[0]);
+    // Get songs for each page - USING NEW TABLE!
+    const allSongs = await FirebaseDatabaseService.getCollection('praise_night_songs');
+    console.log('🔥 [FRESH] Firebase praise_night_songs fetched:', allSongs.length, 'songs');
+    console.log('🔥 [FRESH] Sample song data:', allSongs[0]);
     
     // Associate songs with their respective pages and map to correct format
     const pagesWithSongs = pages.map((page, index) => {
@@ -171,52 +172,17 @@ export function useRealtimeData() {
 
   const getCurrentSongs = async (pageId: number | string): Promise<PraiseNightSong[]> => {
     try {
-      console.log(`🎵 Regular App: Fetching songs for page ${pageId}...`);
+      console.log(`🎵 [FRESH] Regular App: Fetching songs for page ${pageId}...`);
       const startTime = performance.now();
 
-      // Get all songs and filter by page ID (same as admin)
-      const allSongs = await FirebaseDatabaseService.getCollection('songs');
-      console.log(`📊 Total songs in Firebase: ${allSongs.length}`);
+      // Use new PraiseNightSongsService - FRESH TABLE!
+      const songs = await PraiseNightSongsService.getSongsByPraiseNight(String(pageId));
 
-      const pageSongs = allSongs.filter((song: any) => {
-        // Handle both number IDs and Firebase document IDs (same as admin)
-        const songPraiseNightId = song.praiseNightId || song.praisenightid;
-        const matches = songPraiseNightId === pageId || songPraiseNightId === pageId.toString();
-        
-        if (matches) {
-          console.log(`✅ Song matches page ${pageId}:`, {
-            firebaseId: song.id,
-            title: song.title,
-            praiseNightId: songPraiseNightId,
-            pageId: pageId,
-            pageIdType: typeof pageId
-          });
-        }
-        return matches;
-      });
+      console.log(`⚡ [FRESH] Regular App: ${songs.length} songs for page ${pageId} fetched in ${(performance.now() - startTime).toFixed(2)}ms`);
+      return songs;
 
-      console.log(`📊 Songs matching page ${pageId}: ${pageSongs.length}`);
-
-      const mappedSongs: PraiseNightSong[] = pageSongs.map((song: any) => ({
-        // Spread all original fields first to preserve everything from Firebase
-        ...song,
-        // Then override specific fields to ensure correct types
-        id: song.id, // Use Firebase document ID directly (string)
-        firebaseId: song.id, // Firebase document ID
-        title: song.title || 'Untitled Song',
-        status: song.status || 'unheard',
-        category: song.category || '',
-        praiseNightId: String(pageId), // Ensure it's a string
-        comments: song.comments || [],
-        history: song.history || [],
-        rehearsalCount: song.rehearsalCount || 1
-      }));
-
-      console.log(`⚡ Regular App: ${mappedSongs.length} songs for page ${pageId} fetched in ${(performance.now() - startTime).toFixed(2)}ms`);
-      return mappedSongs;
-      
     } catch (error) {
-      console.error(`❌ Regular App: Error fetching songs for page ${pageId}:`, error);
+      console.error(`❌ [FRESH] Regular App: Error fetching songs for page ${pageId}:`, error);
       return [];
     }
   };

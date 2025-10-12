@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PraiseNight, PraiseNightSong } from '@/types/supabase';
 import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { PraiseNightSongsService } from '@/lib/praise-night-songs-service';
 
 interface AdminData {
   pages: PraiseNight[];
@@ -70,8 +71,27 @@ async function fetchAdminData(): Promise<PraiseNight[]> {
   }
 }
 
-// Fast song fetching for a specific page
+// Fast song fetching for a specific page - USING NEW TABLE!
 async function fetchPageSongs(pageId: string): Promise<PraiseNightSong[]> {
+  try {
+    console.log(`🎵 [FRESH] Admin: Fetching songs for page ${pageId}...`);
+    const startTime = performance.now();
+
+    // Use new PraiseNightSongsService
+    const songs = await PraiseNightSongsService.getSongsByPraiseNight(pageId);
+
+    console.log(`⚡ [FRESH] Admin: Songs fetched in ${(performance.now() - startTime).toFixed(2)}ms`);
+    console.log(`📊 [FRESH] Songs for page ${pageId}: ${songs.length}`);
+
+    return songs;
+  } catch (error) {
+    console.error(`❌ [FRESH] Error fetching songs for page ${pageId}:`, error);
+    return [];
+  }
+}
+
+// DEPRECATED - Old function for reference
+async function fetchPageSongsOLD(pageId: string): Promise<PraiseNightSong[]> {
   try {
     console.log(`🎵 Admin: Fetching songs for page ${pageId}...`);
     const startTime = performance.now();
@@ -84,7 +104,7 @@ async function fetchPageSongs(pageId: string): Promise<PraiseNightSong[]> {
       // Handle both number IDs and Firebase document IDs
       const songPraiseNightId = song.praiseNightId || song.praisenightid;
       const matches = songPraiseNightId === pageId || songPraiseNightId === pageId.toString();
-      
+
       if (matches) {
         console.log(`✅ Song matches page ${pageId}:`, {
           firebaseId: song.id,
@@ -99,26 +119,42 @@ async function fetchPageSongs(pageId: string): Promise<PraiseNightSong[]> {
 
     console.log(`📊 Songs matching page ${pageId}: ${pageSongs.length}`);
 
-    const mappedSongs = pageSongs.map((song: any) => ({
-      id: song.id, // Use Firebase document ID directly (string)
-      firebaseId: song.id, // Firebase document ID
-      title: song.title || 'Untitled Song',
-      status: song.status || 'unheard',
-      category: song.category || '',
-      praiseNightId: pageId,
-      lyrics: song.lyrics || '',
-      leadSinger: song.leadSinger || '',
-      writer: song.writer || '',
-      conductor: song.conductor || '',
-      key: song.key || '',
-      tempo: song.tempo || '',
-      leadKeyboardist: song.leadKeyboardist || '',
-      drummer: song.drummer || '',
-      comments: song.comments || [],
-      audioFile: song.audioFile || '',
-      history: song.history || [],
-      rehearsalCount: song.rehearsalCount || 1
-    }));
+    const mappedSongs = pageSongs.map((song: any) => {
+      // SIMPLE SOLUTION - Always use Firebase document ID
+      const songId = song.firebaseId || song.id || song.documentId || '';
+
+      const mappedSong = {
+        id: songId, // Primary ID for all operations
+        firebaseId: songId, // Same ID for Firebase operations
+        title: song.title || 'Untitled Song',
+        status: song.status || 'unheard',
+        category: song.category || '',
+        praiseNightId: pageId,
+        lyrics: song.lyrics || '',
+        leadSinger: song.leadSinger || '',
+        writer: song.writer || '',
+        conductor: song.conductor || '',
+        key: song.key || '',
+        tempo: song.tempo || '',
+        leadKeyboardist: song.leadKeyboardist || '',
+        drummer: song.drummer || '',
+        comments: song.comments || [],
+        audioFile: song.audioFile || '',
+        history: song.history || [],
+        rehearsalCount: song.rehearsalCount || 1
+      };
+
+      // Only log if there's an issue
+      if (!songId || songId === '') {
+        console.error('🚨 CRITICAL: Song has no valid ID!', {
+          songTitle: song.title,
+          originalSong: song,
+          mappedSong: mappedSong
+        });
+      }
+      
+      return mappedSong;
+    });
 
     console.log(`⚡ Admin: ${mappedSongs.length} songs for page ${pageId} fetched in ${(performance.now() - startTime).toFixed(2)}ms`);
     return mappedSongs;

@@ -6,10 +6,10 @@ import { PraiseNightSong, Comment, PraiseNight, Category } from '../../types/sup
 import { useAdminData } from '../../hooks/useAdminData';
 import { FirebaseDatabaseService } from '@/lib/firebase-database';
 import { FirebaseAuthService } from '@/lib/firebase-auth';
-import { PraiseNightSongsService } from '@/lib/praise-night-songs-service'; // NEW FRESH SERVICE!
 import { logAdminAction } from '@/lib/admin-activity-logger';
 import { versionManager } from '@/utils/versionManager';
 import { uploadBannerImage } from '@/utils/imageUpload';
+import { IDManager } from '@/utils/idManager';
 import { ToastContainer, Toast } from '../../components/Toast';
 
 // Import admin components
@@ -19,7 +19,7 @@ import PagesSection from '../../components/admin/PagesSection';
 import CategoriesSection from '../../components/admin/CategoriesSection';
 import MediaSection from '../../components/admin/MediaSection';
 import MembersSection from '../../components/admin/MembersSection';
-import SimpleNotificationsSection from '../../components/admin/SimpleNotificationsSection';
+import NotificationsSection from '../../components/admin/NotificationsSection';
 import AdminModals from '../../components/admin/AdminModals';
 
 export default function AdminPage() {
@@ -671,9 +671,18 @@ export default function AdminPage() {
 
   // Song management functions
   const handleEditSong = (song: PraiseNightSong) => {
-    console.log('🎵 [FRESH] Editing song:', song.title, 'ID:', song.id);
+    console.log('🎵 handleEditSong called with:', song);
+    console.log('🎵 Song ID fields:', {
+      id: song.id,
+      firebaseId: song.firebaseId,
+      primaryId: IDManager.getPrimaryId(song),
+      isSupabaseId: IDManager.isSupabaseId(IDManager.getPrimaryId(song)),
+      isFirebaseId: IDManager.isFirebaseId(IDManager.getPrimaryId(song))
+    });
+    console.log('🎵 Setting editingSong and showSongModal to true');
     setEditingSong(song);
     setShowSongModal(true);
+    console.log('🎵 Modal should now be open');
   };
 
   const handleDeleteSong = (song: PraiseNightSong) => {
@@ -684,15 +693,17 @@ export default function AdminPage() {
   const handleToggleSongStatus = async (song: PraiseNightSong) => {
     try {
       const newStatus = song.status === 'heard' ? 'unheard' : 'heard';
+      const updatedSong = { ...song, status: newStatus };
 
-      if (!song.id) {
+      const songId = IDManager.getPrimaryId(song);
+      if (!IDManager.isValidId(songId)) {
         throw new Error('Invalid song ID for status update');
       }
 
-      const result = await PraiseNightSongsService.updateSongStatus(song.id, newStatus);
+      const result = await FirebaseDatabaseService.updateSong(songId, updatedSong);
 
       if (result.success) {
-        console.log('✅ [FRESH] Song status updated successfully');
+        console.log('✅ Song status updated successfully');
         addToast({
           type: 'success',
           message: `Song marked as ${newStatus}`
@@ -704,7 +715,7 @@ export default function AdminPage() {
           logAdminAction.updateSong(currentAdmin, `Updated song status: ${song.title} -> ${newStatus}`);
         }
       } else {
-        throw new Error(result.error || 'Failed to update song status');
+        throw new Error('Failed to update song status');
       }
     } catch (error) {
       console.error('❌ Error updating song status:', error);
@@ -717,21 +728,77 @@ export default function AdminPage() {
 
   const handleSaveSong = async (songData: PraiseNightSong) => {
     try {
-      console.log('💾 [FRESH] Saving song:', songData.title);
+      console.log('💾 handleSaveSong called with:', {
+        editingSong: editingSong,
+        editingSongId: editingSong?.id,
+        editingSongFirebaseId: editingSong?.firebaseId,
+        songData: songData,
+        songDataId: songData.id,
+        songDataFirebaseId: songData.firebaseId
+      });
 
       let result;
 
-      // SIMPLE: Check if we're editing (has ID) or creating (no ID)
-      const isEditingExistingSong = editingSong && editingSong.id;
+      // Use ID manager to determine if we're editing an existing song
+      const primarySongId = IDManager.getPrimaryId(songData);
+      const primaryEditingSongId = editingSong ? IDManager.getPrimaryId(editingSong) : '';
+      
+      console.log('🔍 ID Analysis:');
+      console.log('📊 songData:', songData);
+      console.log('📊 editingSong:', editingSong);
+      console.log('📊 primarySongId:', primarySongId);
+      console.log('📊 primaryEditingSongId:', primaryEditingSongId);
+      console.log('📊 isEditingExistingSong:', IDManager.isValidId(primarySongId) || IDManager.isValidId(primaryEditingSongId));
+      
+      const isEditingExistingSong = IDManager.isValidId(primarySongId) || IDManager.isValidId(primaryEditingSongId);
 
       if (isEditingExistingSong) {
-        // UPDATE existing song
-        console.log('🔄 [FRESH] Updating song ID:', editingSong.id);
+        // Use ID manager to get the correct ID for update
+        const songIdToUpdate = primarySongId || primaryEditingSongId;
+        
+        console.log('🔄 Updating existing song');
+        IDManager.debugIds(songData, 'Song Data');
+        if (editingSong) {
+          IDManager.debugIds(editingSong, 'Editing Song');
+        }
+        console.log('📊 songIdToUpdate (will use this):', songIdToUpdate);
+        console.log('📊 songData.praiseNightId:', songData.praiseNightId);
+        console.log('📊 songData.title:', songData.title);
 
-        result = await PraiseNightSongsService.updateSong(editingSong.id!, songData);
+        if (!IDManager.isValidId(songIdToUpdate)) {
+          throw new Error('No valid song ID found for update');
+        }
+
+        // Detect what changed for notifications
+        const changes: string[] = [];
+        const existingSong = allSongs.find(s => {
+          const sId = IDManager.getPrimaryId(s);
+          const targetId = songIdToUpdate;
+          return IDManager.areIdsEqual(sId, targetId);
+        });
+
+        if (existingSong) {
+          if (existingSong.lyrics !== songData.lyrics) {
+            changes.push('lyrics');
+          }
+          if (existingSong.audioFile !== songData.audioFile && songData.audioFile) {
+            changes.push('audio');
+          }
+          if (existingSong.key !== songData.key) {
+            changes.push(`key changed from ${existingSong.key} to ${songData.key}`);
+          }
+          if (existingSong.tempo !== songData.tempo) {
+            changes.push(`tempo changed to ${songData.tempo}`);
+          }
+          if (existingSong.leadSinger !== songData.leadSinger) {
+            changes.push(`lead singer: ${songData.leadSinger}`);
+          }
+        }
+
+        result = await FirebaseDatabaseService.updateSong(songIdToUpdate, songData);
 
         if (result.success) {
-          console.log('✅ [FRESH] Song updated successfully');
+          console.log('✅ Song updated successfully');
           addToast({
             type: 'success',
             message: 'Song updated successfully'
@@ -742,26 +809,54 @@ export default function AdminPage() {
             logAdminAction.updateSong(currentAdmin, `Updated song: ${songData.title}`);
           }
         } else {
-          console.error('❌ [FRESH] Song update failed:', result.error);
+          console.error('❌ Song update failed:', result.error);
           addToast({
             type: 'error',
             message: result.error || 'Failed to update song'
           });
         }
       } else {
-        // CREATE new song
-        console.log('➕ [FRESH] Creating new song');
-
-        // Ensure praiseNightId is set
-        const newSongData = {
+        // Add new song
+        console.log('➕ Creating new song (this should NOT happen when editing!)');
+        console.log('🚨 WHY IS THIS CREATING INSTEAD OF UPDATING?');
+        console.log('🔍 Debug info:');
+        console.log('📊 songData has ID?', !!songData.id);
+        console.log('📊 songData has firebaseId?', !!songData.firebaseId);
+        console.log('📊 editingSong exists?', !!editingSong);
+        console.log('📊 editingSong has ID?', editingSong ? !!editingSong.id : 'N/A');
+        console.log('📊 editingSong has firebaseId?', editingSong ? !!editingSong.firebaseId : 'N/A');
+        
+        // Ensure we use the correct page ID format (Firebase document ID)
+        const updatedSongData = {
           ...songData,
           praiseNightId: selectedPage?.firebaseId || selectedPage?.id || songData.praiseNightId
         };
-
-        result = await PraiseNightSongsService.createSong(newSongData);
+        
+        console.log('🎵 Song data with correct praiseNightId:', {
+          originalPraiseNightId: songData.praiseNightId,
+          selectedPageId: selectedPage?.id,
+          selectedPageFirebaseId: selectedPage?.firebaseId,
+          finalPraiseNightId: updatedSongData.praiseNightId
+        });
+        
+        result = await FirebaseDatabaseService.createSong(updatedSongData);
 
         if (result.success) {
-          console.log('✅ [FRESH] Song created with ID:', result.id);
+          console.log('✅ Song added successfully');
+          console.log('🎵 Created song with Firebase ID:', result.id);
+          console.log('🎵 Full result:', result);
+          console.log('🎵 Created song object:', result.song);
+          
+          // Verify the created song has proper ID fields
+          if (result.song) {
+            console.log('🎵 Created song ID fields:', {
+              id: result.song.id,
+              firebaseId: result.song.firebaseId,
+              title: (result.song as any).title,
+              praiseNightId: (result.song as any).praiseNightId
+            });
+          }
+          
           addToast({
             type: 'success',
             message: 'Song added successfully'
@@ -772,7 +867,7 @@ export default function AdminPage() {
             logAdminAction.addSong(currentAdmin, songData.title, songData.category);
           }
         } else {
-          console.error('❌ [FRESH] Song creation failed:', result.error);
+          console.error('❌ Song creation failed:', result.error);
           addToast({
             type: 'error',
             message: result.error || 'Failed to create song'
@@ -807,16 +902,20 @@ export default function AdminPage() {
     if (!songToDelete) return;
 
     try {
-      if (!songToDelete.id) {
+      // SIMPLE: Use IDManager to get the correct Firebase document ID
+      const songIdToDelete = IDManager.getPrimaryId(songToDelete);
+
+      if (!IDManager.isValidId(songIdToDelete)) {
         throw new Error('No valid song ID found for deletion');
       }
 
-      console.log('🗑️ [FRESH] Deleting song:', songToDelete.title, 'ID:', songToDelete.id);
+      console.log('🗑️ Deleting song:', songToDelete.title);
+      console.log('�️ Firebase ID:', songIdToDelete);
 
-      const deleteResult = await PraiseNightSongsService.deleteSong(songToDelete.id);
+      const deleteResult = await FirebaseDatabaseService.deleteSong(songIdToDelete);
 
       if (deleteResult.success) {
-        console.log('✅ [FRESH] Song deleted successfully');
+        console.log('✅ Song deleted successfully');
         addToast({
           type: 'success',
           message: 'Song deleted successfully'
@@ -1031,7 +1130,7 @@ export default function AdminPage() {
 
         {activeSection === 'Members' && <MembersSection />}
         {activeSection === 'Media' && <MediaSection />}
-        {activeSection === 'Notifications' && <SimpleNotificationsSection />}
+        {activeSection === 'Notifications' && <NotificationsSection />}
       </div>
 
       {/* Modals */}

@@ -39,39 +39,23 @@ export async function uploadProfileImage(
       };
     }
     
-    // Create unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}-${Date.now()}.${fileExt}`;
-    const filePath = `profile-images/${fileName}`;
-    
-    console.log('📁 Uploading to path:', filePath);
-    
-    // Upload file to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('media-files')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-    
-    if (error) {
-      console.error('❌ Upload error:', error);
+    console.log('📁 [Cloudinary] Uploading profile image...');
+
+    // Upload file to Cloudinary
+    const { uploadImageToCloudinary } = await import('@/lib/cloudinary-storage');
+    const uploadResult = await uploadImageToCloudinary(file);
+
+    if (!uploadResult) {
+      console.log('❌ Cloudinary upload failed');
       return {
         success: false,
-        error: `Upload failed: ${error.message}`
+        error: 'Failed to upload image to Cloudinary'
       };
     }
-    
-    console.log('📤 Upload data:', data);
-    
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('media-files')
-      .getPublicUrl(filePath);
-    
-    const publicUrl = urlData.publicUrl;
-    console.log('✅ Upload successful:', publicUrl);
-    
+
+    const publicUrl = uploadResult.url;
+    console.log('✅ [Cloudinary] Upload successful:', publicUrl);
+
     return {
       success: true,
       url: publicUrl

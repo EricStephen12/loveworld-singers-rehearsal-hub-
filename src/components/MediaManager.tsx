@@ -23,8 +23,13 @@ import {
   RefreshCw,
   Settings
 } from 'lucide-react';
-import { uploadAudioToSupabase, deleteAudioFromSupabase } from '@/lib/supabase-storage';
-import { getAllMedia, createMediaFile, deleteMediaFile, MediaFile as DatabaseMediaFile, clearMediaCache } from '@/lib/database';
+import { uploadToCloudinary, deleteFromCloudinary, getFileType } from '@/lib/cloudinary-storage';
+import {
+  getAllCloudinaryMedia,
+  createCloudinaryMedia,
+  deleteCloudinaryMedia,
+  CloudinaryMediaFile
+} from '@/lib/cloudinary-media-service';
 import { Toast } from './Toast';
 import { runMediaDiagnostics, printDiagnostics } from '@/utils/media-diagnostics';
 
@@ -81,14 +86,15 @@ export default function MediaManager({
   const loadFilesFromDatabase = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
-      console.log('🚀 Loading media files...');
+      console.log('🚀 [Cloudinary] Loading media files from Firebase...');
       const startTime = performance.now();
 
-      const mediaFiles = await getAllMedia();
+      // Load from NEW Firebase collection: cloudinary_media
+      const mediaFiles = await getAllCloudinaryMedia();
 
       const loadTime = performance.now() - startTime;
-      console.log(`⚡ Media loaded in ${loadTime.toFixed(2)}ms`);
-      console.log(`📊 Total media files: ${mediaFiles.length}`);
+      console.log(`⚡ [Cloudinary] Media loaded in ${loadTime.toFixed(2)}ms`);
+      console.log(`📊 [Cloudinary] Total media files: ${mediaFiles.length}`);
 
       // Show success message for slow loads
       if (loadTime > 1000 && showLoading) {
@@ -98,16 +104,16 @@ export default function MediaManager({
         });
       }
 
-      // Convert database format to component format
+      // Convert to component format
       const convertedFiles: MediaFile[] = mediaFiles.map(dbFile => ({
-        id: dbFile.id.toString(),
+        id: dbFile.id,
         name: dbFile.name,
         url: dbFile.url,
         type: dbFile.type,
         size: dbFile.size,
         folder: dbFile.folder || 'uncategorized',
-        uploadedAt: dbFile.uploadedAt,
-        storagePath: dbFile.storagePath,
+        uploadedAt: dbFile.createdAt,
+        storagePath: dbFile.publicId, // Store Cloudinary publicId
         createdAt: new Date(dbFile.createdAt),
         updatedAt: new Date(dbFile.updatedAt)
       }));
@@ -121,7 +127,7 @@ export default function MediaManager({
         });
       }
     } catch (error) {
-      console.error('❌ Error loading media files:', error);
+      console.error('❌ [Cloudinary] Error loading media files:', error);
       addToast({
         type: 'error',
         message: `Failed to load media: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -201,33 +207,32 @@ export default function MediaManager({
         console.log(`📤 Uploading file ${i + 1}/${fileList.length}: ${file.name} (${formatFileSize(file.size)})`);
 
         // Determine file type
-        let fileType: 'image' | 'audio' | 'video' | 'document' = 'document';
-        if (file.type.startsWith('image/')) fileType = 'image';
-        else if (file.type.startsWith('audio/')) fileType = 'audio';
-        else if (file.type.startsWith('video/')) fileType = 'video';
+        const fileType = getFileType(file.type);
 
         try {
-          // Upload to Supabase Storage with progress tracking
-          const uploadResult = await uploadAudioToSupabase(file, (progress) => {
+          // Upload to Cloudinary with progress tracking
+          console.log(`📤 [Cloudinary] Uploading to Cloudinary...`);
+          const uploadResult = await uploadToCloudinary(file, (progress) => {
             setUploadProgress(progress);
           });
 
           if (uploadResult) {
-            console.log(`✅ File uploaded to storage: ${uploadResult.url}`);
+            console.log(`✅ [Cloudinary] File uploaded: ${uploadResult.url}`);
 
-            // Save to database with Supabase Storage info
-            const dbMediaFile = await createMediaFile({
+            // Save to Firebase: cloudinary_media collection
+            const result = await createCloudinaryMedia({
               name: file.name,
               url: uploadResult.url,
+              publicId: uploadResult.publicId,
+              resourceType: uploadResult.resourceType as 'image' | 'video' | 'raw',
               type: fileType,
               size: file.size,
               folder: fileType,
-              storagePath: uploadResult.path, // Store path for deletion
-              uploadedAt: new Date().toISOString()
+              format: file.name.split('.').pop() || ''
             });
 
-            if (dbMediaFile) {
-              console.log(`✅ File saved to database with ID: ${dbMediaFile.id}`);
+            if (result.success) {
+              console.log(`✅ [Cloudinary] File saved to Firebase with ID: ${result.id}`);
               successCount++;
 
               addToast({
@@ -235,7 +240,7 @@ export default function MediaManager({
                 message: `✅ "${file.name}" uploaded successfully!`
               });
             } else {
-              console.error(`❌ Failed to save "${file.name}" to database`);
+              console.error(`❌ [Cloudinary] Failed to save "${file.name}" to Firebase:`, result.error);
               failCount++;
               addToast({
                 type: 'error',
@@ -313,21 +318,28 @@ export default function MediaManager({
   const handleFileDelete = async (file: MediaFile) => {
     if (confirm(`Are you sure you want to delete "${file.name}"?`)) {
       try {
-        // Delete from database first
-        const dbDeleteSuccess = await deleteMediaFile(parseInt(file.id));
-        
-        if (dbDeleteSuccess) {
-          // Delete from Supabase Storage using stored path
-          let supabaseDeleteSuccess = true;
+        // Delete from Firebase first
+        console.log(`🗑️ [Cloudinary] Deleting from Firebase: ${file.id}`);
+        const dbDeleteResult = await deleteCloudinaryMedia(file.id);
+
+        if (dbDeleteResult.success) {
+          // Delete from Cloudinary using stored publicId
+          let cloudinaryDeleteSuccess = true;
           if (file.storagePath) {
-            supabaseDeleteSuccess = await deleteAudioFromSupabase(file.storagePath);
+            console.log(`🗑️ [Cloudinary] Deleting file with publicId: ${file.storagePath}`);
+
+            // Determine resource type
+            let resourceType = 'image';
+            if (file.type === 'audio') resourceType = 'video'; // Cloudinary uses 'video' for audio
+            else if (file.type === 'video') resourceType = 'video';
+            else if (file.type === 'document') resourceType = 'raw';
+
+            cloudinaryDeleteSuccess = await deleteFromCloudinary(file.storagePath, resourceType);
           } else {
-            // Fallback for legacy files without storagePath
-            const fileName = file.url.split('/').pop();
-            supabaseDeleteSuccess = await deleteAudioFromSupabase(`audio/${fileName}`);
+            console.log('⚠️ No storagePath found for file, skipping Cloudinary deletion');
           }
-          
-          if (supabaseDeleteSuccess) {
+
+          if (cloudinaryDeleteSuccess) {
             // Refresh local data to remove deleted file
             await loadFilesFromDatabase();
             addToast({
@@ -335,7 +347,7 @@ export default function MediaManager({
               message: `File "${file.name}" deleted successfully!`
             });
           } else {
-            // If Supabase Storage deletion fails, we should still remove from UI since DB is updated
+            // If Cloudinary deletion fails, we should still remove from UI since DB is updated
             await loadFilesFromDatabase();
             addToast({
               type: 'warning',

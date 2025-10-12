@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { PraiseNightSong } from '@/types/supabase';
-import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { PraiseNightSongsService } from '@/lib/praise-night-songs-service';
 
 interface UseRealtimeSongDataProps {
   songId: string | null;
@@ -22,20 +22,20 @@ export function useRealtimeSongData({ songId, enabled = true }: UseRealtimeSongD
     setError(null);
 
     try {
-      console.log('🔄 Fetching real-time song data for:', songId);
-      
-      // Fetch directly from Firebase without cache
-      const freshSongData = await (FirebaseDatabaseService as any).getSongById(songId);
-      
+      console.log('🔄 [FRESH] Fetching real-time song data for:', songId);
+
+      // Fetch directly from new praise_night_songs table
+      const freshSongData = await PraiseNightSongsService.getSongById(songId);
+
       if (freshSongData) {
-        console.log('✅ Real-time song data fetched:', freshSongData.title);
+        console.log('✅ [FRESH] Real-time song data fetched:', freshSongData.title);
         setSongData(freshSongData);
       } else {
-        console.log('⚠️ No song data found for:', songId);
+        console.log('⚠️ [FRESH] No song data found for:', songId);
         setSongData(null);
       }
     } catch (error) {
-      console.error('❌ Error fetching real-time song data:', error);
+      console.error('❌ [FRESH] Error fetching real-time song data:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch song data');
     } finally {
       setLoading(false);

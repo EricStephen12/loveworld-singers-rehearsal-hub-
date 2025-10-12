@@ -124,46 +124,41 @@ export async function ultraFastUploadProfileImage(
       message: 'Uploading to cloud...'
     });
     
-    console.log('📤 Uploading to:', filePath);
-    
-    // Stage 4: Ultra-fast upload with optimized settings
-    const { data, error } = await supabase.storage
-      .from('media-files')
-      .upload(filePath, processedFile, {
-        cacheControl: '31536000', // 1 year cache
-        upsert: true, // Allow overwrite for faster retries
-        contentType: 'image/webp' // Explicit content type
+    console.log('📤 [Cloudinary] Uploading ultra-fast...');
+
+    // Stage 4: Ultra-fast upload to Cloudinary
+    // Convert Blob to File if needed
+    const fileToUpload = processedFile instanceof File
+      ? processedFile
+      : new File([processedFile], fileName, { type: 'image/webp' });
+
+    const { uploadImageToCloudinary } = await import('@/lib/cloudinary-storage');
+    const uploadResult = await uploadImageToCloudinary(fileToUpload, (progress) => {
+      onProgress?.({
+        stage: 'uploading',
+        progress: 50 + (progress / 2), // 50-100%
+        message: 'Uploading to cloud...'
       });
-    
-    if (error) {
-      console.error('❌ Upload error:', error);
+    });
+
+    if (!uploadResult) {
+      console.error('❌ [Cloudinary] Upload failed');
       return {
         success: false,
-        error: `Upload failed: ${error.message}`
+        error: 'Upload failed'
       };
     }
     
-    onProgress?.({
-      stage: 'processing',
-      progress: 80,
-      message: 'Processing image...'
-    });
-    
-    // Stage 5: Get public URL with CDN optimization
-    const { data: urlData } = supabase.storage
-      .from('media-files')
-      .getPublicUrl(filePath);
-    
-    const publicUrl = urlData.publicUrl;
+    const publicUrl = uploadResult.url;
     const uploadTime = Date.now() - startTime;
-    
+
     onProgress?.({
       stage: 'complete',
       progress: 100,
       message: 'Upload complete!'
     });
-    
-    console.log('✅ ULTRA-FAST upload successful!', {
+
+    console.log('✅ [Cloudinary] ULTRA-FAST upload successful!', {
       url: publicUrl,
       uploadTime: `${uploadTime}ms`,
       originalSize: file.size,

@@ -1,13 +1,15 @@
 "use client";
 
-import React from 'react';
-import { 
+import React, { useState } from 'react';
+import {
   X,
   Save,
-  Trash2
+  Trash2,
+  FolderOpen
 } from "lucide-react";
 import { PraiseNight, Category, PraiseNightSong } from '../../types/supabase';
 import EditSongModal from '../EditSongModal';
+import MediaSelectionModal from '../MediaSelectionModal';
 
 interface AdminModalsProps {
   // Page Modal
@@ -88,6 +90,9 @@ interface AdminModalsProps {
 }
 
 export default function AdminModals(props: AdminModalsProps) {
+  // Media Library Modal State
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+
   const {
     // Page Modal
     showPageModal,
@@ -338,16 +343,14 @@ export default function AdminModals(props: AdminModalsProps) {
                   className="hidden"
                 />
 
-                {/* Choose Image Button */}
+                {/* Browse Library Button */}
                 <button
                   type="button"
-                  onClick={() => document.getElementById('banner-image-input')?.click()}
+                  onClick={() => setShowMediaLibrary(true)}
                   className="w-full px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium rounded-lg border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 flex items-center justify-center gap-2"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  {newPageBannerFile ? 'Change Image' : 'Choose Image'}
+                  <FolderOpen className="w-5 h-5" />
+                  {newPageBannerImage ? 'Change Image' : 'Browse Library'}
                 </button>
 
                 {newPageBannerImage && (
@@ -358,28 +361,24 @@ export default function AdminModals(props: AdminModalsProps) {
                       className="w-full h-40 object-cover rounded-lg border-2 border-purple-200 shadow-sm"
                     />
                     <div className="flex items-center justify-between mt-2">
-                      <p className="text-xs text-gray-600">
-                        {newPageBannerFile ? `Selected: ${newPageBannerFile.name}` : 'Current banner image'}
+                      <p className="text-xs text-gray-600 truncate flex-1">
+                        {newPageBannerImage.includes('cloudinary') ? 'From Media Library' : 'Current banner image'}
                       </p>
-                      {newPageBannerFile && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewPageBannerFile(null);
-                            setNewPageBannerImage(editingPage?.bannerImage || '');
-                            const fileInput = document.getElementById('banner-image-input') as HTMLInputElement;
-                            if (fileInput) fileInput.value = '';
-                          }}
-                          className="text-xs text-red-600 hover:text-red-700 font-medium"
-                        >
-                          Remove
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewPageBannerImage('');
+                          setNewPageBannerFile(null);
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700 font-medium ml-2"
+                      >
+                        Remove
+                      </button>
                     </div>
                   </div>
                 )}
                 <p className="text-xs text-gray-500 mt-2">
-                  Upload a banner image for this page (JPG, PNG, WebP - Max 5MB)
+                  Select an image from your media library
                 </p>
               </div>
 
@@ -674,6 +673,20 @@ export default function AdminModals(props: AdminModalsProps) {
           </div>
         </div>
       )}
+
+      {/* Media Library Modal for Banner Image Selection */}
+      <MediaSelectionModal
+        isOpen={showMediaLibrary}
+        onClose={() => setShowMediaLibrary(false)}
+        onFileSelect={(file) => {
+          console.log('📸 Selected image from library:', file.url);
+          setNewPageBannerImage(file.url);
+          setNewPageBannerFile(null); // Clear file since we're using URL
+          setShowMediaLibrary(false);
+        }}
+        allowedTypes={['image']}
+        title="Select Banner Image"
+      />
     </>
   );
 }
