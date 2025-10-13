@@ -353,7 +353,45 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     }
   };
 
-  const formatDateTime = (date: Date) => {
+  const formatDateTime = (dateInput: any) => {
+    let date: Date;
+    
+    // Handle different Firebase date formats
+    if (dateInput && typeof dateInput === 'object') {
+      // Firestore Timestamp object
+      if (dateInput.toDate && typeof dateInput.toDate === 'function') {
+        date = dateInput.toDate();
+      }
+      // Firestore Timestamp with seconds/nanoseconds
+      else if (dateInput.seconds) {
+        date = new Date(dateInput.seconds * 1000);
+      }
+      // Regular Date object
+      else if (dateInput instanceof Date) {
+        date = dateInput;
+      }
+      // ISO string or other format
+      else {
+        date = new Date(dateInput);
+      }
+    }
+    // String or number
+    else if (dateInput) {
+      date = new Date(dateInput);
+    }
+    // Fallback to current date
+    else {
+      date = new Date();
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return {
+        date: 'Invalid Date',
+        time: ''
+      };
+    }
+    
     return {
       date: date.toLocaleDateString('en-US', { 
         year: 'numeric', 
@@ -954,7 +992,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                             </div>
                             <div className="text-right">
                               <div className="text-sm font-medium text-slate-800">{entry.title}</div>
-                              <div className="text-xs text-slate-500">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                              <div className="text-xs text-slate-500">{formatDateTime(entry.date).date} {formatDateTime(entry.date).time}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1008,7 +1046,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                               <Music className="w-5 h-5 text-white" />
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(entry.date).date} {formatDateTime(entry.date).time}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1126,7 +1164,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                               <Music className="w-5 h-5 text-white" />
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(entry.date).date} {formatDateTime(entry.date).time}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1175,7 +1213,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                               <Users className="w-5 h-5 text-white" />
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(comment.date)).date} {formatDateTime(new Date(comment.date)).time}</div>
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(comment.date).date} {formatDateTime(comment.date).time}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1210,7 +1248,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                               <Users className="w-5 h-5 text-white" />
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(entry.date).date} {formatDateTime(entry.date).time}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1266,7 +1304,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                               <Settings className="w-5 h-5 text-white" />
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-medium text-slate-800">{formatDateTime(new Date(entry.date)).date} {formatDateTime(new Date(entry.date)).time}</div>
+                              <div className="text-sm font-medium text-slate-800">{formatDateTime(entry.date).date} {formatDateTime(entry.date).time}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
