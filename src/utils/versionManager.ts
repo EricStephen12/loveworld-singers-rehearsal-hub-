@@ -26,8 +26,8 @@ class VersionManager {
   }
 
   private generateVersion(): string {
-    // Use current timestamp as version for development
-    // In production, this should be replaced with actual build version
+    // Use current timestamp as version for automatic cache busting
+    // This ensures every deployment gets a new version
     const buildTime = Date.now().toString();
     return `v${buildTime}`;
   }

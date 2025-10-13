@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { X, LogOut, AlertCircle } from 'lucide-react'
 
 type DrawerItem = {
@@ -29,6 +30,7 @@ type SharedDrawerProps = {
 export default function SharedDrawer({ open, onClose, title = 'Menu', items, customSections = [], fixedOnDesktop = false }: SharedDrawerProps) {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [logoutCallback, setLogoutCallback] = useState<(() => void) | null>(null)
+  const router = useRouter()
   // Render drawer content
   const renderDrawerContent = () => (
     <>
@@ -65,9 +67,10 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
           if (isRefresh) {
             console.log('🔄 Rendering refresh button:', { title: item.title, hasIcon: !!item.icon, hasOnClick: !!item.onClick });
           }
-          const commonProps = item.onClick
+              const commonProps = item.onClick
             ? {
                 onClick: () => {
+                  console.log('🔗 Menu item clicked (onClick):', item.title);
                   if (isLogout) {
                     // Show confirmation modal for logout
                     setLogoutCallback(() => item.onClick)
@@ -78,7 +81,28 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
                   }
                 }
               }
-            : { href: item.href || '#', onClick: onClose }
+            : { 
+                href: item.href || '#', 
+                onClick: (e: any) => {
+                  console.log('🔗 Menu item clicked (href):', item.title, 'href:', item.href);
+                  
+                  // If href is '#', prevent navigation
+                  if (item.href === '#') {
+                    e.preventDefault();
+                    console.log('🚫 Prevented navigation for placeholder link');
+                    return;
+                  }
+                  
+                  // Close drawer first
+                  onClose();
+                  
+                  // Use router for navigation
+                  if (item.href && item.href !== '#') {
+                    console.log('🚀 Navigating to:', item.href);
+                    router.push(item.href);
+                  }
+                }
+              }
 
           return (
             <MenuItem
@@ -128,7 +152,19 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
               const MenuItem: any = item.onClick ? 'button' : Link
               const commonProps = item.onClick 
                 ? { onClick: () => { item.onClick?.(); onClose(); } }
-                : { href: item.href || '#', onClick: onClose }
+                : { 
+                    href: item.href || '#', 
+                    onClick: (e: any) => {
+                      if (item.href === '#') {
+                        e.preventDefault();
+                        return;
+                      }
+                      onClose();
+                      if (item.href && item.href !== '#') {
+                        router.push(item.href);
+                      }
+                    }
+                  }
 
               return (
                 <MenuItem
@@ -177,7 +213,7 @@ export default function SharedDrawer({ open, onClose, title = 'Menu', items, cus
         />
 
         {/* Drawer Content */}
-        <div className="relative w-80 max-w-sm h-full bg-white/95 backdrop-blur-xl shadow-2xl border-r border-gray-200/50 overflow-y-auto">
+        <div className="relative w-80 max-w-sm h-full bg-white/95 backdrop-blur-xl shadow-2xl border-r border-gray-200/50 overflow-y-auto" data-drawer>
           {renderDrawerContent()}
         </div>
       </div>

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 
-import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2, Flag, Archive } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Clock, Music, User, BookOpen, Timer, Mic, Edit, ChevronDown, ChevronUp, Play, Pause, Menu, X, Bell, Users, Calendar, BarChart3, HelpCircle, Home, Plus, Filter, MoreHorizontal, Heart, Sparkles, CheckCircle, Globe, Info, ArrowLeft, SkipForward, SkipBack, MousePointer2, Hand, MousePointerClick, Piano, Drum, Guitar, HandMetal, Volume2, Flag, Archive, RefreshCw } from "lucide-react";
 import SongDetailModal from "@/components/SongDetailModal";
 import { PraiseNightSong, PraiseNight } from "@/types/supabase";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
@@ -34,7 +34,17 @@ function PraiseNightPageContent() {
   const { signOut } = useAuth();
   const [currentPraiseNight, setCurrentPraiseNightState] = useState<PraiseNight | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  
+  // Debug dropdown state
+  useEffect(() => {
+    if (showDropdown) {
+      console.log('🔽 Dropdown opened, categoryFilter:', categoryFilter);
+    } else {
+      console.log('🔼 Dropdown closed, categoryFilter:', categoryFilter);
+    }
+  }, [showDropdown, categoryFilter]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   
   // Load songs on demand like admin does
   const [allSongsFromFirebase, setAllSongsFromFirebase] = useState<PraiseNightSong[]>([]);
@@ -229,11 +239,11 @@ function PraiseNightPageContent() {
     console.log('⚠️ No banner image in database, using fallback');
 
     // Fallback to default image
-    return "/Ecards/1000876785.png";
+        return "/Ecards/1000876785.png";
   }, [currentPraiseNight]);
 
   const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen)
+    setIsMenuOpen(!isMenuOpen);
   }
 
   const handleLogout = async () => {
@@ -398,6 +408,16 @@ function PraiseNightPageContent() {
     // Dispatch event to show mini player (if song is playing)
     window.dispatchEvent(new CustomEvent('songDetailClose'));
   };
+
+  // NAVIGATION SAFETY - Close dropdown when navigation is attempted
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      setShowDropdown(false);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Format single digit numbers with leading zero
   const formatNumber = (num: number) => {
@@ -602,7 +622,6 @@ function PraiseNightPageContent() {
 
   // Search input focus from header search button
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Use page-specific search hook with actual songs data
   const { searchQuery, setSearchQuery, searchResults, hasResults } = usePageSearch(
@@ -611,6 +630,7 @@ function PraiseNightPageContent() {
       songs: allSongsFromFirebase
     } : null
   );
+
   const typedSearchResults = searchResults as PageSearchResult[];
 
   const onHeaderSearchClick = () => {
@@ -645,13 +665,13 @@ function PraiseNightPageContent() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-sm">Loading program data...</p>
+          <p className="text-gray-600 text-sm">Loading program...</p>
         </div>
       </div>
     );
   }
 
-  // Show error state
+  // Show error state - but allow navigation
   if (error) {
     console.log('❌ Showing error state:', error);
     return (
@@ -663,21 +683,93 @@ function PraiseNightPageContent() {
           <p className="text-red-600 font-medium mb-2">Error loading data</p>
           <p className="text-slate-600 text-sm">{error}</p>
         </div>
+        {/* Header with menu button */}
+        <ScreenHeader 
+          title="Error"
+          onMenuClick={toggleMenu}
+          showMenuButton={true}
+        />
+        
+        {/* ALWAYS show SharedDrawer even when there's an error */}
+        <SharedDrawer 
+          open={isMenuOpen} 
+          onClose={toggleMenu} 
+          title="Menu" 
+          items={menuItems}
+          key={`drawer-error-${categoryFilter}`}
+        />
       </div>
     );
   }
 
   console.log('✅ Rendering main page content');
   
-  // Fallback: If no data at all, show a basic page
-  if (!allPraiseNights || allPraiseNights.length === 0) {
-    console.log('⚠️ No praise nights data, showing fallback');
-  return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 text-sm">No praise night data available</p>
-          <p className="text-gray-500 text-xs mt-2">Check your connection and try again</p>
+  // Show empty state when there's no data for the current category
+  if (!allPraiseNights || allPraiseNights.length === 0 || filteredPraiseNights.length === 0) {
+    console.log('⚠️ No data for category, showing empty state');
+    return (
+      <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50 safe-area-bottom">
+        {/* Simple Header - No menu, just title */}
+        <div className="flex-shrink-0 w-full">
+          <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100/50 min-h-[60px] sm:min-h-[70px] w-full">
+            <div className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-3">
+              <h1 className="text-base sm:text-lg font-outfit-semibold text-gray-800">
+                {categoryFilter === 'ongoing' ? 'Ongoing Sessions' : 
+                 categoryFilter === 'archive' ? 'Archives' : 
+                 categoryFilter === 'pre-rehearsal' ? 'Pre-Rehearsal' : 'Praise Night'}
+              </h1>
+            </div>
+          </div>
         </div>
+        
+        {/* Empty State Content */}
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-sm mx-auto">
+            {/* Icon */}
+            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
+              {categoryFilter === 'ongoing' ? (
+                <Clock className="w-10 h-10 text-purple-600" />
+              ) : categoryFilter === 'archive' ? (
+                <Archive className="w-10 h-10 text-purple-600" />
+              ) : categoryFilter === 'pre-rehearsal' ? (
+                <Calendar className="w-10 h-10 text-purple-600" />
+              ) : (
+                <Music className="w-10 h-10 text-purple-600" />
+              )}
+            </div>
+            
+            {/* Title */}
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">
+              {categoryFilter === 'ongoing' ? 'No Ongoing Sessions' :
+               categoryFilter === 'archive' ? 'No Archived Sessions' :
+               categoryFilter === 'pre-rehearsal' ? 'No Pre-Rehearsal Sessions' :
+               'No Sessions Available'}
+            </h2>
+            
+            {/* Description */}
+            <p className="text-gray-600 text-sm mb-6 leading-relaxed">
+              {categoryFilter === 'ongoing' ? 'Ongoing sessions will appear here when they are active and ready for rehearsal.' :
+               categoryFilter === 'archive' ? 'Archived sessions will appear here when they are completed and moved to archive.' :
+               categoryFilter === 'pre-rehearsal' ? 'Pre-rehearsal sessions will appear here when they are scheduled for preparation.' :
+               'Create your first session to get started with your praise and worship program.'}
+            </p>
+            
+            {/* Back Button */}
+            <button
+              onClick={() => {
+                console.log('🔙 Back button clicked, navigating to /pages/rehearsals');
+                window.location.href = '/pages/rehearsals';
+                console.log('🔙 Navigation command sent');
+              }}
+              className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Rehearsals
+            </button>
+          </div>
+        </div>
+        
+        {/* No SharedDrawer in empty state - just back button for navigation */}
       </div>
     );
   }
@@ -1028,6 +1120,7 @@ function PraiseNightPageContent() {
           <div
             className="fixed inset-0 bg-black/20 z-[75]"
             onClick={() => setShowDropdown(false)}
+            onTouchStart={() => setShowDropdown(false)}
           />
           <div className="fixed right-3 left-3 sm:right-4 sm:left-auto top-16 sm:top-16 z-[80] w-auto sm:w-64 max-w-2xl mx-auto sm:mx-0 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden max-h-64 overflow-y-auto">
             {filteredPraiseNights.length > 0 ? (
@@ -1375,7 +1468,13 @@ function PraiseNightPageContent() {
       </div>
       {/* ✅ End of Scrollable Content */}
 
-      <SharedDrawer open={isMenuOpen} onClose={toggleMenu} title="Menu" items={menuItems} />
+      <SharedDrawer 
+        open={isMenuOpen} 
+        onClose={toggleMenu} 
+        title="Menu" 
+        items={menuItems}
+        key={`drawer-${categoryFilter}`} // Force re-render when category changes
+      />
 
       {/* ✅ Category Bar for Individual Archive Pages with Horizontal Scroll */}
       {categoryFilter === 'archive' && pageParam && (
@@ -1488,17 +1587,17 @@ function PraiseNightPageContent() {
         // Always get the latest song data from finalSongData (real-time)
         const latestSongData = finalSongData.find(s => s.id === selectedSong.id) || selectedSong;
         return (
-          <SongDetailModal
+        <SongDetailModal
             selectedSong={latestSongData}
-            isOpen={isSongDetailOpen}
-            onClose={handleCloseSongDetail}
-            currentFilter={activeFilter}
+          isOpen={isSongDetailOpen}
+          onClose={handleCloseSongDetail}
+          currentFilter={activeFilter}
             songs={finalSongData}
-            onSongChange={(newSong) => {
-              setSelectedSong(newSong);
-              // Don't auto-play here since the modal handles it
-            }}
-          />
+          onSongChange={(newSong) => {
+            setSelectedSong(newSong);
+            // Don't auto-play here since the modal handles it
+          }}
+        />
         );
       })()}
       

@@ -203,7 +203,7 @@ function HomePageContent() {
               <Link href="#" className="w-10 h-10 rounded-full overflow-hidden focus:outline-none focus:ring-0 transition-all duration-200 hover:scale-105 active:scale-95">
                 <div className="relative">
                   <img
-                    src="/lmm.png"
+                    src="/logo.png"
                     alt="Profile"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -232,7 +232,7 @@ function HomePageContent() {
               <div className="flex items-center">
                 <div className="relative">
                   <img 
-                    src="/logo.png" 
+                    src="/lmm.png" 
                     alt="LoveWorld Logo" 
                     className="w-10 h-10 object-contain transition-transform duration-200 hover:scale-105"
                     onError={(e) => {

@@ -598,7 +598,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           display: none;
         }
       `}</style>
-      <div className="fixed inset-0 bg-white z-50 flex flex-col">
+      <div className="fixed inset-0 bg-white z-[100] flex flex-col">
       {/* Responsive Container */}
       <div className="mx-auto max-w-2xl w-full h-full flex flex-col">
         
@@ -1272,7 +1272,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
         </div>
 
         {/* Compact Music Player - Fixed at Bottom */}
-        <div className="fixed bottom-0 left-0 right-0 px-6 modal-bottom-safe bg-white border-t border-gray-100 z-50">
+        <div className="fixed bottom-0 left-0 right-0 px-6 modal-bottom-safe bg-white border-t border-gray-100 z-[100]">
 
           {/* Progress Bar */}
           <div className="mb-2">

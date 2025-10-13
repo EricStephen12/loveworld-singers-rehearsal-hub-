@@ -1,7 +1,9 @@
 // public/sw.js - Service Worker for offline caching
-const CACHE_NAME = 'loveworld-singers-v1'
-const STATIC_CACHE = 'loveworld-static-v1'
-const DYNAMIC_CACHE = 'loveworld-dynamic-v1'
+// AUTO-UPDATE: Cache names with timestamp for automatic cache busting
+const CACHE_VERSION = 'v' + Date.now()
+const CACHE_NAME = `loveworld-singers-${CACHE_VERSION}`
+const STATIC_CACHE = `loveworld-static-${CACHE_VERSION}`
+const DYNAMIC_CACHE = `loveworld-dynamic-${CACHE_VERSION}`
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -17,40 +19,44 @@ const STATIC_FILES = [
 
 // Install event - cache static files
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...')
+  console.log('🚀 Service Worker installing with version:', CACHE_VERSION)
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
-        console.log('Caching static files...')
+        console.log('📦 Caching static files...')
         return cache.addAll(STATIC_FILES)
       })
       .then(() => {
-        console.log('Static files cached successfully')
+        console.log('✅ Static files cached successfully')
+        // FORCE UPDATE: Skip waiting to activate immediately
         return self.skipWaiting()
       })
       .catch((error) => {
-        console.error('Failed to cache static files:', error)
+        console.error('❌ Failed to cache static files:', error)
       })
   )
 })
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...')
+  console.log('🔄 Service Worker activating with version:', CACHE_VERSION)
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
-      return Promise.all(
+        console.log('🗑️ Found caches:', cacheNames)
+        return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-              console.log('Deleting old cache:', cacheName)
+            // DELETE ALL OLD CACHES - Only keep current version
+            if (!cacheName.includes(CACHE_VERSION)) {
+              console.log('🗑️ Deleting old cache:', cacheName)
               return caches.delete(cacheName)
             }
           })
         )
       })
       .then(() => {
-        console.log('Service Worker activated')
+        console.log('✅ Service Worker activated - old caches cleaned')
+        // FORCE UPDATE: Claim all clients immediately
         return self.clients.claim()
       })
   )
@@ -71,12 +77,40 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // NETWORK-FIRST for critical files (always get latest)
+  const criticalFiles = ['/sw.js', '/manifest.json', '/_next/static/']
+  const isCriticalFile = criticalFiles.some(path => request.url.includes(path))
+
+  if (isCriticalFile) {
+    console.log('🌐 Network-first for critical file:', request.url)
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache the fresh response
+          if (response.status === 200) {
+            const responseToCache = response.clone()
+            caches.open(DYNAMIC_CACHE)
+              .then((cache) => {
+                cache.put(request, responseToCache)
+              })
+          }
+          return response
+        })
+        .catch(() => {
+          // Fallback to cache if network fails
+          return caches.match(request)
+        })
+    )
+    return
+  }
+
+  // CACHE-FIRST for other files
   event.respondWith(
     caches.match(request)
       .then((cachedResponse) => {
         // Return cached version if available
-    if (cachedResponse) {
-          console.log('Serving from cache:', request.url)
+        if (cachedResponse) {
+          console.log('📦 Serving from cache:', request.url)
           return cachedResponse
         }
 
@@ -94,14 +128,14 @@ self.addEventListener('fetch', (event) => {
             // Cache the response
             caches.open(DYNAMIC_CACHE)
               .then((cache) => {
-                console.log('Caching dynamic response:', request.url)
+                console.log('💾 Caching dynamic response:', request.url)
                 cache.put(request, responseToCache)
               })
 
             return response
           })
           .catch((error) => {
-            console.error('Fetch failed:', error)
+            console.error('❌ Fetch failed:', error)
             
             // Return offline page for navigation requests
             if (request.mode === 'navigate') {

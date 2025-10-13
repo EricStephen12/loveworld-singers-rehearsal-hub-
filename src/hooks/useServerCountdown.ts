@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { FirebaseDatabaseService } from '@/lib/firebase-database'
 
 interface ServerTimeResponse {
   serverTime: string
@@ -129,9 +130,28 @@ export function useServerCountdown({
           // Use provided target date
           target = targetDate
         } else if (countdownData) {
-          // Check if we have a stored target date for this praise night
-          const storageKey = `server_target_date_${praiseNightId}`
-          const storedTargetDate = localStorage.getItem(storageKey)
+          // Check if we have a stored target date for this praise night in Firebase
+          let storedTargetDate: string | null = null
+          
+          if (praiseNightId) {
+            try {
+              // Try to get the stored target date from Firebase
+              const countdownDoc = await FirebaseDatabaseService.getDocument('countdowns', praiseNightId.toString())
+              if (countdownDoc && (countdownDoc as any).targetDate) {
+                storedTargetDate = (countdownDoc as any).targetDate
+                console.log('🕐 Found stored target date in Firebase:', storedTargetDate)
+              }
+            } catch (error) {
+              console.log('🕐 No stored target date in Firebase, checking localStorage fallback')
+              // Fallback to localStorage if Firebase fails
+              const storageKey = `server_target_date_${praiseNightId}`
+              const localStoredDate = localStorage.getItem(storageKey)
+              if (localStoredDate) {
+                storedTargetDate = localStoredDate
+                console.log('🕐 Found stored target date in localStorage:', storedTargetDate)
+              }
+            }
+          }
 
           if (storedTargetDate) {
             // Use stored target date to prevent timer reset
@@ -154,8 +174,24 @@ export function useServerCountdown({
               target: target.toISOString()
             });
 
-            // Store it for future use
-            localStorage.setItem(storageKey, target.toISOString())
+            // Store it in Firebase for future use (persistent across devices)
+            if (praiseNightId) {
+              try {
+                await FirebaseDatabaseService.createDocument('countdowns', praiseNightId.toString(), {
+                  targetDate: target.toISOString(),
+                  createdAt: new Date(),
+                  praiseNightId: praiseNightId
+                })
+                console.log('🕐 Stored target date in Firebase for persistence')
+              } catch (error) {
+                console.error('🕐 Failed to store target date in Firebase:', error)
+              }
+              
+              // Also store in localStorage as backup
+              const storageKey = `server_target_date_${praiseNightId}`
+              localStorage.setItem(storageKey, target.toISOString())
+              console.log('🕐 Stored target date in localStorage as backup')
+            }
           }
         } else {
           // If no countdown data, don't show countdown

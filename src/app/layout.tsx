@@ -20,6 +20,7 @@ import { lowDataOptimizer } from '@/utils/low-data-optimizer'
 import { EmergencyRecovery } from '@/utils/emergency-recovery'
 import FeatureUpdateChecker from '@/components/FeatureUpdateChecker'
 import OfflineIndicator from '@/components/OfflineIndicator'
+import ForceUpdateButton from '@/components/ForceUpdateButton'
 import '@/utils/auth-debug'
 
 // Auto-optimize for low data on app startup
@@ -213,6 +214,7 @@ export default function RootLayout({
               <PushNotificationListener />
               <OfflineIndicator />
               <FeatureUpdateChecker />
+              <ForceUpdateButton />
             </AudioProvider>
           </AuthProvider>
         </ErrorBoundary>

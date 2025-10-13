@@ -179,6 +179,7 @@ export function useRealtimeData() {
       const songs = await PraiseNightSongsService.getSongsByPraiseNight(String(pageId));
 
       console.log(`⚡ [FRESH] Regular App: ${songs.length} songs for page ${pageId} fetched in ${(performance.now() - startTime).toFixed(2)}ms`);
+      
       return songs;
 
     } catch (error) {
