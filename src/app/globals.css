@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Enhanced safe area variables */
+:root {
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --enhanced-safe-area-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
+}
+
 /* ✅ INSTANT RENDERING - Critical CSS First */
 html {
   -webkit-text-size-adjust: 100%;
@@ -61,8 +67,10 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
+  /* Enhanced safe area support for modern devices */
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
+  /* Additional support for devices with home indicators */
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
 }
 
 /* Native app-style bottom input areas */
@@ -96,6 +104,29 @@ body {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--enhanced-safe-area-bottom, 24px));
 }
 
+/* Enhanced bottom bar with better device support */
+.bottom-bar-enhanced {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  /* Use CSS custom properties for dynamic safe area */
+  padding-bottom: var(--enhanced-safe-area-bottom, 24px);
+  /* Ensure content is not cut off */
+  min-height: 60px;
+  /* Better touch target */
+  touch-action: manipulation;
+}
+
+/* Device-specific enhancements */
+.has-safe-area .bottom-bar-enhanced {
+  padding-bottom: var(--enhanced-safe-area-bottom, 24px);
+}
+
+.no-safe-area .bottom-bar-enhanced {
+  padding-bottom: 24px;
+}
+
 /* For content that needs extra bottom spacing on mobile */
 .content-bottom-safe {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 80px);
@@ -115,6 +146,10 @@ body {
   
   .bottom-nav-safe {
     padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--nav-safe-area-bottom, 24px));
+  }
+  
+  .fixed-bottom-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
   }
 }
 
@@ -232,7 +267,7 @@ body {
   }
   
   .fixed-bottom-safe {
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
   }
 }
 

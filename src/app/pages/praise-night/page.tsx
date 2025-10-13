@@ -1478,7 +1478,7 @@ function PraiseNightPageContent() {
 
       {/* ✅ Category Bar for Individual Archive Pages with Horizontal Scroll */}
       {categoryFilter === 'archive' && pageParam && (
-        <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+        <div className="bottom-bar-enhanced flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
           <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
             {/* Category buttons with horizontal scroll */}
             <div 
@@ -1505,7 +1505,7 @@ function PraiseNightPageContent() {
 
        {/* ✅ Fixed Bottom Bar with Horizontal Scrolling Categories */}
       {filteredPraiseNights.length > 0 && categoryFilter !== 'archive' && (
-         <div className="fixed-bottom-safe flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
+         <div className="bottom-bar-enhanced flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
              <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
               {/* Category buttons with horizontal scroll */}
               <div 

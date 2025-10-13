@@ -22,6 +22,7 @@ import FeatureUpdateChecker from '@/components/FeatureUpdateChecker'
 import OfflineIndicator from '@/components/OfflineIndicator'
 import ForceUpdateButton from '@/components/ForceUpdateButton'
 import '@/utils/auth-debug'
+import '@/utils/safeAreaManager'
 
 // Auto-optimize for low data on app startup
 if (typeof window !== 'undefined') {
