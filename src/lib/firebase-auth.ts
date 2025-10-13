@@ -158,20 +158,22 @@ export class FirebaseAuthService {
   }
 
   // Create user with email and password (alias for signUp)
-  static async createUserWithEmailAndPassword(email: string, password: string) {
+  static async createUserWithEmailAndPassword(email: string, password: string, userData?: any) {
     try {
       // Set persistence to LOCAL (keeps user signed in across browser sessions)
       await setPersistence(auth, browserLocalPersistence)
       
       const result = await createUserWithEmailAndPassword(auth, email, password)
       
-      // Create user profile in Firestore with profile_completed: false
+      // Create user profile in Firestore with profile_completed: true (no completion page needed)
       await setDoc(doc(db, 'profiles', result.user.uid), {
         id: result.user.uid,
         email: result.user.email,
-        profile_completed: false,
+        profile_completed: true, // Mark as completed since we have basic info
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        // Include user data if provided
+        ...(userData || {})
       })
       
       return { user: result.user, error: null }

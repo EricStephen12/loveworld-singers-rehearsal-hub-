@@ -153,12 +153,16 @@ export function useServerCountdown({
             }
           }
 
-          if (storedTargetDate) {
-            // Use stored target date to prevent timer reset
+          // Check if countdown data has changed by comparing with stored hash
+          const currentCountdownHash = JSON.stringify(countdownData)
+          const storedCountdownHash = localStorage.getItem(`countdown_hash_${praiseNightId}`)
+          
+          if (storedTargetDate && currentCountdownHash === storedCountdownHash) {
+            // Use stored target date if countdown data hasn't changed
             target = new Date(storedTargetDate)
-            console.log('🕐 Using stored target date:', target.toISOString());
+            console.log('🕐 Using stored target date (no changes):', target.toISOString());
           } else {
-            // First time - calculate target date from countdown data
+            // Countdown data changed or first time - calculate new target date
             const totalMs =
               (countdownData.days * 24 * 60 * 60 * 1000) +
               (countdownData.hours * 60 * 60 * 1000) +
@@ -190,7 +194,8 @@ export function useServerCountdown({
               // Also store in localStorage as backup
               const storageKey = `server_target_date_${praiseNightId}`
               localStorage.setItem(storageKey, target.toISOString())
-              console.log('🕐 Stored target date in localStorage as backup')
+              localStorage.setItem(`countdown_hash_${praiseNightId}`, currentCountdownHash)
+              console.log('🕐 Stored new target date and hash in localStorage')
             }
           }
         } else {

@@ -9,7 +9,7 @@ export const dynamicImport = {
   
   // Lazy load pages
   AdminPage: () => import('@/app/admin/page'),
-  ProfileCompletionPage: () => import('@/app/profile-completion/page'),
+  CalendarPage: () => import('@/app/pages/calendar/page'),
 };
 
 // Image optimization utilities

@@ -10,7 +10,7 @@ const LazyAuthPage = lazy(() => import('@/app/auth/page'));
 const LazyProfilePage = lazy(() => import('@/app/pages/profile/page'));
 const LazyPraiseNightPage = lazy(() => import('@/app/pages/praise-night/page'));
 const LazyRehearsalsPage = lazy(() => import('@/app/pages/rehearsals/page'));
-const LazyProfileCompletionPage = lazy(() => import('@/app/profile-completion/page'));
+// Profile completion page removed
 // Subscription page removed
 
 // Loading component with skeleton
@@ -72,7 +72,7 @@ export const LazyAuthPageComponent = withLazyLoading(LazyAuthPage, 'Authenticati
 export const LazyProfilePageComponent = withLazyLoading(LazyProfilePage, 'Profile');
 export const LazyPraiseNightPageComponent = withLazyLoading(LazyPraiseNightPage, 'Praise Night');
 export const LazyRehearsalsPageComponent = withLazyLoading(LazyRehearsalsPage, 'Rehearsals');
-export const LazyProfileCompletionPageComponent = withLazyLoading(LazyProfileCompletionPage, 'Profile Completion');
+// Profile completion page component removed
 // Subscription page removed
 
 // Lazy loading wrapper for any component

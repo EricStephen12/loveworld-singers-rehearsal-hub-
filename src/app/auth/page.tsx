@@ -71,10 +71,15 @@ function AuthPageContent() {
 
         setSuccess('Creating your account...')
         
-        // Sign up with Firebase
+        // Sign up with Firebase and create profile in one step
         const result = await FirebaseAuthService.createUserWithEmailAndPassword(
           formData.email,
-          formData.password
+          formData.password,
+          {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email
+          }
         )
         
         if (result.error) {
@@ -86,17 +91,6 @@ function AuthPageContent() {
 
         setSuccess('Account created! Setting up your profile...')
         
-        // Create user profile in Firebase
-        await FirebaseDatabaseService.createDocument('profiles', result.user!.uid, {
-          id: result.user!.uid,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          email: formData.email,
-          profile_completed: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        
         setSuccess('Account created successfully! Redirecting...')
         
         // Set auth flags immediately for AuthGuard
@@ -104,15 +98,15 @@ function AuthPageContent() {
           localStorage.setItem('userAuthenticated', 'true')
           localStorage.setItem('lastAuthTime', Date.now().toString())
           localStorage.setItem('bypassLogin', 'true')
-          // Don't set hasCompletedProfile yet - they need to complete profile
+          localStorage.setItem('hasCompletedProfile', 'true') // Profile is complete with basic info
         }
         
-        // Always go directly to profile completion
+        // Go directly to home - no profile completion needed
         console.log('✅ Account created, redirecting to home...')
         console.log('👤 User created successfully')
         setTimeout(() => {
           console.log('🔄 Redirecting to /home')
-        router.push('/home')
+          router.push('/home')
         }, 1500)
       } else {
         setSuccess('Checking your account...')

@@ -28,11 +28,12 @@ export function useUltraFastSongHistory(songId: string | null) {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Load cached history data instantly
-  const loadCachedHistory = useCallback(async (): Promise<HistoryEntry[]> => {
+  const loadCachedHistory = useCallback(async (numericId?: string): Promise<HistoryEntry[]> => {
     try {
       const cached = await offlineManager.getCachedData(CACHE_KEY) as SongHistoryCache;
-      if (cached && cached[songId!] && songId) {
-        const cacheEntry = cached[songId];
+      const cacheKey = numericId || songId!;
+      if (cached && cached[cacheKey] && cacheKey) {
+        const cacheEntry = cached[cacheKey];
         // No cache - always fetch fresh data
         const isExpired = true;
         
@@ -71,8 +72,32 @@ export function useUltraFastSongHistory(songId: string | null) {
       console.log('🚀 Starting ultra-fast song history load for:', songId);
       const startTime = performance.now();
 
+      // First, get the song data to find the original numeric ID
+      let numericSongId: number | null = null;
+      
+      try {
+        const songData = await FirebaseDatabaseService.getDocument('songs', songId);
+        if (songData) {
+          // Try to get the original numeric ID from various possible fields
+          numericSongId = (songData as any).supabaseId || (songData as any).id || parseInt((songData as any).id) || null;
+          console.log('🔍 Found numeric song ID for history query:', numericSongId, 'from song:', (songData as any).title);
+        }
+      } catch (error) {
+        console.log('🔍 Could not fetch song data, trying direct conversion:', error);
+        // Fallback: try to convert the string ID to number
+        numericSongId = isNaN(Number(songId)) ? null : parseInt(songId);
+      }
+      
+      if (!numericSongId) {
+        console.warn('⚠️ No numeric song ID found for history query, songId:', songId);
+        setHistory([]);
+        setError(null);
+        setIsInitialLoad(false);
+        return;
+      }
+
       // INSTANT: Load cached data immediately for zero loading time
-      const cachedHistory = await loadCachedHistory();
+      const cachedHistory = await loadCachedHistory(numericSongId.toString());
       if (cachedHistory.length > 0) {
         setHistory(cachedHistory);
         setError(null);
@@ -81,9 +106,8 @@ export function useUltraFastSongHistory(songId: string | null) {
       } else {
         setLoading(true);
       }
-
-      // Fetch fresh data from Firebase (non-blocking)
-      const historyData = await FirebaseDatabaseService.getCollectionWhere('song_history', 'song_id', '==', parseInt(songId));
+      
+      const historyData = await FirebaseDatabaseService.getCollectionWhere('song_history', 'song_id', '==', numericSongId);
       
       if (!historyData) {
         console.error('Error fetching song history from Firebase');
@@ -109,8 +133,8 @@ export function useUltraFastSongHistory(songId: string | null) {
       setError(null);
       setIsInitialLoad(false);
 
-      // Cache the fresh data
-      await cacheHistory(songId, historyEntries);
+      // Cache the fresh data using the numeric ID for consistency
+      await cacheHistory(numericSongId.toString(), historyEntries);
 
       const endTime = performance.now();
       console.log(`✅ Song history loaded in ${endTime - startTime}ms`);

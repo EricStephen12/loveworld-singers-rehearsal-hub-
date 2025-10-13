@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronLeft, BookOpen, Music, Users, Clock, Play, Pause, SkipBack, SkipForward, RotateCcw, Music2, ChevronDown, ChevronUp, Settings, Maximize2, Minimize2 } from "lucide-react";
+import { ChevronLeft, BookOpen, Music, Users, Clock, Play, Pause, SkipBack, SkipForward, RotateCcw, Music2, ChevronDown, ChevronUp, Settings, Maximize2, Minimize2, RotateCw, Undo2, Redo2 } from "lucide-react";
 import { PraiseNightSong, HistoryEntry } from "@/types/supabase";
 import { useAudio } from "@/contexts/AudioContext";
 import { FirebaseDatabaseService } from "@/lib/firebase-database";
@@ -538,6 +538,23 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
         };
         audioRef.current.addEventListener('canplay', handleCanPlay);
       }
+    }
+  };
+
+  // 10-second skip functions
+  const skipBackward10 = () => {
+    if (audioRef.current && duration > 0) {
+      const newTime = Math.max(0, currentTime - 10);
+      seekToTime(newTime);
+      console.log('⏪ Skipped backward 10 seconds to:', newTime);
+    }
+  };
+
+  const skipForward10 = () => {
+    if (audioRef.current && duration > 0) {
+      const newTime = Math.min(duration, currentTime + 10);
+      seekToTime(newTime);
+      console.log('⏩ Skipped forward 10 seconds to:', newTime);
     }
   };
 
@@ -1401,7 +1418,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           {/* Main Controls */}
           <div className="flex items-center justify-between">
             {/* Left Controls */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               {/* Repeat Button */}
               <button
                 onClick={toggleRepeat}
@@ -1418,6 +1435,16 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                 className="w-6 h-6 flex items-center justify-center hover:text-gray-800 transition-colors"
               >
                 <SkipBack className="w-5 h-5 text-gray-600 fill-gray-600" />
+              </button>
+
+              {/* 10 Second Backward - Small */}
+              <button 
+                onClick={skipBackward10}
+                className="relative w-5 h-5 flex items-center justify-center hover:text-gray-800 transition-colors"
+                title="Skip backward 10 seconds"
+              >
+                <RotateCcw className="w-3 h-3 text-gray-600" />
+                <span className="absolute text-[5px] text-gray-600 font-bold leading-none top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">10</span>
               </button>
             </div>
 
@@ -1484,7 +1511,17 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
             </button>
 
             {/* Right Controls */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
+              {/* 10 Second Forward - Small */}
+              <button 
+                onClick={skipForward10}
+                className="relative w-5 h-5 flex items-center justify-center hover:text-gray-800 transition-colors"
+                title="Skip forward 10 seconds"
+              >
+                <RotateCw className="w-3 h-3 text-gray-600" />
+                <span className="absolute text-[5px] text-gray-600 font-bold leading-none top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">10</span>
+              </button>
+
               {/* Next Track */}
               <button 
                 onClick={handleNext}

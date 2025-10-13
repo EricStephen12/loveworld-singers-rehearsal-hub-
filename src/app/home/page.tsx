@@ -149,8 +149,8 @@ function HomePageContent() {
     },
     {
       icon: Calendar,
-      title: 'Ministy Calendar',
-      href: '#',
+      title: 'Ministry Calendar',
+      href: '/pages/calendar',
       badge: null,
     },
     {
