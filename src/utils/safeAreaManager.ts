@@ -90,6 +90,7 @@ export class SafeAreaManager {
       setTimeout(() => {
         this.detectSafeArea();
         this.applySafeAreaStyles();
+        console.log('🛡️ Safe area updated after orientation change');
       }, 100);
     });
 
@@ -97,6 +98,7 @@ export class SafeAreaManager {
     window.addEventListener('resize', () => {
       this.detectSafeArea();
       this.applySafeAreaStyles();
+      console.log('🛡️ Safe area updated after resize');
     });
 
     // Handle visual viewport changes (for mobile browsers)
@@ -104,8 +106,29 @@ export class SafeAreaManager {
       window.visualViewport.addEventListener('resize', () => {
         this.detectSafeArea();
         this.applySafeAreaStyles();
+        console.log('🛡️ Safe area updated after visual viewport change');
       });
     }
+
+    // Handle page visibility changes (when navigating between pages)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        setTimeout(() => {
+          this.detectSafeArea();
+          this.applySafeAreaStyles();
+          console.log('🛡️ Safe area updated after page visibility change');
+        }, 200);
+      }
+    });
+
+    // Handle popstate events (back/forward navigation)
+    window.addEventListener('popstate', () => {
+      setTimeout(() => {
+        this.detectSafeArea();
+        this.applySafeAreaStyles();
+        console.log('🛡️ Safe area updated after navigation');
+      }, 100);
+    });
   }
 
   /**
@@ -146,6 +169,16 @@ export class SafeAreaManager {
    */
   hasSafeArea(): boolean {
     return this.safeAreaBottom > 0;
+  }
+
+  /**
+   * Manually trigger safe area recalculation
+   * Useful when navigating between pages or when layout changes
+   */
+  recalculate(): void {
+    console.log('🛡️ Manually recalculating safe area...');
+    this.detectSafeArea();
+    this.applySafeAreaStyles();
   }
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronLeft, BookOpen, Music, Users, Clock, Play, Pause, SkipBack, SkipForward, RotateCcw, Music2, ChevronDown, ChevronUp, Settings } from "lucide-react";
+import { ChevronLeft, BookOpen, Music, Users, Clock, Play, Pause, SkipBack, SkipForward, RotateCcw, Music2, ChevronDown, ChevronUp, Settings, Maximize2, Minimize2 } from "lucide-react";
 import { PraiseNightSong, HistoryEntry } from "@/types/supabase";
 import { useAudio } from "@/contexts/AudioContext";
 import { FirebaseDatabaseService } from "@/lib/firebase-database";
@@ -32,6 +32,14 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     'solfas-1', 'solfas-2', 'solfas-3',
     'comment-1', 'comment-2', 'comment-3', 'comment-4'
   ]));
+  
+  // Fullscreen lyrics state
+  const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
+
+  // Toggle fullscreen lyrics
+  const toggleFullscreenLyrics = () => {
+    setIsFullscreenLyrics(!isFullscreenLyrics);
+  };
   
   // State for history audio players
   const [historyAudioStates, setHistoryAudioStates] = useState<{[key: string]: {isPlaying: boolean, currentTime: number, duration: number}}>({});
@@ -601,6 +609,48 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
       <div className="fixed inset-0 bg-white z-[100] flex flex-col">
       {/* Responsive Container */}
       <div className="mx-auto max-w-2xl w-full h-full flex flex-col">
+        
+        {/* Fullscreen Lyrics View */}
+        {isFullscreenLyrics && activeTab === 'lyrics' ? (
+          <div className="fixed inset-0 bg-white z-[100] flex flex-col">
+            {/* Fullscreen Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={toggleFullscreenLyrics}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <Minimize2 className="w-5 h-5 text-gray-600" />
+                </button>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">{currentSongData?.title}</h2>
+                  <p className="text-sm text-gray-500">{currentSongData?.writer}</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Fullscreen Lyrics Content - Properly scrollable */}
+            <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch p-6" style={{ height: 'calc(100vh - 80px)' }}>
+              <div className="max-w-4xl mx-auto">
+                <div className="text-gray-900 leading-relaxed space-y-6 text-base text-left font-poppins">
+                  {currentSongData?.lyrics ? (
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: currentSongData.lyrics }}
+                      className="prose prose-lg max-w-none"
+                    />
+                  ) : (
+                    <div className="text-center py-12">
+                      <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 text-lg">No lyrics available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Normal Modal Content */}
         
         {/* iOS Handle */}
         <div className="flex justify-center pt-2 pb-1 flex-shrink-0">
@@ -1271,6 +1321,18 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           )}
         </div>
 
+
+        {/* Floating Fullscreen Button - Positioned close to the player */}
+        {activeTab === 'lyrics' && !isFullscreenLyrics && (
+          <button
+            onClick={toggleFullscreenLyrics}
+            className="fixed bottom-28 right-3 sm:right-4 w-10 h-10 sm:w-11 sm:h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg transition-all duration-200 z-[110] hover:scale-105 flex items-center justify-center"
+            title="Fullscreen Lyrics"
+          >
+            <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+        )}
+
         {/* Compact Music Player - Fixed at Bottom */}
         <div className="fixed bottom-0 left-0 right-0 px-6 modal-bottom-safe bg-white border-t border-gray-100 z-[100]">
 
@@ -1404,6 +1466,8 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           </div>
           
         </div>
+          </>
+        )}
       </div>
     </div>
     </>

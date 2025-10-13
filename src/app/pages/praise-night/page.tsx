@@ -43,6 +43,31 @@ function PraiseNightPageContent() {
       console.log('🔼 Dropdown closed, categoryFilter:', categoryFilter);
     }
   }, [showDropdown, categoryFilter]);
+
+  // Re-initialize safe area when category changes (fixes bottom bar cut-off issue)
+  useEffect(() => {
+    const reinitializeSafeArea = async () => {
+      // Force re-calculation of safe area when navigating between categories
+      if (typeof window !== 'undefined') {
+        // Import and use SafeAreaManager for manual recalculation
+        const { SafeAreaManager } = await import('@/utils/safeAreaManager');
+        const safeAreaManager = SafeAreaManager.getInstance();
+        safeAreaManager.recalculate();
+        
+        // Also trigger resize event for additional compatibility
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+        }, 100);
+        
+        console.log('🛡️ Re-initializing safe area for category:', categoryFilter);
+      }
+    };
+
+    // Re-initialize when category changes
+    if (categoryFilter) {
+      reinitializeSafeArea();
+    }
+  }, [categoryFilter]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   
@@ -66,16 +91,28 @@ function PraiseNightPageContent() {
 
   // Refresh data when page becomes visible (after admin updates)
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (!document.hidden) {
         console.log('🔄 Page became visible, refreshing data...');
         refreshData();
+        
+        // Also re-initialize safe area when page becomes visible
+        const { SafeAreaManager } = await import('@/utils/safeAreaManager');
+        const safeAreaManager = SafeAreaManager.getInstance();
+        safeAreaManager.recalculate();
+        console.log('🛡️ Safe area recalculated after page visibility change');
       }
     };
 
-    const handleFocus = () => {
+    const handleFocus = async () => {
       console.log('🔄 Page focused, refreshing data...');
       refreshData();
+      
+      // Re-initialize safe area when page gains focus
+      const { SafeAreaManager } = await import('@/utils/safeAreaManager');
+      const safeAreaManager = SafeAreaManager.getInstance();
+      safeAreaManager.recalculate();
+      console.log('🛡️ Safe area recalculated after page focus');
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
