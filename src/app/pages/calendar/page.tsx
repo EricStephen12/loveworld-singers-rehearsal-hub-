@@ -130,23 +130,23 @@ function CalendarPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Sidebar - Toggleable */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-purple-600 transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-300 ease-in-out shadow-lg ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between p-6 border-b border-purple-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                 <User className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-semibold">Welcome Back</h3>
-                <p className="text-purple-100 text-sm">{profile?.first_name || 'User'}</p>
+                <h3 className="text-gray-800 font-semibold">Welcome Back</h3>
+                <p className="text-purple-600 text-sm font-medium">{profile?.first_name || 'User'}</p>
               </div>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className="text-white hover:text-purple-200"
+              className="text-gray-600 hover:text-gray-800"
             >
               <X className="w-6 h-6" />
             </button>
@@ -154,39 +154,15 @@ function CalendarPage() {
           <nav className="flex-1 px-4 py-6">
             <ul className="space-y-2">
               <li>
-                <Link href="/home" className="flex items-center space-x-3 text-white hover:bg-purple-700 px-4 py-3 rounded-lg transition-colors">
-                  <Home className="w-5 h-5" />
-                  <span>Dashboard</span>
-                </Link>
-              </li>
-              <li>
-                <Link href="/pages/calendar" className="flex items-center space-x-3 text-white bg-purple-700 px-4 py-3 rounded-lg">
+                <Link href="/pages/calendar" className="flex items-center space-x-3 text-purple-600 bg-purple-50 px-4 py-3 rounded-lg font-medium">
                   <Calendar className="w-5 h-5" />
                   <span>Calendar</span>
                 </Link>
               </li>
               <li>
-                <Link href="/pages/rehearsals" className="flex items-center space-x-3 text-white hover:bg-purple-700 px-4 py-3 rounded-lg transition-colors">
-                  <Music className="w-5 h-5" />
-                  <span>Rehearsals</span>
-                </Link>
-              </li>
-              <li>
-                <Link href="/pages/praise-night" className="flex items-center space-x-3 text-white hover:bg-purple-700 px-4 py-3 rounded-lg transition-colors">
-                  <Play className="w-5 h-5" />
-                  <span>Praise Night</span>
-                </Link>
-              </li>
-              <li>
-                <Link href="/pages/profile" className="flex items-center space-x-3 text-white hover:bg-purple-700 px-4 py-3 rounded-lg transition-colors">
-                  <User className="w-5 h-5" />
-                  <span>Profile</span>
-                </Link>
-              </li>
-              <li>
-                <Link href="/admin" className="flex items-center space-x-3 text-white hover:bg-purple-700 px-4 py-3 rounded-lg transition-colors">
-                  <BarChart3 className="w-5 h-5" />
-                  <span>Admin</span>
+                <Link href="/pages/birthdays" className="flex items-center space-x-3 text-gray-700 hover:bg-purple-50 hover:text-purple-600 px-4 py-3 rounded-lg transition-colors">
+                  <Users className="w-5 h-5" />
+                  <span>Birthdays</span>
                 </Link>
               </li>
             </ul>
