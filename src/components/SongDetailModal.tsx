@@ -541,22 +541,6 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
     }
   };
 
-  // 10-second skip functions
-  const skipBackward10 = () => {
-    if (audioRef.current && duration > 0) {
-      const newTime = Math.max(0, currentTime - 10);
-      seekToTime(newTime);
-      console.log('⏪ Skipped backward 10 seconds to:', newTime);
-    }
-  };
-
-  const skipForward10 = () => {
-    if (audioRef.current && duration > 0) {
-      const newTime = Math.min(duration, currentTime + 10);
-      seekToTime(newTime);
-      console.log('⏩ Skipped forward 10 seconds to:', newTime);
-    }
-  };
 
   const getTimeFromMouseEvent = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -1416,25 +1400,35 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           </div>
 
           {/* Main Controls */}
-          <div className="flex items-center justify-center space-x-4">
+          <div className="flex items-center justify-center space-x-2">
             {/* Left Controls */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               {/* Repeat Button */}
               <button
                 onClick={toggleRepeat}
-                className={`w-6 h-6 flex items-center justify-center transition-colors ${
+                className={`w-5 h-5 flex items-center justify-center transition-colors ${
                   isRepeating ? 'text-blue-600' : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                <RotateCcw className={`w-4 h-4 ${isRepeating ? 'fill-current' : ''}`} />
+                <RotateCcw className={`w-3.5 h-3.5 ${isRepeating ? 'fill-current' : ''}`} />
               </button>
 
               {/* Previous Track */}
               <button 
                 onClick={handlePrevious}
-                className="w-6 h-6 flex items-center justify-center hover:text-gray-800 transition-colors"
+                className="w-5 h-5 flex items-center justify-center hover:text-gray-800 transition-colors"
               >
-                <SkipBack className="w-5 h-5 text-gray-600 fill-gray-600" />
+                <SkipBack className="w-4 h-4 text-gray-600 fill-gray-600" />
+              </button>
+
+              {/* 10 Second Backward */}
+              <button 
+                onClick={skipBackward10}
+                className="relative w-4 h-4 flex items-center justify-center hover:text-gray-800 transition-colors"
+                title="Skip backward 10 seconds"
+              >
+                <RotateCcw className="w-2.5 h-2.5 text-gray-600" />
+                <span className="absolute text-[4px] text-gray-600 font-bold leading-none top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">10</span>
               </button>
             </div>
 
@@ -1501,21 +1495,31 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
             </button>
 
             {/* Right Controls */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              {/* 10 Second Forward */}
+              <button 
+                onClick={skipForward10}
+                className="relative w-4 h-4 flex items-center justify-center hover:text-gray-800 transition-colors"
+                title="Skip forward 10 seconds"
+              >
+                <RotateCw className="w-2.5 h-2.5 text-gray-600" />
+                <span className="absolute text-[4px] text-gray-600 font-bold leading-none top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">10</span>
+              </button>
+
               {/* Next Track */}
               <button 
                 onClick={handleNext}
-                className="w-6 h-6 flex items-center justify-center hover:text-gray-800 transition-colors"
+                className="w-5 h-5 flex items-center justify-center hover:text-gray-800 transition-colors"
               >
-                <SkipForward className="w-5 h-5 text-gray-600 fill-gray-600" />
+                <SkipForward className="w-4 h-4 text-gray-600 fill-gray-600" />
               </button>
 
               {/* Music Page Button */}
               <button
                 onClick={handleMusicPage}
-                className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                className="w-5 h-5 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
               >
-                <Music2 className="w-4 h-4" />
+                <Music2 className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
