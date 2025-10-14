@@ -112,7 +112,7 @@ function AuthPageContent() {
       } else {
         setSuccess('Checking your account...')
         
-        // Check if it's special login (The President)
+        // Check if it's special login (The President) - MUST be first!
         if (formData.email === 'The President' && formData.password === 'KING_PRIEST') {
           // Special login for president - bypass all validation
           setSuccess('Welcome, President! Redirecting...')
@@ -134,7 +134,7 @@ function AuthPageContent() {
           return
         }
         
-        // Regular Firebase login
+        // Regular Firebase login (only if not special login)
         const result = await FirebaseAuthService.signInWithEmailAndPassword(
           formData.email,
           formData.password
@@ -300,7 +300,7 @@ function AuthPageContent() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             <div className="space-y-4">
               {!isLogin && (
                 <>
