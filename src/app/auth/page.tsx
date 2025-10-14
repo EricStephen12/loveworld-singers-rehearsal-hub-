@@ -335,6 +335,8 @@ function AuthPageContent() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
                 required
+                pattern=".*"
+                title="Enter your email or username"
               />
               
               <div className="relative">
