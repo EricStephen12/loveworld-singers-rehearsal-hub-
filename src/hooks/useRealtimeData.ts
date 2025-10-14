@@ -91,7 +91,7 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
             }
           });
           return countdownData;
-        })(),
+          })(),
         songs: [] // Load songs on demand like admin does
       };
     });
@@ -108,7 +108,7 @@ export function useRealtimeData() {
   const [pages, setPages] = useState<PraiseNight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
   // Low-data optimized loading
   useEffect(() => {
     async function loadData() {

@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (currentUser) {
             console.log('✅ User is authenticated:', currentUser.email)
             setUser(currentUser)
-            
+
             // Load user profile
             FirebaseDatabaseService.getDocument('profiles', currentUser.uid)
               .then((userProfile) => {
@@ -116,8 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           if (isMounted) {
-            setIsLoading(false)
-          }
+          setIsLoading(false)
+        }
         })
 
       } catch (error) {
@@ -135,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false
       if (unsubscribe) {
-        unsubscribe()
+      unsubscribe()
       }
     }
   }, [isLoggingOut])
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoggingOut(false)
     }
   }, [])
-
+  
   // Debug logging
   console.log('AuthContext: Profile state:', {
     hasProfile: !!profile,
@@ -155,11 +155,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
-    user,
-    profile,
-    isLoading,
-    signOut,
-    refreshProfile
+        user,
+        profile,
+        isLoading,
+        signOut,
+        refreshProfile
   }), [user, profile, isLoading, signOut, refreshProfile])
 
   return (

