@@ -1418,7 +1418,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           {/* Main Controls */}
           <div className="flex items-center justify-between px-1">
             {/* Left Controls */}
-            <div className="flex items-center space-x-1.5">
+            <div className="flex items-center space-x-1">
               {/* Repeat Button */}
               <button
                 onClick={toggleRepeat}
@@ -1435,6 +1435,16 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                 className="w-5 h-5 flex items-center justify-center hover:text-gray-800 transition-colors"
               >
                 <SkipBack className="w-4 h-4 text-gray-600 fill-gray-600" />
+              </button>
+
+              {/* 10 Second Backward - After skip back */}
+              <button 
+                onClick={skipBackward10}
+                className="relative w-5 h-5 flex items-center justify-center hover:text-gray-800 transition-colors"
+                title="Skip backward 10 seconds"
+              >
+                <RotateCcw className="w-4 h-4 text-gray-600" />
+                <span className="absolute text-[6px] text-gray-600 font-bold leading-none top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">10</span>
               </button>
             </div>
 
@@ -1502,6 +1512,16 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
 
             {/* Right Controls */}
             <div className="flex items-center space-x-1.5">
+              {/* 10 Second Forward - Positioned to not affect layout */}
+              <button 
+                onClick={skipForward10}
+                className="relative w-5 h-5 flex items-center justify-center hover:text-gray-800 transition-colors"
+                title="Skip forward 10 seconds"
+              >
+                <RotateCw className="w-4 h-4 text-gray-600" />
+                <span className="absolute text-[6px] text-gray-600 font-bold leading-none top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">10</span>
+              </button>
+
               {/* Next Track */}
               <button 
                 onClick={handleNext}

@@ -695,9 +695,9 @@ function PraiseNightPageContent() {
     categoryFilter
   });
 
-  // Show loading state only if no cached data is available
-  if (loading && allPraiseNights.length === 0) {
-    console.log('🔄 Showing loading state');
+  // Show loading state only when initially loading with no data
+  if (loading && allPraiseNights.length === 0 && !currentPraiseNight) {
+    console.log('🔄 Showing initial loading state');
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -741,8 +741,8 @@ function PraiseNightPageContent() {
 
   console.log('✅ Rendering main page content');
   
-  // Show empty state when there's no data for the current category
-  if (!allPraiseNights || allPraiseNights.length === 0 || filteredPraiseNights.length === 0) {
+  // Show empty state when there's no data for the current category (but not when still loading)
+  if (!loading && (!allPraiseNights || allPraiseNights.length === 0 || filteredPraiseNights.length === 0)) {
     console.log('⚠️ No data for category, showing empty state');
     return (
       <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50 safe-area-bottom">
