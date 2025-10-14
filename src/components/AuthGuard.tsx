@@ -68,6 +68,14 @@ export default function AuthGuard({
         localStorage.getItem('bypassLogin') === 'true'
       ));
 
+    // Special user bypass - President gets full access without any validation
+    const isSpecialUser = typeof window !== 'undefined' && localStorage.getItem('specialUser') === 'true';
+    if (isSpecialUser) {
+      console.log('AuthGuard: Special user detected, bypassing all validation');
+      setShouldRender(true);
+      return;
+    }
+
     // Instagram-style bypass: If user was authenticated recently, just let them through
     const lastAuthTime = typeof window !== 'undefined' ? localStorage.getItem('lastAuthTime') : null;
     const timeSinceAuth = lastAuthTime ? Date.now() - parseInt(lastAuthTime) : Infinity;
@@ -95,10 +103,10 @@ export default function AuthGuard({
       }
     }
 
-    // If auth is required but user is not authenticated
+    // If auth is required but user is not authenticated - load with demo data instead of redirecting
     if (requireAuth && !isAuthenticated) {
-      console.log('AuthGuard: No user, redirecting to auth');
-      router.push(redirectTo || '/auth');
+      console.log('AuthGuard: No user, loading with demo data instead of redirecting');
+      setShouldRender(true);
       return;
     }
 

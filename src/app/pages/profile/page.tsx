@@ -164,27 +164,27 @@ function ProfilePage() {
     }
   }
 
-  // Use default profile data if none is loaded yet - fixed duplicate declaration
+  // Use default profile data if none is loaded yet - with president's data as demo
   const profileData = currentProfile || {
-    id: user?.uid || '',
-    first_name: (user as any)?.user_metadata?.first_name || '',
-    middle_name: (user as any)?.user_metadata?.middle_name || '',
-    last_name: (user as any)?.user_metadata?.last_name || '',
-    email: user?.email || '',
-    phone_number: '',
-    gender: '',
-    birthday: '',
-    region: '',
-    zone: '',
-    church: '',
-    designation: '',
-    administration: '',
+    id: user?.uid || 'president-demo-123',
+    first_name: user ? ((user as any)?.user_metadata?.first_name || '') : 'The',
+    middle_name: user ? ((user as any)?.user_metadata?.middle_name || '') : '',
+    last_name: user ? ((user as any)?.user_metadata?.last_name || '') : 'President',
+    email: user?.email || 'president@loveworld.com',
+    phone_number: user ? '' : '+1 (555) 000-0001',
+    gender: user ? '' : 'Male',
+    birthday: user ? '' : '1985-01-01',
+    region: user ? '' : 'Global',
+    zone: user ? '' : 'International',
+    church: user ? '' : 'LoveWorld International',
+    designation: user ? '' : 'President',
+    administration: user ? '' : 'President',
     social_provider: 'email',
-    social_id: user?.email || '',
+    social_id: user?.email || 'president@loveworld.com',
     profile_image_url: '',
-    profile_completed: false,
-    email_verified: (user as any)?.email_confirmed_at ? true : false,
-    created_at: (user as any)?.created_at || new Date().toISOString(),
+    profile_completed: true,
+    email_verified: true,
+    created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
 
@@ -539,12 +539,12 @@ function ProfilePage() {
     }
   }
 
-  // Only redirect if authentication is complete and no user is found
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/auth')
-    }
-  }, [isLoading, user, router])
+  // No redirect - allow access with demo data
+  // useEffect(() => {
+  //   if (!isLoading && !user) {
+  //     router.push('/auth')
+  //   }
+  // }, [isLoading, user, router])
 
   // Show loading state while authentication is being checked
   if (isLoading) {
@@ -558,9 +558,10 @@ function ProfilePage() {
     )
   }
 
-  if (!isLoading && !user) {
-    return null
-  }
+  // Allow access even without user - show president's demo data
+  // if (!isLoading && !user) {
+  //   return null
+  // }
 
   // Real user data from profile (use currentProfile for immediate loading)
   const userProfile = {
@@ -586,7 +587,7 @@ function ProfilePage() {
     socialId: profileData.social_id || profileData.email || '',
     
     // Additional Profile Data (these would come from other tables in a real app)
-    groups: selectedGroup ? [selectedGroup] : ["No group assigned"], // Use actual user group
+    groups: selectedGroup ? [selectedGroup] : ["Your LoveWorld Singers"], // Default to president's group
     joinDate: profileData.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
     totalRehearsals: 0,
     attendanceRate: 0,
@@ -1526,7 +1527,7 @@ function ProfilePage() {
 
 export default function ProfilePageWithAuth() {
   return (
-    <AuthGuard requireAuth={true} requireCompleteProfile={false}>
+    <AuthGuard requireAuth={false} requireCompleteProfile={false}>
       <ProfilePage />
     </AuthGuard>
   )
