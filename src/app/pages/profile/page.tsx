@@ -995,9 +995,9 @@ function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Ministry Information Section */}
+                {/* Designation Information Section */}
                 <div className="pt-4 border-t border-gray-100">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Ministry Information</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Designation Information</h4>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -1233,7 +1233,7 @@ function ProfilePage() {
                 <Briefcase className="w-4 h-4 text-white" />
               </div>
               <div className="text-left">
-                <h3 className="text-sm font-bold text-gray-900">Ministry</h3>
+                <h3 className="text-sm font-bold text-gray-900">Designation</h3>
                 <p className="text-[10px] text-gray-500">Role & groups</p>
               </div>
             </div>

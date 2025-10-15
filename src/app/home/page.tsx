@@ -434,7 +434,7 @@ function HomePageContent() {
                 </button>
                 {openAbout === 0 && (
                   <div className="px-4 pb-4 border-t border-gray-100">
-                    <p className="text-sm text-gray-600 leading-relaxed pt-3">A comprehensive platform for managing rehearsal schedules, song collections, and ministry activities. Connect with fellow singers, access audio resources, and stay updated with the latest ministry news.</p>
+                    <p className="text-sm text-gray-600 leading-relaxed pt-3">A comprehensive platform for managing rehearsal schedules, song collections, and ministry activities. Connect with fellow singers, access audio resources, and stay updated with the latest rehearsal updates.</p>
                   </div>
                 )}
               </div>

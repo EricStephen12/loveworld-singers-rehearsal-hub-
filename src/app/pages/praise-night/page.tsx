@@ -1338,7 +1338,7 @@ function PraiseNightPageContent() {
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100">
                     <Users className="w-3.5 h-3.5 text-amber-600" />
                   </span>
-                  <span className="text-xs sm:text-sm font-medium">Conductor's Guide</span>
+                  <span className="text-xs sm:text-sm font-medium">Solfas</span>
                 </button>
 
                 <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
@@ -1370,7 +1370,7 @@ function PraiseNightPageContent() {
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100">
                     <Users className="w-3.5 h-3.5 text-amber-600" />
                   </span>
-                  <span className="text-xs sm:text-sm font-medium">Conductor's Guide</span>
+                  <span className="text-xs sm:text-sm font-medium">Solfas</span>
                 </button>
 
                 <button className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-50 active:scale-95 transition flex-shrink-0 snap-start">
@@ -1520,28 +1520,28 @@ function PraiseNightPageContent() {
         <div className="bottom-bar-enhanced flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
           <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
             {/* Category buttons with horizontal scroll */}
-            <div 
+            <div
               className="flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
             >
               <div className="flex gap-2 min-w-max px-1">
-              {mainCategories.map((category, index) => {
-                const hasActiveSong = finalSongData.some((song: any) => song.category === category && song.isActive);
-                return (
-                <button
-                  key={category}
-                  onClick={() => handleCategorySelect(category)}
-                    className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
-                      hasActiveSong
-                        ? 'bg-purple-500 text-white shadow-lg animate-pulse-badge'
-                        : activeCategory === category
-                          ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                          : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                    }`}
-                >
-                    <span className="block leading-tight">{category}</span>
-                </button>
-                );
-              })}
+                {mainCategories.map((category, index) => {
+                  const hasActiveSong = finalSongData.some((song: any) => song.category === category && song.isActive);
+                  return (
+                    <button
+                      key={category}
+                      onClick={() => handleCategorySelect(category)}
+                      className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
+                        hasActiveSong
+                          ? 'bg-purple-500 text-white shadow-lg animate-pulse-badge'
+                          : activeCategory === category
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                            : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                      }`}
+                    >
+                      <span className="block leading-tight">{category}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1553,29 +1553,29 @@ function PraiseNightPageContent() {
          <div className="bottom-bar-enhanced flex-shrink-0 z-30 bg-gradient-to-t from-purple-100/60 via-purple-50/40 to-white/20 backdrop-blur-md shadow-sm border-t border-gray-200/50 w-full">
              <div className="w-full flex items-center px-3 sm:px-4 lg:px-6 py-4 gap-2">
               {/* Category buttons with horizontal scroll */}
-              <div 
+              <div
                 className="flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
               >
                 <div className="flex gap-2 min-w-max px-1">
-            {mainCategories.map((category, index) => {
-              const hasActiveSong = finalSongData.some((song: any) => song.category === category && song.isActive);
-              return (
-                <button
-                    key={category}
-                  onClick={() => handleCategorySelect(category)}
-                      className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
-                        hasActiveSong
-                          ? 'bg-purple-500 text-white shadow-lg animate-pulse-badge'
-                          : activeCategory === category
-                            ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                            : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                      }`}
-                >
-                      <span className="block leading-tight">{category}</span>
-                </button>
-              );
-            })}
-              </div>
+                  {mainCategories.map((category, index) => {
+                    const hasActiveSong = finalSongData.some((song: any) => song.category === category && song.isActive);
+                    return (
+                      <button
+                        key={category}
+                        onClick={() => handleCategorySelect(category)}
+                        className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
+                          hasActiveSong
+                            ? 'bg-purple-500 text-white shadow-lg animate-pulse-badge'
+                            : activeCategory === category
+                              ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                              : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                        }`}
+                      >
+                        <span className="block leading-tight">{category}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
           </div>
