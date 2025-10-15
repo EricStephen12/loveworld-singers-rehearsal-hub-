@@ -386,7 +386,9 @@ export class FirebaseDatabaseService {
       console.log('🔥 Updating song:', {
         firebaseDocId: firebaseDocId,
         title: data.title,
-        praiseNightId: data.praiseNightId
+        praiseNightId: data.praiseNightId,
+        hasHistory: !!data.history,
+        historyCount: data.history?.length || 0
       });
 
       // Filter out undefined values (Firebase doesn't allow them)
@@ -418,6 +420,35 @@ export class FirebaseDatabaseService {
       // Update the document
       await updateDoc(docRef, cleanData);
       console.log('✅ Song updated successfully:', data.title);
+
+      // Save history entries if provided
+      if (data.history && data.history.length > 0) {
+        console.log('💾 Saving', data.history.length, 'history entries to Firebase...');
+        
+        // Get existing history to avoid duplicates
+        const existingHistory = await this.getCollectionWhere('song_history', 'song_id', '==', firebaseDocId);
+        const existingIds = new Set(existingHistory?.map(h => h.id) || []);
+        
+        // Only save new history entries
+        const newHistoryEntries = data.history.filter((h: any) => !existingIds.has(h.id));
+        
+        for (const historyEntry of newHistoryEntries) {
+          const savedEntry = await this.createHistoryEntry({
+            ...historyEntry,
+            song_id: firebaseDocId, // Use Firebase document ID
+            created_at: new Date()
+          });
+          
+          if (savedEntry) {
+            console.log('✅ Saved history entry to Firebase:', historyEntry.type);
+          } else {
+            console.error('❌ Failed to save history entry to Firebase:', historyEntry.type);
+          }
+        }
+        
+        console.log('✅ History entries saved to Firebase');
+      }
+
       return { success: true };
     } catch (error) {
       console.error('❌ Firebase updateSong error:', error)

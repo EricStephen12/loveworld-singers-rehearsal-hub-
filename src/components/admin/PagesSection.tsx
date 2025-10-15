@@ -90,6 +90,7 @@ interface PagesSectionProps {
   handleEditSong: (song: PraiseNightSong) => void;
   handleDeleteSong: (song: PraiseNightSong) => void;
   handleToggleSongStatus: (song: PraiseNightSong) => void;
+  handleToggleSongActive: (song: PraiseNightSong) => void;
   allCategories: Category[];
   addToast: (toast: Omit<Toast, 'id'>) => void;
 }
@@ -149,6 +150,7 @@ export default function PagesSection(props: PagesSectionProps) {
     handleEditSong,
     handleDeleteSong,
     handleToggleSongStatus,
+    handleToggleSongActive,
     allCategories,
     addToast
   } = props;
@@ -455,6 +457,7 @@ export default function PagesSection(props: PagesSectionProps) {
                           <th className="text-left py-3 px-4 font-medium text-slate-900">Song</th>
                           <th className="text-left py-3 px-4 font-medium text-slate-900">Category</th>
                           <th className="text-left py-3 px-4 font-medium text-slate-900">Status</th>
+                          <th className="text-left py-3 px-4 font-medium text-slate-900">Active</th>
                           <th className="text-left py-3 px-4 font-medium text-slate-900">Lead Singer</th>
                           <th className="text-left py-3 px-4 font-medium text-slate-900">Writer</th>
                           <th className="text-left py-3 px-4 font-medium text-slate-900">Conductor</th>
@@ -496,6 +499,23 @@ export default function PagesSection(props: PagesSectionProps) {
                                 }`}
                               >
                                 {song.status === 'heard' ? 'Heard' : 'Unheard'}
+                              </button>
+                            </td>
+                            <td className="py-4 px-4">
+                              <button
+                                onClick={() => handleToggleSongActive(song)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                                  (song as any).isActive
+                                    ? 'bg-purple-600'
+                                    : 'bg-gray-200'
+                                }`}
+                                title={(song as any).isActive ? 'Active (Users see blinking border)' : 'Click to make active'}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    (song as any).isActive ? 'translate-x-6' : 'translate-x-1'
+                                  }`}
+                                />
                               </button>
                             </td>
                             <td className="py-4 px-4 text-sm text-slate-900">{song.leadSinger}</td>

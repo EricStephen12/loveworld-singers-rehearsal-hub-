@@ -726,6 +726,42 @@ export default function AdminPage() {
     }
   };
 
+  const handleToggleSongActive = async (song: PraiseNightSong) => {
+    try {
+      const newActiveStatus = !(song as any).isActive;
+
+      if (!song.id) {
+        throw new Error('Invalid song ID for active status update');
+      }
+
+      const result = await FirebaseDatabaseService.updateSong(song.id, {
+        isActive: newActiveStatus
+      });
+
+      if (result.success) {
+        console.log('✅ Song active status updated successfully');
+        addToast({
+          type: 'success',
+          message: newActiveStatus ? `🔴 ${song.title} is now ACTIVE (users see blinking border)` : `Song deactivated`
+        });
+        refreshData();
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.updateSong(currentAdmin, `Set song active status: ${song.title} -> ${newActiveStatus ? 'ACTIVE' : 'INACTIVE'}`);
+        }
+      } else {
+        throw new Error(result.error || 'Failed to update song active status');
+      }
+    } catch (error) {
+      console.error('❌ Error updating song active status:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to update song active status'
+      });
+    }
+  };
+
   const handleSaveSong = async (songData: PraiseNightSong) => {
     try {
       console.log('💾 handleSaveSong called with:', {
@@ -1088,6 +1124,7 @@ export default function AdminPage() {
             handleEditSong={handleEditSong}
             handleDeleteSong={handleDeleteSong}
             handleToggleSongStatus={handleToggleSongStatus}
+            handleToggleSongActive={handleToggleSongActive}
             allCategories={allCategories}
             addToast={addToast}
           />

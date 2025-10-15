@@ -6,6 +6,36 @@
   --enhanced-safe-area-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
 }
 
+/* 🟣 ACTIVE SONG - Blinking Purple Border Animation */
+@keyframes pulse-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(192, 92, 242, 0.7), 0 0 20px rgba(192, 92, 242, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(192, 92, 242, 0), 0 0 30px rgba(192, 92, 242, 0.5);
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 🟣 ACTIVE CATEGORY - Blinking Purple Badge */
+@keyframes pulse-badge {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(192, 92, 242, 0.6), 0 0 10px rgba(192, 92, 242, 0.3);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(192, 92, 242, 0), 0 0 15px rgba(192, 92, 242, 0.5);
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-badge {
+  animation: pulse-badge 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* ✅ INSTANT RENDERING - Critical CSS First */
 html {
   -webkit-text-size-adjust: 100%;

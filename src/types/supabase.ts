@@ -180,6 +180,7 @@ export interface PraiseNightSong {
   status: 'heard' | 'unheard';
   category: string;
   praiseNightId: string; // Reference to PraiseNight ID (Firebase-generated)
+  isActive?: boolean; // TRUE = Song is currently being discussed (users see blinking border)
   leadSinger?: string;
   writer?: string;
   conductor?: string;

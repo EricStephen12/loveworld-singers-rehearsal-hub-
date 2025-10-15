@@ -97,7 +97,7 @@ export default function EditSongModal({
       'personnel': 'Personnel',
       'music-details': 'Music Details',
       'lyrics': 'Lyrics',
-      'solfas': 'Solfas',
+      'solfas': 'Conductor Guide',
       'audio': 'Audio',
       'comments': 'Comments'
     };
@@ -195,7 +195,7 @@ export default function EditSongModal({
           'personnel': 'Personnel',
           'music-details': 'Music Details',
           'lyrics': 'Lyrics',
-          'solfas': 'Solfas',
+          'solfas': 'Conductor Guide',
           'audio': 'Audio',
           'comments': 'Comments'
         };
@@ -1048,13 +1048,13 @@ Bridge:
                     </div>
                   </div>
 
-                  {/* Solfas Section */}
+                  {/* Conductor Guide Section */}
                   <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50 rounded-t-lg">
                       <div className="flex items-center justify-between">
                       <h4 className="text-base sm:text-lg font-semibold text-slate-900 flex items-center gap-2">
                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                        Solfas Notation
+                        Conductor Guide Notation
                       </h4>
                         <button
                           onClick={() => handleCreateHistory('solfas')}
@@ -1076,7 +1076,7 @@ Bridge:
                           id="solfas-editor"
                           value={songSolfas}
                           onChange={(value) => {
-                            console.log('🎵 Solfas onChange called with:', value);
+                            console.log('🎵 Conductor Guide onChange called with:', value);
                             setSongSolfas(value);
                           }}
                           placeholder="Enter solfas notation here...

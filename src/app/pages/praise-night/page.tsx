@@ -1398,7 +1398,7 @@ function PraiseNightPageContent() {
             </button>
 
             <div className="text-center">
-              <span className="text-xs text-gray-600 font-black">
+              <span className="text-black text-sm font-medium">
                 {activeCategory}
               </span>
             </div>
@@ -1448,15 +1448,17 @@ function PraiseNightPageContent() {
                       handleSongClick(song, index);
                     }}
                     className={`border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer touch-optimized ${
-                      (() => {
-                        const isActive = currentSong?.id === song.id;
-                        if (isActive) {
-                          console.log('🎵 Active song detected:', song.title, 'Current song:', currentSong?.title);
-                        }
-                        return isActive;
-                      })()
-                        ? 'ring-2 ring-purple-400 shadow-lg shadow-purple-200/30 bg-purple-200 hover:bg-purple-300' // Active or playing - solid purple
-                        : 'bg-white hover:bg-gray-50 ring-1 ring-black/5'
+                      (song as any).isActive
+                        ? 'ring-4 ring-purple-500 shadow-lg shadow-purple-200/50 bg-white hover:bg-gray-50 animate-pulse-ring' // Admin marked as ACTIVE - blinking purple border
+                        : (() => {
+                          const isActive = currentSong?.id === song.id;
+                          if (isActive) {
+                            console.log('🎵 Active song detected:', song.title, 'Current song:', currentSong?.title);
+                          }
+                          return isActive;
+                        })()
+                          ? 'ring-2 ring-purple-400 shadow-lg shadow-purple-200/30 bg-purple-200 hover:bg-purple-300' // Playing - solid purple
+                          : 'bg-white hover:bg-gray-50 ring-1 ring-black/5'
                       }`}
                   >
                     {/* Song Header - Rehearsal Style */}
@@ -1522,18 +1524,24 @@ function PraiseNightPageContent() {
               className="flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
             >
               <div className="flex gap-2 min-w-max px-1">
-              {mainCategories.map((category, index) => (
+              {mainCategories.map((category, index) => {
+                const hasActiveSong = finalSongData.some((song: any) => song.category === category && song.isActive);
+                return (
                 <button
                   key={category}
                   onClick={() => handleCategorySelect(category)}
-                    className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${activeCategory === category
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                    className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
+                      hasActiveSong
+                        ? 'bg-purple-500 text-white shadow-lg animate-pulse-badge'
+                        : activeCategory === category
+                          ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                          : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
                     }`}
                 >
                     <span className="block leading-tight">{category}</span>
                 </button>
-              ))}
+                );
+              })}
               </div>
             </div>
           </div>
@@ -1549,18 +1557,24 @@ function PraiseNightPageContent() {
                 className="flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
               >
                 <div className="flex gap-2 min-w-max px-1">
-            {mainCategories.map((category, index) => (
+            {mainCategories.map((category, index) => {
+              const hasActiveSong = finalSongData.some((song: any) => song.category === category && song.isActive);
+              return (
                 <button
                     key={category}
                   onClick={() => handleCategorySelect(category)}
-                      className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${activeCategory === category
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                    }`}
+                      className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
+                        hasActiveSong
+                          ? 'bg-purple-500 text-white shadow-lg animate-pulse-badge'
+                          : activeCategory === category
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                            : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                      }`}
                 >
                       <span className="block leading-tight">{category}</span>
                 </button>
-                ))}
+              );
+            })}
               </div>
               </div>
 

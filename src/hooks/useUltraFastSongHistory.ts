@@ -72,32 +72,12 @@ export function useUltraFastSongHistory(songId: string | null) {
       console.log('🚀 Starting ultra-fast song history load for:', songId);
       const startTime = performance.now();
 
-      // First, get the song data to find the original numeric ID
-      let numericSongId: number | null = null;
-      
-      try {
-        const songData = await FirebaseDatabaseService.getDocument('songs', songId);
-        if (songData) {
-          // Try to get the original numeric ID from various possible fields
-          numericSongId = (songData as any).supabaseId || (songData as any).id || parseInt((songData as any).id) || null;
-          console.log('🔍 Found numeric song ID for history query:', numericSongId, 'from song:', (songData as any).title);
-        }
-      } catch (error) {
-        console.log('🔍 Could not fetch song data, trying direct conversion:', error);
-        // Fallback: try to convert the string ID to number
-        numericSongId = isNaN(Number(songId)) ? null : parseInt(songId);
-      }
-      
-      if (!numericSongId) {
-        console.warn('⚠️ No numeric song ID found for history query, songId:', songId);
-        setHistory([]);
-        setError(null);
-        setIsInitialLoad(false);
-        return;
-      }
+      // Use Firebase document ID directly (no need to convert to numeric)
+      const firebaseSongId = String(songId).trim();
+      console.log('🔍 Using Firebase document ID for history query:', firebaseSongId);
 
       // INSTANT: Load cached data immediately for zero loading time
-      const cachedHistory = await loadCachedHistory(numericSongId.toString());
+      const cachedHistory = await loadCachedHistory(firebaseSongId);
       if (cachedHistory.length > 0) {
         setHistory(cachedHistory);
         setError(null);
@@ -107,7 +87,7 @@ export function useUltraFastSongHistory(songId: string | null) {
         setLoading(true);
       }
       
-      const historyData = await FirebaseDatabaseService.getCollectionWhere('song_history', 'song_id', '==', numericSongId);
+      const historyData = await FirebaseDatabaseService.getCollectionWhere('song_history', 'song_id', '==', firebaseSongId);
       
       if (!historyData) {
         console.error('Error fetching song history from Firebase');
@@ -133,8 +113,8 @@ export function useUltraFastSongHistory(songId: string | null) {
       setError(null);
       setIsInitialLoad(false);
 
-      // Cache the fresh data using the numeric ID for consistency
-      await cacheHistory(numericSongId.toString(), historyEntries);
+      // Cache the fresh data using the Firebase ID for consistency
+      await cacheHistory(firebaseSongId, historyEntries);
 
       const endTime = performance.now();
       console.log(`✅ Song history loaded in ${endTime - startTime}ms`);
