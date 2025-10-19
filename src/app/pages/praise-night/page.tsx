@@ -744,7 +744,7 @@ function PraiseNightPageContent() {
   // Show empty state when there's no data for the current category (but not when still loading)
   if (!loading && (!allPraiseNights || allPraiseNights.length === 0 || filteredPraiseNights.length === 0)) {
     console.log('⚠️ No data for category, showing empty state');
-    return (
+  return (
       <div className="mobile-vh flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50 safe-area-bottom">
         {/* Simple Header - No menu, just title */}
         <div className="flex-shrink-0 w-full">
@@ -868,6 +868,21 @@ function PraiseNightPageContent() {
         
         .breathe-animation {
           animation: breathe 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-border {
+          0%, 100% { 
+            border-color: rgb(147 51 234);
+            box-shadow: 0 0 0 2px rgb(147 51 234);
+          }
+          50% { 
+            border-color: rgb(196 181 253);
+            box-shadow: 0 0 0 2px rgb(196 181 253);
+          }
+        }
+        
+        .animate-pulse-border {
+          animation: pulse-border 2s ease-in-out infinite;
         }
         
         @keyframes scroll {
@@ -1527,19 +1542,19 @@ function PraiseNightPageContent() {
                 {mainCategories.map((category, index) => {
                   const hasActiveSong = finalSongData.some((song: any) => song.category === category && song.isActive);
                   return (
-                    <button
-                      key={category}
-                      onClick={() => handleCategorySelect(category)}
+                <button
+                  key={category}
+                  onClick={() => handleCategorySelect(category)}
                       className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
                         hasActiveSong
-                          ? 'bg-purple-500 text-white shadow-lg animate-pulse-badge'
+                          ? 'bg-white text-purple-600 shadow-lg border-2 border-purple-600 animate-pulse-border'
                           : activeCategory === category
-                            ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                            : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                      }`}
-                    >
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                    }`}
+                >
                       <span className="block leading-tight">{category}</span>
-                    </button>
+                </button>
                   );
                 })}
               </div>
@@ -1560,22 +1575,22 @@ function PraiseNightPageContent() {
                   {mainCategories.map((category, index) => {
                     const hasActiveSong = finalSongData.some((song: any) => song.category === category && song.isActive);
                     return (
-                      <button
-                        key={category}
-                        onClick={() => handleCategorySelect(category)}
+                <button
+                    key={category}
+                  onClick={() => handleCategorySelect(category)}
                         className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
                           hasActiveSong
-                            ? 'bg-purple-500 text-white shadow-lg animate-pulse-badge'
+                            ? 'bg-white text-purple-600 shadow-lg border-2 border-purple-600 animate-pulse-border'
                             : activeCategory === category
-                              ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
-                              : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
-                        }`}
-                      >
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
+                    }`}
+                >
                         <span className="block leading-tight">{category}</span>
-                      </button>
+                </button>
                     );
                   })}
-                </div>
+              </div>
               </div>
 
           </div>

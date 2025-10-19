@@ -578,27 +578,43 @@ export class FirebaseDatabaseService {
   }
 
   // Get history entries for a song
-  static async getHistoryBySongId(songId: number) {
+  static async getHistoryBySongId(songId: string | number) {
     try {
+      console.log('🔍 Firebase: Getting history for song ID:', songId, 'type:', typeof songId);
+      
       const q = query(
         collection(db, 'song_history'),
-        where('song_id', '==', songId)
+        where('song_id', '==', songId.toString())
       )
 
       const querySnapshot = await getDocs(q)
-      const results = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
+      console.log('📊 Firebase: Query returned', querySnapshot.docs.length, 'documents');
+      
+      const results = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('📝 Firebase: History entry:', {
+          id: doc.id,
+          song_id: data.song_id,
+          title: data.title,
+          type: data.type
+        });
+        return {
+          id: doc.id,
+          ...data
+        };
+      });
 
       // Sort by created_at in JavaScript to avoid index requirement
-      return results.sort((a, b) => {
+      const sortedResults = results.sort((a, b) => {
         const dateA = new Date((a as any).created_at || 0).getTime()
         const dateB = new Date((b as any).created_at || 0).getTime()
         return dateB - dateA // Descending order (newest first)
-      })
+      });
+      
+      console.log('✅ Firebase: Returning', sortedResults.length, 'sorted history entries');
+      return sortedResults;
     } catch (error) {
-      console.error('Error getting song history:', error)
+      console.error('❌ Error getting song history:', error)
       return []
     }
   }
@@ -657,10 +673,11 @@ export class FirebaseDatabaseService {
   static async createHistoryEntry(data: any) {
     try {
       const docRef = await addDoc(collection(db, 'song_history'), data)
-      return { id: docRef.id, ...data }
+      console.log('✅ History entry created successfully:', docRef.id)
+      return true // Return boolean for success
     } catch (error) {
-      console.error('Error creating history entry:', error)
-      return null
+      console.error('❌ Error creating history entry:', error)
+      return false // Return boolean for failure
     }
   }
 

@@ -760,7 +760,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                   <span><span className="font-semibold uppercase">KEY:</span> {(realtimeSongData || currentSongData)?.key || ''}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
-                  <span><span className="font-semibold uppercase">KEYBOARDIST:</span> {(realtimeSongData || currentSongData)?.leadKeyboardist || ''}</span>
+                  <span><span className="font-semibold uppercase">LEAD KEYBOARDIST:</span> {(realtimeSongData || currentSongData)?.leadKeyboardist || ''}</span>
                   <span><span className="font-semibold uppercase">TEMPO:</span> {(realtimeSongData || currentSongData)?.tempo || ''}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/30 pb-1 mb-1">
@@ -797,7 +797,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
               }`}>
                 <Music className="w-4 h-4" />
               </div>
-              <span className="text-xs font-medium">Conductor Guide</span>
+              <span className="text-xs font-medium">Conductor's Guide</span>
             </button>
             <button
               onClick={() => setActiveTab('comments')}
@@ -873,8 +873,8 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                   />
                 ) : (
                   <div className="text-center py-8">
-                    <div className="text-gray-500 text-sm mb-2">No Conductor Guide Available</div>
-                    <div className="text-gray-400 text-xs">Conductor guide notation will be displayed here when available</div>
+                    <div className="text-gray-500 text-sm mb-2">No Conductor's Guide Available</div>
+                    <div className="text-gray-400 text-xs">Conductor's guide notation will be displayed here when available</div>
                   </div>
                 )}
               </div>
@@ -955,7 +955,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                       : 'bg-white/70 backdrop-blur-sm text-slate-700 hover:bg-white/90 hover:shadow-sm border border-slate-200/50'
                   }`}
                 >
-                  Conductor Guide
+                  Conductor's Guide
                 </button>
                 <button
                   onClick={() => setActiveHistoryTab('comments')}
@@ -1127,7 +1127,7 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
                     ) : getOlderSolfas().length === 0 && getHistoryData('solfas').length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12">
                         <Music className="w-12 h-12 text-gray-300 mb-3" />
-                        <p className="text-gray-500 text-sm font-medium">No Conductor Guide History</p>
+                        <p className="text-gray-500 text-sm font-medium">No Conductor's Guide History</p>
                         <p className="text-gray-400 text-xs mt-1">Changes will appear here</p>
                       </div>
                     ) : (

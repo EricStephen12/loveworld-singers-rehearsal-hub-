@@ -86,9 +86,16 @@ export default function EditSongModal({
   const [historyDescription, setHistoryDescription] = useState('');
   const [historyEntries, setHistoryEntries] = useState<any[]>([]);
   const [showHistoryList, setShowHistoryList] = useState(false);
+  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(true);
 
   // Manual history creation functions
   const handleCreateHistory = (type: 'song-details' | 'personnel' | 'music-details' | 'lyrics' | 'solfas' | 'audio' | 'comments') => {
+    // Check if Firebase is configured
+    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+      alert('History features require Firebase configuration. Please set up your .env.local file with Firebase credentials. See ENVIRONMENT_SETUP.md for details.');
+      return;
+    }
+    
     setHistoryType(type);
     
     // Set default title and description based on section
@@ -97,7 +104,7 @@ export default function EditSongModal({
       'personnel': 'Personnel',
       'music-details': 'Music Details',
       'lyrics': 'Lyrics',
-      'solfas': 'Conductor Guide',
+      'solfas': "Conductor's Guide",
       'audio': 'Audio',
       'comments': 'Comments'
     };
@@ -178,8 +185,8 @@ export default function EditSongModal({
       }
       
       // Create history entry in Firebase
-      const success = await FirebaseDatabaseService.createHistoryEntry({
-        song_id: parseInt(song.id.toString()),
+      console.log('📝 Creating history entry:', {
+        song_id: song.id.toString(), // Use string ID instead of number
         title: historyTitle,
         description: historyDescription,
         type: historyType,
@@ -188,6 +195,19 @@ export default function EditSongModal({
         created_by: 'admin'
       });
       
+      const success = await FirebaseDatabaseService.createHistoryEntry({
+        song_id: song.id.toString(), // Use string ID instead of number
+        title: historyTitle,
+        description: historyDescription,
+        type: historyType,
+        old_value: oldValue,
+        new_value: currentContent,
+        created_by: 'admin',
+        created_at: new Date().toISOString()
+      });
+      
+      console.log('📝 History creation result:', success);
+      
       if (success) {
         // Reset form but keep it open for multiple entries
         const sectionNames = {
@@ -195,7 +215,7 @@ export default function EditSongModal({
           'personnel': 'Personnel',
           'music-details': 'Music Details',
           'lyrics': 'Lyrics',
-          'solfas': 'Conductor Guide',
+          'solfas': "Conductor's Guide",
           'audio': 'Audio',
           'comments': 'Comments'
         };
@@ -209,7 +229,7 @@ export default function EditSongModal({
         // Show success message
         alert('History entry created successfully! You can create another one or close the form.');
       } else {
-        alert('Error creating history entry. Please try again.');
+        alert('Error creating history entry. Please check your Firebase configuration in .env.local file. See ENVIRONMENT_SETUP.md for details.');
       }
     } catch (error) {
       console.error('Error creating history entry:', error);
@@ -222,10 +242,25 @@ export default function EditSongModal({
     if (!song?.id) return;
     
     try {
-      const data = await FirebaseDatabaseService.getHistoryBySongId(parseInt(song.id.toString()));
+      // Check if Firebase is configured
+      if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+        console.warn('⚠️ Firebase not configured - history features will not work');
+        setHistoryEntries([]);
+        return;
+      }
+      
+      console.log('🔍 Loading history for song:', {
+        songId: song.id,
+        songIdType: typeof song.id,
+        songIdString: song.id.toString()
+      });
+      
+      const data = await FirebaseDatabaseService.getHistoryBySongId(song.id.toString());
+      console.log('📝 History data received:', data);
       setHistoryEntries(data || []);
     } catch (error) {
       console.error('Error loading history entries:', error);
+      setHistoryEntries([]);
     }
   };
 
@@ -1048,13 +1083,13 @@ Bridge:
                     </div>
                   </div>
 
-                  {/* Conductor Guide Section */}
+                  {/* Conductor's Guide Section */}
                   <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50 rounded-t-lg">
                       <div className="flex items-center justify-between">
                       <h4 className="text-base sm:text-lg font-semibold text-slate-900 flex items-center gap-2">
                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                        Conductor Guide Notation
+                        Conductor's Guide Notation
                       </h4>
                         <button
                           onClick={() => handleCreateHistory('solfas')}
@@ -1076,7 +1111,7 @@ Bridge:
                           id="solfas-editor"
                           value={songSolfas}
                           onChange={(value) => {
-                            console.log('🎵 Conductor Guide onChange called with:', value);
+                            console.log("🎵 Conductor's Guide onChange called with:", value);
                             setSongSolfas(value);
                           }}
                           placeholder="Enter solfas notation here...
@@ -1212,20 +1247,34 @@ Do Re Mi Fa Sol La Ti Do"
             </button>
             
             <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => {
-                  loadHistoryEntries();
-                  setShowHistoryList(true);
-                }}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors font-medium relative"
-              >
-                <History className="w-4 h-4" />
-                <span className="text-sm sm:text-base">View History</span>
-                {historyEntries.length > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {historyEntries.length}
-                  </span>
-                )}
+            <button
+              onClick={() => {
+                if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+                  alert('History features require Firebase configuration. Please set up your .env.local file with Firebase credentials. See ENVIRONMENT_SETUP.md for details.');
+                  return;
+                }
+                loadHistoryEntries();
+                setShowHistoryList(true);
+              }}
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors font-medium relative ${
+                !process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID 
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+              disabled={!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+            >
+              <History className="w-4 h-4" />
+              <span className="text-sm sm:text-base">View History</span>
+              {historyEntries.length > 0 && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {historyEntries.length}
+                </span>
+              )}
+              {!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && (
+                <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center" title="Firebase not configured">
+                  ⚠️
+                </span>
+              )}
             </button>
             <button
               onClick={onClose}
