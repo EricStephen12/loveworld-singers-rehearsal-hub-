@@ -1497,7 +1497,7 @@ function PraiseNightPageContent() {
                     }}
                     className={`border-0 rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-lg transition-all duration-300 active:scale-[0.97] group mb-3 lg:mb-0 w-full cursor-pointer touch-optimized ${
                       (song as any).isActive
-                        ? 'ring-4 ring-purple-500 shadow-lg shadow-purple-200/50 bg-white hover:bg-gray-50 animate-pulse-ring' // Admin marked as ACTIVE - blinking purple border
+                        ? 'ring-4 ring-green-500 shadow-lg shadow-green-200/50 bg-white hover:bg-gray-50 animate-pulse-ring' // Admin marked as ACTIVE - blinking green border
                         : (() => {
                           const isActive = currentSong?.id === song.id;
                           if (isActive) {

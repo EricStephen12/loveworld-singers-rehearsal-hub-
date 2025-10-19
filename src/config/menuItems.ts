@@ -10,13 +10,7 @@ export type MenuItem = {
 
 // Shared menu items used across all pages
 export const getMenuItems = (onLogout?: () => void, onRefresh?: () => void): MenuItem[] => [
-  {
-    icon: RotateCw,
-    title: 'Refresh App',
-    href: '#',
-    badge: null,
-    onClick: onRefresh,
-  },
+ 
   {
     icon: Home,
     title: 'Home',
@@ -77,6 +71,13 @@ export const getMenuItems = (onLogout?: () => void, onRefresh?: () => void): Men
     title: 'Admin Support',
     href: '/pages/support',
     badge: null,
+  },
+  {
+    icon: RotateCw,
+    title: 'Refresh App',
+    href: '#',
+    badge: null,
+    onClick: onRefresh,
   },
   {
     icon: LogOut,
