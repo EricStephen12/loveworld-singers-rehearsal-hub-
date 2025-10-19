@@ -187,11 +187,40 @@ export class FirebaseAuthService {
     return this.signIn(email, password)
   }
 
-  // Reset password
+  // Reset password - sends email with in-app redirect
   static async resetPassword(email: string) {
     try {
       const { sendPasswordResetEmail } = await import('firebase/auth')
-      await sendPasswordResetEmail(auth, email)
+      // Prefer in-app handling if possible
+      const actionCodeSettings = (typeof window !== 'undefined') ? {
+        // Redirect back to our reset page where we handle the oobCode
+        url: `${window.location.origin}/auth/reset-password`,
+        handleCodeInApp: true
+      } : undefined as any
+
+      await sendPasswordResetEmail(auth, email, actionCodeSettings)
+      return { error: null }
+    } catch (error: any) {
+      return { error: error.message }
+    }
+  }
+
+  // Verify password reset code (oobCode from email link)
+  static async verifyPasswordResetCode(oobCode: string) {
+    try {
+      const { verifyPasswordResetCode } = await import('firebase/auth')
+      const email = await verifyPasswordResetCode(auth, oobCode)
+      return { email, error: null }
+    } catch (error: any) {
+      return { email: null, error: error.message }
+    }
+  }
+
+  // Confirm password reset with new password
+  static async confirmPasswordReset(oobCode: string, newPassword: string) {
+    try {
+      const { confirmPasswordReset } = await import('firebase/auth')
+      await confirmPasswordReset(auth, oobCode, newPassword)
       return { error: null }
     } catch (error: any) {
       return { error: error.message }

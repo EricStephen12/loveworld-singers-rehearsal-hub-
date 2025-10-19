@@ -232,7 +232,21 @@ function AuthPageContent() {
     setIsLoading(true)
     
     try {
-      await FirebaseAuthService.resetPassword(forgotPasswordEmail)
+      if (!forgotPasswordEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotPasswordEmail)) {
+        setError('Please enter a valid email address')
+        return
+      }
+      const res = await FirebaseAuthService.resetPassword(forgotPasswordEmail)
+      if (res.error) {
+        if (res.error.includes('user-not-found')) {
+          setError('No account found with that email')
+        } else if (res.error.includes('invalid-email')) {
+          setError('Invalid email address')
+        } else {
+          setError(res.error)
+        }
+        return
+      }
       setForgotPasswordSuccess(true)
     } catch (error: any) {
       console.error('Forgot password error:', error)

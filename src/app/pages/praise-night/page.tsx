@@ -602,8 +602,8 @@ function PraiseNightPageContent() {
         return;
       }
       if (songCategories.length > 0) {
-        setActiveCategory(songCategories[0]);
-      }
+      setActiveCategory(songCategories[0]);
+    }
     } else if (!songCategories.includes(activeCategory)) {
       // If current activeCategory no longer exists (page switched), reset with preference
       const preferred = mainCategories.find((cat) => categoriesWithActiveSongs.includes(cat));
@@ -1580,7 +1580,7 @@ function PraiseNightPageContent() {
                   onClick={() => handleCategorySelect(category)}
                       className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
                         hasActiveSong
-                          ? 'bg-amber-50 text-amber-900 border-4 border-amber-600 shadow-lg'
+                          ? 'bg-green-600 text-white border-2 border-green-700 shadow-md'
                           : activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
@@ -1613,7 +1613,7 @@ function PraiseNightPageContent() {
                   onClick={() => handleCategorySelect(category)}
                         className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
                           hasActiveSong
-                            ? 'bg-amber-50 text-amber-900 border-4 border-amber-600 shadow-lg'
+                            ? 'bg-green-600 text-white border-2 border-green-700 shadow-md'
                             : activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'

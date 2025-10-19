@@ -11,6 +11,7 @@ function ResetPasswordContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [emailForReset, setEmailForReset] = useState<string>('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -18,23 +19,24 @@ function ResetPasswordContent() {
     confirmPassword: ''
   })
 
+  // Verify the password reset code from the email link
   useEffect(() => {
-    // Check if user is authenticated (should be set by callback)
-    const checkAuth = async () => {
-      try {
-        const user = await FirebaseAuthService.getCurrentUser()
-        
-        if (!user) {
-          setError('Invalid or expired reset link. Please request a new password reset.')
-        }
-      } catch (error) {
-        console.error('Auth check error:', error)
+    const verifyCode = async () => {
+      const oobCode = searchParams.get('oobCode')
+      const mode = searchParams.get('mode')
+      if (!oobCode || mode !== 'resetPassword') {
+        setError('Invalid or missing reset link. Please request a new password reset.')
+        return
+      }
+      const { email, error } = await FirebaseAuthService.verifyPasswordResetCode(oobCode)
+      if (error) {
         setError('Invalid or expired reset link. Please request a new password reset.')
+      } else if (email) {
+        setEmailForReset(email)
       }
     }
-
-    checkAuth()
-  }, [])
+    verifyCode()
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,8 +55,17 @@ function ResetPasswordContent() {
         return
       }
 
-      // Update password
-      await FirebaseAuthService.updatePassword(formData.password)
+      // Confirm password reset using the oobCode from the link
+      const oobCode = searchParams.get('oobCode')
+      if (!oobCode) {
+        setError('Missing reset code. Please use the link from your email again.')
+        return
+      }
+      const res = await FirebaseAuthService.confirmPasswordReset(oobCode, formData.password)
+      if (res.error) {
+        setError(res.error)
+        return
+      }
       setSuccess(true)
       
       // Redirect to home after 3 seconds

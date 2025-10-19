@@ -1247,34 +1247,34 @@ Do Re Mi Fa Sol La Ti Do"
             </button>
             
             <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => {
+              <button
+                onClick={() => {
                 if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
                   alert('History features require Firebase configuration. Please set up your .env.local file with Firebase credentials. See ENVIRONMENT_SETUP.md for details.');
                   return;
                 }
-                loadHistoryEntries();
-                setShowHistoryList(true);
-              }}
+                  loadHistoryEntries();
+                  setShowHistoryList(true);
+                }}
               className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors font-medium relative ${
                 !process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID 
                   ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
               disabled={!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}
-            >
-              <History className="w-4 h-4" />
-              <span className="text-sm sm:text-base">View History</span>
+              >
+                <History className="w-4 h-4" />
+                <span className="text-sm sm:text-base">View History</span>
               {historyEntries.length > 0 && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {historyEntries.length}
-                </span>
-              )}
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {historyEntries.length}
+                  </span>
+                )}
               {!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && (
                 <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center" title="Firebase not configured">
                   ⚠️
-                </span>
-              )}
+                  </span>
+                )}
             </button>
             <button
               onClick={onClose}
