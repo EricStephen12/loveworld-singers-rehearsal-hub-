@@ -562,8 +562,25 @@ function PraiseNightPageContent() {
     return uniqueCategories;
   }, [finalSongData, currentPraiseNight?.songs]);
 
-  // All categories in horizontal bar with auto-scroll
-  const mainCategories = songCategories;
+  // Categories that currently have at least one active song
+  const categoriesWithActiveSongs = useMemo(() => {
+    const activeCategories = finalSongData
+      .filter((song: any) => song.isActive && song.category)
+      .map((song: any) => song.category);
+    return Array.from(new Set(activeCategories));
+  }, [finalSongData]);
+
+  // All categories in horizontal bar with auto-scroll (prioritize categories that have active songs)
+  const mainCategories = useMemo(() => {
+    const base = [...songCategories];
+    if (categoriesWithActiveSongs.length === 0) return base;
+    return base.sort((a, b) => {
+      const aActive = categoriesWithActiveSongs.includes(a);
+      const bActive = categoriesWithActiveSongs.includes(b);
+      if (aActive === bActive) return 0;
+      return aActive ? -1 : 1; // Active categories first
+    });
+  }, [songCategories, categoriesWithActiveSongs]);
   // No more FAB categories - all moved to main bar
   const otherCategories: string[] = [];
   
@@ -576,13 +593,29 @@ function PraiseNightPageContent() {
   });
 
 
-  // ✅ Update active category when categories change (e.g., switching pages)
+  // ✅ Prefer auto-selecting a category that has active songs; otherwise fall back to first
   useEffect(() => {
-    if (songCategories.length > 0 && !activeCategory) {
-      // Only set to first category if no category is currently selected
-      setActiveCategory(songCategories[0]);
+    if (!activeCategory) {
+      const preferred = mainCategories.find((cat) => categoriesWithActiveSongs.includes(cat));
+      if (preferred) {
+        setActiveCategory(preferred);
+        return;
+      }
+      if (songCategories.length > 0) {
+        setActiveCategory(songCategories[0]);
+      }
+    } else if (!songCategories.includes(activeCategory)) {
+      // If current activeCategory no longer exists (page switched), reset with preference
+      const preferred = mainCategories.find((cat) => categoriesWithActiveSongs.includes(cat));
+      if (preferred) {
+        setActiveCategory(preferred);
+      } else if (songCategories.length > 0) {
+        setActiveCategory(songCategories[0]);
+      } else {
+        setActiveCategory('');
+      }
     }
-  }, [songCategories, activeCategory]);
+  }, [activeCategory, mainCategories, categoriesWithActiveSongs, songCategories]);
 
   // Fallback data if no centralized songs available
   const fallbackSongData = [
@@ -1547,7 +1580,7 @@ function PraiseNightPageContent() {
                   onClick={() => handleCategorySelect(category)}
                       className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
                         hasActiveSong
-                          ? 'bg-white text-purple-600 shadow-lg border-2 border-purple-600 animate-pulse-border'
+                          ? 'bg-amber-50 text-amber-900 border-4 border-amber-600 shadow-lg'
                           : activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
@@ -1580,7 +1613,7 @@ function PraiseNightPageContent() {
                   onClick={() => handleCategorySelect(category)}
                         className={`flex-shrink-0 px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-center whitespace-nowrap category-button ${
                           hasActiveSong
-                            ? 'bg-white text-purple-600 shadow-lg border-2 border-purple-600 animate-pulse-border'
+                            ? 'bg-amber-50 text-amber-900 border-4 border-amber-600 shadow-lg'
                             : activeCategory === category
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-200/50'
                     : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white border border-gray-200'
