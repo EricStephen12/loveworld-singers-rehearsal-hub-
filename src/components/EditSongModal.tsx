@@ -57,6 +57,7 @@ export default function EditSongModal({
   const [songLyrics, setSongLyrics] = useState('');
   const [songComments, setSongComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [pastorComment, setPastorComment] = useState('');
   
   // History management state
   const [rehearsalCount, setRehearsalCount] = useState(1);
@@ -179,8 +180,17 @@ export default function EditSongModal({
           oldValue = originalValues.audioFile;
           break;
         case 'comments':
-          currentContent = JSON.stringify(songComments);
-          oldValue = JSON.stringify(song?.comments || []);
+          // Save the current Pastor comment rich-text content
+          currentContent = pastorComment;
+          // Previous value: latest Pastor comment from existing song comments
+          try {
+            const latestPastor = (Array.isArray(song?.comments) ? song!.comments : [])
+              .filter((c: any) => c.author === 'Pastor')
+              .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+            oldValue = (latestPastor as any)?.text || (latestPastor as any)?.content || '';
+          } catch {
+            oldValue = '';
+          }
           break;
       }
       
@@ -440,6 +450,13 @@ export default function EditSongModal({
       
       setSongComments(Array.isArray(song.comments) ? song.comments : []);
       setNewComment('');
+      // Initialize Pastor comment editor from latest Pastor comment
+      try {
+        const latestPastor = (Array.isArray(song.comments) ? song.comments : [])
+          .filter(c => c.author === 'Pastor')
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+        setPastorComment((latestPastor as any)?.text || (latestPastor as any)?.content || '');
+      } catch {}
       
       // Load rehearsal count from song data, default to 1 if not set
       setRehearsalCount(song.rehearsalCount || 1);
@@ -482,6 +499,7 @@ export default function EditSongModal({
       setSongLyrics('');
       setSongComments([]);
       setNewComment('');
+      setPastorComment('');
       setRehearsalCount(1);
       
       // Reset original values for new song
@@ -532,6 +550,15 @@ export default function EditSongModal({
       
       const finalAudioFile = audioFile ? audioFile.url : songAudioFile;
       
+      const finalComments = pastorComment && pastorComment.trim() !== '' ? [
+        {
+          id: `comment-${Date.now()}`,
+          text: pastorComment,
+          date: new Date().toISOString(),
+          author: 'Pastor'
+        }
+      ] : [];
+
       const songData: PraiseNightSong = {
         title: songTitle.trim(),
         status: songStatus,
@@ -548,7 +575,7 @@ export default function EditSongModal({
         drummer: songDrummer,
         solfas: songSolfas, // BasicTextEditor provides HTML
         rehearsalCount: rehearsalCount, // Save rehearsal count to database
-        comments: songComments,
+        comments: finalComments,
         audioFile: finalAudioFile,
         // Only include mediaId if it exists (Firebase doesn't allow undefined values)
         ...(audioFile && { mediaId: parseInt(audioFile.id) }),
@@ -1134,101 +1161,30 @@ Do Re Mi Fa Sol La Ti Do"
                   <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50 rounded-t-lg">
                       <div className="flex items-center justify-between">
-                      <h4 className="text-base sm:text-lg font-semibold text-slate-900 flex items-center gap-2">
-                        <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                        Pastor Comments
-                        <span className="ml-auto text-xs sm:text-sm font-normal text-slate-500 bg-gray-200 px-2 py-1 rounded-full">
-                          {Array.isArray(songComments) ? songComments.length : 0} comment{(Array.isArray(songComments) ? songComments.length : 0) !== 1 ? 's' : ''}
-                        </span>
-                      </h4>
+                        <h4 className="text-base sm:text-lg font-semibold text-slate-900 flex items-center gap-2">
+                          <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                          Pastor Comment
+                        </h4>
                         <button
                           onClick={() => handleCreateHistory('comments')}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-md transition-colors"
                         >
                           <History className="w-3 h-3" />
-                          Add History
+                          Save Version
                         </button>
                       </div>
                     </div>
-                    
                     <div className="p-4 sm:p-6">
-                      {/* Add new comment */}
-                      <div className="mb-6">
-                        <div className="flex gap-3">
-                          <div className="flex-1">
-                            <textarea
-                              value={newComment}
-                              onChange={(e) => {
-                                console.log('🎵 Comment onChange called with:', e.target.value);
-                                setNewComment(e.target.value);
-                              }}
-                              onPaste={(e) => handlePaste(e, newComment, setNewComment)}
-                              rows={3}
-                              dir="ltr"
-                              style={{ textAlign: 'left', direction: 'ltr' }}
-                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200 resize-none"
-                              placeholder="Add a new comment..."
-                            />
-                          </div>
-                          <div className="flex flex-col justify-end">
-                            <button
-                              onClick={handleAddComment}
-                              disabled={!newComment.trim()}
-                              className="px-6 py-3 bg-purple-600 text-white hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors font-medium"
-                            >
-                              Add Comment
-                            </button>
-                          </div>
-                        </div>
+                      <div className="mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
+                        Basic rich text - Bold and Italic supported
                       </div>
-
-                      {/* Display existing comments */}
-                      <div className="space-y-4 max-h-80 overflow-y-auto">
-                        {(!songComments || !Array.isArray(songComments) || songComments.length === 0) ? (
-                          <div className="text-center py-8 text-slate-500">
-                            <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
-                              <span className="text-slate-400 text-xl">💬</span>
-                            </div>
-                            <p className="text-sm">No comments yet</p>
-                            <p className="text-xs text-slate-400">Add the first comment above</p>
-                          </div>
-                        ) : (
-                          (Array.isArray(songComments) ? songComments : []).map((comment) => (
-                            <div key={comment.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm text-slate-900 leading-relaxed">{comment.text}</p>
-                                  <div className="flex items-center gap-3 mt-3">
-                                    <div className="flex items-center gap-1">
-                                      <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
-                                        <span className="text-xs font-medium text-purple-600">P</span>
-                                      </span>
-                                      <span className="text-xs text-slate-600 font-medium">{comment.author}</span>
-                                    </div>
-                                    <span className="text-xs text-slate-400">•</span>
-                                    <span className="text-xs text-slate-500">
-                                      {new Date(comment.date).toLocaleDateString('en-US', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </span>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => handleDeleteComment(comment.id)}
-                                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-3"
-                                  title="Delete comment"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
+                      <BasicTextEditor
+                        id="pastor-comment-editor"
+                        value={pastorComment}
+                        onChange={(value) => setPastorComment(value)}
+                        placeholder="Enter Pastor's comment here..."
+                        className="w-full"
+                      />
                     </div>
                   </div>
                 </div>

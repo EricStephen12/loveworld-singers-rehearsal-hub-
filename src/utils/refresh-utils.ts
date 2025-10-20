@@ -54,11 +54,23 @@ export const handleAppRefresh = async () => {
       document.body.appendChild(loadingDiv);
     }
     
-    // Clear all caches except auth data
+    // Clear all caches except auth data and countdown persistence keys
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && !key.includes('firebase') && !key.includes('auth') && !key.includes('session') && !key.includes('loveworld-singers-session') && !key.startsWith('firebase:') && !key.includes('__firebase')) {
+      if (
+        key &&
+        // Preserve Firebase/auth/session keys
+        !key.includes('firebase') &&
+        !key.includes('auth') &&
+        !key.includes('session') &&
+        !key.includes('loveworld-singers-session') &&
+        !key.startsWith('firebase:') &&
+        !key.includes('__firebase') &&
+        // Preserve countdown persistence keys
+        !key.startsWith('server_target_date_') &&
+        !key.startsWith('countdown_hash_')
+      ) {
         keysToRemove.push(key);
       }
     }

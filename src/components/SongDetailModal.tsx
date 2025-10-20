@@ -35,10 +35,22 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
   
   // Fullscreen lyrics state
   const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
+  // Fullscreen solfas state
+  const [isFullscreenSolfas, setIsFullscreenSolfas] = useState(false);
+  // Fullscreen comments state
+  const [isFullscreenComments, setIsFullscreenComments] = useState(false);
 
   // Toggle fullscreen lyrics
   const toggleFullscreenLyrics = () => {
     setIsFullscreenLyrics(!isFullscreenLyrics);
+  };
+  // Toggle fullscreen solfas
+  const toggleFullscreenSolfas = () => {
+    setIsFullscreenSolfas(!isFullscreenSolfas);
+  };
+  // Toggle fullscreen comments
+  const toggleFullscreenComments = () => {
+    setIsFullscreenComments(!isFullscreenComments);
   };
   
   // State for history audio players
@@ -703,6 +715,84 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
               </div>
             </div>
           </div>
+        ) : isFullscreenSolfas && activeTab === 'solfas' ? (
+          <div className="fixed inset-0 bg-white z-[100] flex flex-col">
+            {/* Fullscreen Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={toggleFullscreenSolfas}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <Minimize2 className="w-5 h-5 text-gray-600" />
+                </button>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">{currentSongData?.title}</h2>
+                  <p className="text-sm text-gray-500">Conductor's Guide</p>
+                </div>
+              </div>
+            </div>
+            {/* Fullscreen Solfas Content */}
+            <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch p-6" style={{ height: 'calc(100vh - 80px)' }}>
+              <div className="max-w-4xl mx-auto">
+                <div className="text-gray-900 leading-relaxed space-y-6 text-base text-left font-poppins">
+                  {currentSongData?.solfas && currentSongData.solfas.trim() !== '' ? (
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: currentSongData.solfas }}
+                      className="prose prose-lg max-w-none"
+                    />
+                  ) : (
+                    <div className="text-center py-12">
+                      <Music className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 text-lg">No Conductor's Guide available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : isFullscreenComments && activeTab === 'comments' ? (
+          <div className="fixed inset-0 bg-white z-[100] flex flex-col">
+            {/* Fullscreen Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={toggleFullscreenComments}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <Minimize2 className="w-5 h-5 text-gray-600" />
+                </button>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">{currentSongData?.title}</h2>
+                  <p className="text-sm text-gray-500">Pastor's Comment</p>
+                </div>
+              </div>
+            </div>
+            {/* Fullscreen Comments Content */}
+            <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch p-6" style={{ height: 'calc(100vh - 80px)' }}>
+              <div className="max-w-4xl mx-auto">
+                <div className="text-gray-900 leading-relaxed space-y-6 text-base text-left font-poppins">
+                  {(() => {
+                    const latest = getLatestContent('comments') as any;
+                    if (!latest) {
+                      return (
+                        <div className="text-center py-12">
+                          <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-500 text-lg">No comments available</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div
+                        dangerouslySetInnerHTML={{ __html: (latest.text || latest.content || '') }}
+                        className="prose prose-lg max-w-none"
+                      />
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <>
             {/* Normal Modal Content */}
@@ -882,44 +972,47 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
           )}
 
           {activeTab === 'comments' && (
-            <div className="space-y-4 max-h-80 overflow-y-auto">
-              {(!currentSongData?.comments || !Array.isArray(currentSongData.comments) || currentSongData.comments.length === 0) ? (
-                <div className="text-center py-8 text-slate-500">
-                  <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
-                    <span className="text-slate-400 text-xl">💬</span>
-                            </div>
-                  <p className="text-sm">No comments yet</p>
-                  <p className="text-xs text-slate-400">Comments will appear here when added</p>
-                          </div>
-              ) : (
-                (Array.isArray(currentSongData.comments) ? currentSongData.comments : []).map((comment: any) => (
-                  <div key={comment.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm text-slate-900 leading-relaxed">{comment.text}</p>
-                        <div className="flex items-center gap-3 mt-3">
-                          <div className="flex items-center gap-1">
-                            <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-medium text-purple-600">P</span>
-                            </span>
-                            <span className="text-xs text-slate-600 font-medium">{comment.author}</span>
-                          </div>
-                          <span className="text-xs text-slate-400">•</span>
-                          <span className="text-xs text-slate-500">
-                            {new Date(comment.date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
+            <div className="max-w-none">
+              {(() => {
+                const latest = getLatestContent('comments') as any;
+                if (!latest) {
+                  return (
+                    <div className="text-center py-8 text-slate-500">
+                      <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+                        <span className="text-slate-400 text-xl">💬</span>
                       </div>
+                      <p className="text-sm">No comments yet</p>
+                      <p className="text-xs text-slate-400">Comments will appear here when added</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="text-gray-900 leading-relaxed space-y-6 text-sm text-left font-poppins">
+                    <div 
+                      className="prose max-w-none"
+                      dangerouslySetInnerHTML={{ __html: (latest.text || latest.content || '') }}
+                    />
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-medium text-purple-600">P</span>
+                        </span>
+                        <span className="text-xs text-slate-600 font-medium">{latest.author || 'Pastor'}</span>
+                      </div>
+                      <span className="text-xs text-slate-400">•</span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(latest.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
                     </div>
                   </div>
-                ))
-              )}
+                );
+              })()}
             </div>
           )}
 
@@ -1383,6 +1476,24 @@ export default function SongDetailModal({ selectedSong, isOpen, onClose, onSongC
             onClick={toggleFullscreenLyrics}
             className="fixed bottom-28 right-3 sm:right-4 w-10 h-10 sm:w-11 sm:h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg transition-all duration-200 z-[110] hover:scale-105 flex items-center justify-center"
             title="Fullscreen Lyrics"
+          >
+            <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+        )}
+        {activeTab === 'comments' && !isFullscreenComments && (
+          <button
+            onClick={toggleFullscreenComments}
+            className="fixed bottom-28 right-3 sm:right-4 w-10 h-10 sm:w-11 sm:h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg transition-all duration-200 z-[110] hover:scale-105 flex items-center justify-center"
+            title="Fullscreen Comments"
+          >
+            <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+        )}
+        {activeTab === 'solfas' && !isFullscreenSolfas && (
+          <button
+            onClick={toggleFullscreenSolfas}
+            className="fixed bottom-28 right-3 sm:right-4 w-10 h-10 sm:w-11 sm:h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg transition-all duration-200 z-[110] hover:scale-105 flex items-center justify-center"
+            title="Fullscreen Conductor's Guide"
           >
             <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
