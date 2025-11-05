@@ -3,10 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAudioStore } from '@/lib/audio-store';
-import { audioEngine } from '@/lib/audio-engine';
 import Timeline from '@/components/audio-lab/Timeline';
 import AIProducer from '@/components/audio-lab/AIProducer';
 import EffectsPanel from '@/components/audio-lab/EffectsPanel';
+
+// Lazy load audioEngine only on client
+let audioEngine: any = null;
+const getAudioEngine = async () => {
+  if (typeof window === 'undefined') return null;
+  if (!audioEngine) {
+    const { audioEngine: engine } = await import('@/lib/audio-engine');
+    audioEngine = engine;
+  }
+  return audioEngine;
+};
 import {
     Play,
     Pause,
@@ -51,10 +61,14 @@ export default function AudioLabEditor() {
 
     useEffect(() => {
         const loadTracks = async () => {
+            if (typeof window === 'undefined') return;
+            const engine = await getAudioEngine();
+            if (!engine) return;
+            
             console.log('Loading tracks in editor:', tracks.length);
             for (const track of tracks) {
                 try {
-                    await audioEngine.loadTrack(track);
+                    await engine.loadTrack(track);
                     console.log(`Loaded track: ${track.name}`);
                 } catch (error) {
                     console.error(`Failed to load track ${track.name}:`, error);
@@ -72,15 +86,29 @@ export default function AudioLabEditor() {
     }, [tracks]);
 
     useEffect(() => {
-        if (isPlaying) {
-            audioEngine.play();
-        } else {
-            audioEngine.pause();
-        }
+        const handlePlayback = async () => {
+            if (typeof window === 'undefined') return;
+            const engine = await getAudioEngine();
+            if (!engine) return;
+            
+            if (isPlaying) {
+                engine.play();
+            } else {
+                engine.pause();
+            }
+        };
+        handlePlayback();
     }, [isPlaying]);
 
     useEffect(() => {
-        audioEngine.setMasterVolume(masterVolume);
+        const setVolume = async () => {
+            if (typeof window === 'undefined') return;
+            const engine = await getAudioEngine();
+            if (!engine) return;
+            
+            engine.setMasterVolume(masterVolume);
+        };
+        setVolume();
     }, [masterVolume]);
 
     const handlePlay = () => {
@@ -100,9 +128,13 @@ export default function AudioLabEditor() {
         pause();
     };
 
-    const handleStop = () => {
+    const handleStop = async () => {
         stop();
-        audioEngine.stop();
+        if (typeof window === 'undefined') return;
+        const engine = await getAudioEngine();
+        if (engine) {
+            engine.stop();
+        }
     };
 
     const handleSeek = (seconds: number) => {
@@ -125,10 +157,16 @@ export default function AudioLabEditor() {
 
     const handleExport = async () => {
         if (tracks.length === 0) return;
+        if (typeof window === 'undefined') return;
 
         setIsExporting(true);
         try {
-            const audioBlob = await audioEngine.exportMix(tracks);
+            const engine = await getAudioEngine();
+            if (!engine) {
+                throw new Error('Audio engine not available');
+            }
+            
+            const audioBlob = await engine.exportMix(tracks);
 
             const url = URL.createObjectURL(audioBlob);
             const a = document.createElement('a');

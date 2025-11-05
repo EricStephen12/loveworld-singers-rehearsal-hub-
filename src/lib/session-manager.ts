@@ -136,7 +136,7 @@ export class SessionManager {
 
       return { canLogin: true }
     } catch (_e) {
-      return { canLogin: true }
+    return { canLogin: true }
     }
   }
   
