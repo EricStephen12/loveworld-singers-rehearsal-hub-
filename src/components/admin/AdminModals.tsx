@@ -39,6 +39,8 @@ interface AdminModalsProps {
   setNewPageBannerImage: (image: string) => void;
   newPageBannerFile: File | null;
   setNewPageBannerFile: (file: File | null) => void;
+  newPagePageCategory: string; // Add page category field
+  setNewPagePageCategory: (val: string) => void; // Setter for page category
   handleAddPage: () => void;
   handleUpdatePage: () => void;
 
@@ -47,14 +49,16 @@ interface AdminModalsProps {
   setShowCategoryModal: (show: boolean) => void;
   editingCategory: Category | null;
   setEditingCategory: (category: Category | null) => void;
-  editingPageCategory: any | null;
-  setEditingPageCategory: (category: any | null) => void;
+  editingPageCategory: any | null; // New prop for editing page categories
+  setEditingPageCategory: (category: any | null) => void; // New prop for editing page categories
   newPageCategoryName: string;
   setNewPageCategoryName: (name: string) => void;
+  newPageCategoryDescription: string; // New prop for page category description
+  setNewPageCategoryDescription: (description: string) => void; // New prop for page category description
   handleAddCategory: () => void;
   handleUpdateCategory: () => void;
-  handleAddPageCategory: () => void;
-  handleUpdatePageCategory: () => void;
+  handleAddPageCategory: () => void; // New prop for adding page categories
+  handleUpdatePageCategory: () => void; // New prop for updating page categories
   activeSection: string;
 
   // Song Modal
@@ -121,24 +125,28 @@ export default function AdminModals(props: AdminModalsProps) {
     setNewPageBannerImage,
     newPageBannerFile,
     setNewPageBannerFile,
+    newPagePageCategory,
+    setNewPagePageCategory,
     handleAddPage,
     handleUpdatePage,
-
+    
     // Category Modal
     showCategoryModal,
     setShowCategoryModal,
     editingCategory,
     setEditingCategory,
-    editingPageCategory,
-    setEditingPageCategory,
+    editingPageCategory, // New prop
+    setEditingPageCategory, // New prop
     newPageCategoryName,
     setNewPageCategoryName,
+    newPageCategoryDescription, // New prop
+    setNewPageCategoryDescription, // New prop
     handleAddCategory,
     handleUpdateCategory,
-    handleAddPageCategory,
-    handleUpdatePageCategory,
+    handleAddPageCategory, // New prop
+    handleUpdatePageCategory, // New prop
     activeSection,
-
+    
     // Song Modal
     showSongModal,
     setShowSongModal,
@@ -182,6 +190,7 @@ export default function AdminModals(props: AdminModalsProps) {
                   setEditingPageCategory(null);
                   setEditingCategory(null);
                   setNewPageCategoryName('');
+                  setNewPageCategoryDescription(''); // Reset description
                 }}
                 className="text-slate-400 hover:text-slate-600 p-2 -mr-2"
               >
@@ -205,6 +214,19 @@ export default function AdminModals(props: AdminModalsProps) {
                 />
               </div>
               
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
+                  Description
+                </label>
+                <textarea
+                  value={newPageCategoryDescription}
+                  onChange={(e) => setNewPageCategoryDescription(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
+                  placeholder="Enter category description"
+                />
+              </div>
+              
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-4">
                   <button
                     onClick={(editingPageCategory || editingCategory) ? (editingPageCategory ? handleUpdatePageCategory : handleUpdateCategory) : (activeSection === 'Categories' ? handleAddCategory : handleAddPageCategory)}
@@ -219,6 +241,7 @@ export default function AdminModals(props: AdminModalsProps) {
                       setEditingPageCategory(null);
                       setEditingCategory(null);
                       setNewPageCategoryName('');
+                      setNewPageCategoryDescription(''); // Reset description
                     }}
                     className="w-full sm:w-auto px-4 py-3 border border-gray-300 text-gray-700 hover:bg-slate-50 rounded-lg transition-colors font-medium"
                   >
@@ -396,6 +419,23 @@ export default function AdminModals(props: AdminModalsProps) {
                   <option value="ongoing">Ongoing</option>
                   <option value="archive">Archive</option>
                 </select>
+              </div>
+
+              {/* Page Category Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
+                  Page Category
+                </label>
+                <input
+                  type="text"
+                  value={newPagePageCategory}
+                  onChange={(e) => setNewPagePageCategory(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
+                  placeholder="e.g., Healing, Worship, Thanksgiving"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Assign this page to a specific category for better organization
+                </p>
               </div>
             </div>
 

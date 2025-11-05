@@ -137,14 +137,14 @@ function HomePageContent() {
     },
     {
       icon: Music,
-      title: 'Submit Song',
-      href: '#',
+      title: 'Audio Lab Studio',
+      href: '/pages/audio-lab',
       badge: null,
     },
     {
       icon: Play,
-      title: 'Media',
-      href: '#',
+      title: 'Media Player',
+      href: '/pages/audio-lab',
       badge: null,
     },
     {

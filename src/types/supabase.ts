@@ -163,6 +163,7 @@ export interface PraiseNight {
   date: string;
   location: string;
   category: 'unassigned' | 'pre-rehearsal' | 'ongoing' | 'archive';
+  pageCategory?: string; // New field for page categories
   bannerImage?: string;
   countdown: {
     days: number;
@@ -178,7 +179,8 @@ export interface PraiseNightSong {
   firebaseId?: string; // Deprecated: kept for backward compatibility
   title: string;
   status: 'heard' | 'unheard';
-  category: string;
+  category: string; // Keep for backward compatibility
+  categories?: string[]; // New multi-category support
   praiseNightId: string; // Reference to PraiseNight ID (Firebase-generated)
   isActive?: boolean; // TRUE = Song is currently being discussed (users see blinking border)
   leadSinger?: string;

@@ -21,6 +21,7 @@ import MediaSection from '../../components/admin/MediaSection';
 import MembersSection from '../../components/admin/MembersSection';
 import SimpleNotificationsSection from '../../components/admin/SimpleNotificationsSection';
 import AdminModals from '../../components/admin/AdminModals';
+import PageCategoriesSection from '../../components/admin/PageCategoriesSection';
 
 export default function AdminPage() {
   // Admin authentication state
@@ -36,48 +37,55 @@ export default function AdminPage() {
   // Modal states
   const [showPageModal, setShowPageModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showPageCategoryModal, setShowPageCategoryModal] = useState(false); // New state for page categories
   const [showSongModal, setShowSongModal] = useState(false);
   const [editingPage, setEditingPage] = useState<PraiseNight | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [editingPageCategory, setEditingPageCategory] = useState<any | null>(null);
+  const [editingPageCategory, setEditingPageCategory] = useState<any | null>(null); // New state for editing page categories
   const [editingSong, setEditingSong] = useState<PraiseNightSong | null>(null);
 
-  // Form states for new page
+  // Form states
   const [newPageName, setNewPageName] = useState('');
   const [newPageDate, setNewPageDate] = useState('');
   const [newPageLocation, setNewPageLocation] = useState('');
   const [newPageDescription, setNewPageDescription] = useState('');
   const [newPageCategory, setNewPageCategory] = useState<'unassigned' | 'pre-rehearsal' | 'ongoing' | 'archive'>('unassigned');
+  const [newPagePageCategory, setNewPagePageCategory] = useState(''); // New state for page category
   const [newPageDays, setNewPageDays] = useState(0);
   const [newPageHours, setNewPageHours] = useState(0);
   const [newPageMinutes, setNewPageMinutes] = useState(0);
   const [newPageSeconds, setNewPageSeconds] = useState(0);
   const [newPageBannerImage, setNewPageBannerImage] = useState('');
   const [newPageBannerFile, setNewPageBannerFile] = useState<File | null>(null);
-  const [isCreatingPage, setIsCreatingPage] = useState(false);
-
-  // Form states for new category
   const [newPageCategoryName, setNewPageCategoryName] = useState('');
+  const [newPageCategoryDescription, setNewPageCategoryDescription] = useState(''); // New state for page category description
 
-  // Delete confirmation states
+  // Delete dialog states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showDeleteSongDialog, setShowDeleteSongDialog] = useState(false);
-  const [showDeleteCategoryDialog, setShowDeleteCategoryDialog] = useState(false);
   const [pageToDelete, setPageToDelete] = useState<PraiseNight | null>(null);
-  const [songToDelete, setSongToDelete] = useState<PraiseNightSong | null>(null);
+  const [showDeleteCategoryDialog, setShowDeleteCategoryDialog] = useState(false);
+  const [showDeletePageCategoryDialog, setShowDeletePageCategoryDialog] = useState(false); // New state for page category deletion
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [pageCategoryToDelete, setPageCategoryToDelete] = useState<any | null>(null); // New state for page category to delete
+  const [showDeleteSongDialog, setShowDeleteSongDialog] = useState(false);
+  const [songToDelete, setSongToDelete] = useState<PraiseNightSong | null>(null);
 
-  // Search and filter states
+  // Data states
+  const [allSongs, setAllSongs] = useState<PraiseNightSong[]>([]);
+  const [dbCategories, setDbCategories] = useState<Category[]>([]);
+  const [pageCategories, setPageCategories] = useState<any[]>([]); // New state for page categories
+  
+
+  // Pagination and filtering
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'heard' | 'unheard'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage] = useState(10);
 
   // Toast notifications
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isCreatingPage, setIsCreatingPage] = useState(false);
 
   // Get admin data (optimized for fast loading)
   const {
@@ -90,7 +98,6 @@ export default function AdminPage() {
   } = useAdminData();
 
   // Songs for the selected page (loaded on demand)
-  const [allSongs, setAllSongs] = useState<PraiseNightSong[]>([]);
   const [loadingSongs, setLoadingSongs] = useState(false);
 
   // Load songs when a page is selected
@@ -113,7 +120,6 @@ export default function AdminPage() {
   }, [selectedPage, getCurrentSongs]);
 
   // Categories from database
-  const [dbCategories, setDbCategories] = useState<Category[]>([]);
 
   // Get all available categories from songs (only when songs are loaded)
   const allAvailableCategories = useMemo(() => {
@@ -171,6 +177,21 @@ export default function AdminPage() {
     };
 
     loadCategories();
+  }, []);
+
+  // Load page categories from database
+  useEffect(() => {
+    const loadPageCategories = async () => {
+      try {
+        const categories = await FirebaseDatabaseService.getPageCategories();
+        console.log('🔥 Raw page categories from Firebase:', categories);
+        setPageCategories(categories);
+      } catch (error) {
+        console.error('Error loading page categories:', error);
+      }
+    };
+
+    loadPageCategories();
   }, []);
 
   // Check for existing admin session on component mount
@@ -436,6 +457,167 @@ export default function AdminPage() {
     setCategoryToDelete(null);
   };
 
+  // Page category management functions
+  const handleAddPageCategory = async () => {
+    console.log('🎯 handleAddPageCategory called with name:', newPageCategoryName);
+
+    if (!newPageCategoryName.trim()) {
+      addToast({
+        type: 'error',
+        message: 'Please enter a page category name'
+      });
+      return;
+    }
+
+    try {
+      const newPageCategoryData: any = {
+        name: newPageCategoryName.trim(),
+        description: newPageCategoryDescription.trim() || `Page category: ${newPageCategoryName.trim()}`,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const result = await FirebaseDatabaseService.createPageCategory(newPageCategoryData);
+
+      if (result.success) {
+        console.log('✅ Page category added successfully');
+        addToast({
+          type: 'success',
+          message: 'Page category added successfully'
+        });
+
+        // Reload page categories from database
+        const categories = await FirebaseDatabaseService.getPageCategories();
+        setPageCategories(categories);
+
+        setNewPageCategoryName('');
+        setNewPageCategoryDescription('');
+        setShowPageCategoryModal(false);
+        refreshData();
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.createCategory(currentAdmin, newPageCategoryName.trim());
+        }
+      } else {
+        throw new Error(result.error || 'Failed to create page category');
+      }
+    } catch (error) {
+      console.error('❌ Error adding page category:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to add page category'
+      });
+    }
+  };
+
+  const handleEditPageCategory = (pageCategory: any) => {
+    setEditingPageCategory(pageCategory);
+    setNewPageCategoryName(pageCategory.name);
+    setNewPageCategoryDescription(pageCategory.description || '');
+    setShowPageCategoryModal(true);
+  };
+
+  const handleUpdatePageCategory = async () => {
+    if (!editingPageCategory || !newPageCategoryName.trim()) {
+      addToast({
+        type: 'error',
+        message: 'Please enter a page category name'
+      });
+      return;
+    }
+
+    try {
+      const updatedData = {
+        name: newPageCategoryName.trim(),
+        description: newPageCategoryDescription.trim() || `Page category: ${newPageCategoryName.trim()}`,
+        updatedAt: new Date()
+      };
+
+      const result = await FirebaseDatabaseService.updatePageCategory(editingPageCategory.id, updatedData);
+
+      if (result.success) {
+        console.log('✅ Page category updated successfully');
+        addToast({
+          type: 'success',
+          message: 'Page category updated successfully'
+        });
+
+        // Reload page categories from database
+        const categories = await FirebaseDatabaseService.getPageCategories();
+        setPageCategories(categories);
+
+        setEditingPageCategory(null);
+        setNewPageCategoryName('');
+        setNewPageCategoryDescription('');
+        setShowPageCategoryModal(false);
+        refreshData();
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.updateCategory(currentAdmin, `Updated page category: ${newPageCategoryName.trim()}`);
+        }
+      } else {
+        throw new Error('Failed to update page category');
+      }
+    } catch (error) {
+      console.error('❌ Error updating page category:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to update page category'
+      });
+    }
+  };
+
+  const handleDeletePageCategory = (pageCategory: any) => {
+    setPageCategoryToDelete(pageCategory);
+    setShowDeletePageCategoryDialog(true);
+  };
+
+  const confirmDeletePageCategory = async () => {
+    if (!pageCategoryToDelete) return;
+
+    try {
+      console.log('🗑️ Deleting page category with ID:', pageCategoryToDelete.id);
+
+      const result = await FirebaseDatabaseService.deletePageCategory(pageCategoryToDelete.id);
+
+      if (result.success) {
+        console.log('✅ Page category deleted successfully');
+        addToast({
+          type: 'success',
+          message: 'Page category deleted successfully'
+        });
+
+        // Reload page categories from database
+        const categories = await FirebaseDatabaseService.getPageCategories();
+        setPageCategories(categories);
+
+        setShowDeletePageCategoryDialog(false);
+        setPageCategoryToDelete(null);
+        refreshData();
+
+        // Log admin action
+        if (currentAdmin) {
+          logAdminAction.deleteCategory(currentAdmin, `Deleted page category: ${pageCategoryToDelete.name}`);
+        }
+      } else {
+        throw new Error('Failed to delete page category');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting page category:', error);
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to delete page category'
+      });
+    }
+  };
+
+  const cancelDeletePageCategory = () => {
+    setShowDeletePageCategoryDialog(false);
+    setPageCategoryToDelete(null);
+  };
+
   // Page management functions
   const handleAddPage = async () => {
     if (!newPageName.trim() || !newPageDate.trim() || !newPageLocation.trim()) {
@@ -532,7 +714,7 @@ export default function AdminPage() {
     setNewPageLocation(page.location);
     setNewPageDescription(''); // Description not supported in PraiseNight type
     setNewPageCategory(page.category);
-
+    setNewPagePageCategory(page.pageCategory || ''); // Set page category
     // Use countdown object directly
     setNewPageDays(page.countdown.days);
     setNewPageHours(page.countdown.hours);
@@ -559,31 +741,34 @@ export default function AdminPage() {
 
       // Upload banner image if a new file was selected
       if (newPageBannerFile) {
-        console.log('📤 Uploading banner image...');
-        const uploadResult = await uploadBannerImage(newPageBannerFile, editingPage.id);
+        const uploadResult = await uploadBannerImage(newPageBannerFile, editingPage.firebaseId || editingPage.id.toString());
         if (uploadResult.success && uploadResult.url) {
           bannerImageUrl = uploadResult.url;
-          console.log('✅ Banner image uploaded:', bannerImageUrl);
         } else {
-          throw new Error(uploadResult.error || 'Failed to upload banner image');
+          throw new Error('Failed to upload banner image');
         }
       }
 
-      const updatedPageData = {
+      // Prepare page data
+      const pageData = {
         name: newPageName.trim(),
         date: newPageDate.trim(),
         location: newPageLocation.trim(),
         category: newPageCategory,
+        pageCategory: newPagePageCategory || null, // Add page category
+        bannerImage: bannerImageUrl || null,
         countdown: {
           days: newPageDays,
           hours: newPageHours,
           minutes: newPageMinutes,
           seconds: newPageSeconds
-        },
-        bannerImage: bannerImageUrl
+        }
       };
 
-      const result = await FirebaseDatabaseService.updatePraiseNight(editingPage.firebaseId || editingPage.id.toString(), updatedPageData);
+      console.log('🔄 Updating page with data:', pageData);
+
+      // Update the page in Firebase
+      const result = await FirebaseDatabaseService.updatePraiseNight(editingPage.firebaseId || editingPage.id.toString(), pageData);
 
       if (result.success) {
         console.log('✅ Page updated successfully');
@@ -599,6 +784,7 @@ export default function AdminPage() {
         setNewPageLocation('');
         setNewPageDescription('');
         setNewPageCategory('unassigned');
+        setNewPagePageCategory(''); // Reset page category
         setNewPageDays(0);
         setNewPageHours(0);
         setNewPageMinutes(0);
@@ -884,15 +1070,7 @@ export default function AdminPage() {
   };
 
   // Additional category functions for page categories
-  const handleAddPageCategory = async () => {
-    // Same as handleAddCategory but for page-specific categories
-    await handleAddCategory();
-  };
 
-  const handleUpdatePageCategory = async () => {
-    // Same as handleUpdateCategory but for page-specific categories
-    await handleUpdateCategory();
-  };
 
   const handleEditCategoryContent = (content: any) => {
     // Handle editing category content (songs)
@@ -955,6 +1133,7 @@ export default function AdminPage() {
     );
   }
 
+  // Add PageCategoriesSection to the active sections
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex flex-col lg:flex-row">
       {/* Sidebar */}
@@ -999,6 +1178,8 @@ export default function AdminPage() {
             setNewPageDescription={setNewPageDescription}
             newPageCategory={newPageCategory}
             setNewPageCategory={setNewPageCategory}
+            newPagePageCategory={newPagePageCategory}
+            setNewPagePageCategory={setNewPagePageCategory}
             newPageDays={newPageDays}
             setNewPageDays={setNewPageDays}
             newPageHours={newPageHours}
@@ -1066,9 +1247,45 @@ export default function AdminPage() {
           />
         )}
 
+        {activeSection === 'Page Categories' && (
+          <PageCategoriesSection
+            pageCategories={pageCategories}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            showPageCategoryModal={showPageCategoryModal}
+            setShowPageCategoryModal={setShowPageCategoryModal}
+            editingPageCategory={editingPageCategory}
+            setEditingPageCategory={setEditingPageCategory}
+            newPageCategoryName={newPageCategoryName}
+            setNewPageCategoryName={setNewPageCategoryName}
+            newPageCategoryDescription={newPageCategoryDescription}
+            setNewPageCategoryDescription={setNewPageCategoryDescription}
+            showDeletePageCategoryDialog={showDeletePageCategoryDialog}
+            setShowDeletePageCategoryDialog={setShowDeletePageCategoryDialog}
+            pageCategoryToDelete={pageCategoryToDelete}
+            setPageCategoryToDelete={setPageCategoryToDelete}
+            handleAddPageCategory={handleAddPageCategory}
+            handleEditPageCategory={handleEditPageCategory}
+            handleUpdatePageCategory={handleUpdatePageCategory}
+            handleDeletePageCategory={handleDeletePageCategory}
+            confirmDeletePageCategory={confirmDeletePageCategory}
+            cancelDeletePageCategory={cancelDeletePageCategory}
+            addToast={addToast}
+          />
+        )}
+
         {activeSection === 'Members' && <MembersSection />}
         {activeSection === 'Media' && <MediaSection />}
         {activeSection === 'Notifications' && <SimpleNotificationsSection />}
+        {activeSection === 'Analytics' && (
+          <div className="h-full overflow-auto">
+            <iframe 
+              src="/pages/admin/analytics" 
+              className="w-full h-full border-0"
+              title="Analytics Dashboard"
+            />
+          </div>
+        )}
       </div>
 
       {/* Modals */}
@@ -1087,6 +1304,8 @@ export default function AdminPage() {
         setNewPageDescription={setNewPageDescription}
         newPageCategory={newPageCategory}
         setNewPageCategory={setNewPageCategory}
+        newPagePageCategory={newPagePageCategory}
+        setNewPagePageCategory={setNewPagePageCategory}
         newPageDays={newPageDays}
         setNewPageDays={setNewPageDays}
         newPageHours={newPageHours}
@@ -1109,6 +1328,8 @@ export default function AdminPage() {
         setEditingPageCategory={setEditingPageCategory}
         newPageCategoryName={newPageCategoryName}
         setNewPageCategoryName={setNewPageCategoryName}
+        newPageCategoryDescription={newPageCategoryDescription}
+        setNewPageCategoryDescription={setNewPageCategoryDescription}
         handleAddCategory={handleAddCategory}
         handleUpdateCategory={handleUpdateCategory}
         handleAddPageCategory={handleAddPageCategory}

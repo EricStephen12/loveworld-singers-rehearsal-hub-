@@ -538,7 +538,7 @@ function PraiseNightPageContent() {
     }))
   });
 
-  // Song categories - get from Supabase data
+  // Song categories - get from Supabase data (supports both single and multiple categories)
   const songCategories = useMemo(() => {
     // Use finalSongData instead of currentPraiseNight.songs for more reliable data
     const songsToUse = finalSongData.length > 0 ? finalSongData : (currentPraiseNight?.songs || []);
@@ -548,7 +548,19 @@ function PraiseNightPageContent() {
       return [];
     }
     
-    const uniqueCategories = [...new Set(songsToUse.map(song => song.category).filter(cat => cat && cat.trim()))];
+    // Collect categories from both single category and categories array
+    const allCategories: string[] = [];
+    songsToUse.forEach(song => {
+      if (song.categories && Array.isArray(song.categories)) {
+        // New multi-category songs
+        allCategories.push(...song.categories.filter(cat => cat && cat.trim()));
+      } else if (song.category && song.category.trim()) {
+        // Old single category songs
+        allCategories.push(song.category);
+      }
+    });
+    
+    const uniqueCategories = [...new Set(allCategories)];
     
     // Debug logging
     console.log('🎵 Available categories from songs:', uniqueCategories);
@@ -556,6 +568,7 @@ function PraiseNightPageContent() {
     console.log('🎵 All songs data:', songsToUse.map(song => ({
       title: song.title,
       category: song.category,
+      categories: song.categories,
       status: song.status
     })));
     
@@ -645,13 +658,19 @@ function PraiseNightPageContent() {
     // The getCurrentSongs() call will get the new data
   }, [currentPraiseNight]);
 
+  // Helper function to check if song belongs to category (supports both single and multiple categories)
+  const songBelongsToCategory = (song: any, targetCategory: string) => {
+    // Check new categories array first
+    if (song.categories && Array.isArray(song.categories) && song.categories.length > 0) {
+      return song.categories.some((cat: string) => cat.trim() === targetCategory.trim());
+    }
+    // Fallback to old single category
+    return (song.category || '').trim() === targetCategory.trim();
+  };
+
   // Filter songs based on selected category and status
   const filteredSongs = finalSongData.filter(song => {
-    // Normalize category names for comparison (trim whitespace, handle case)
-    const normalizedSongCategory = (song.category || '').trim();
-    const normalizedActiveCategory = (activeCategory || '').trim();
-    
-    const matchesCategory = normalizedSongCategory === normalizedActiveCategory;
+    const matchesCategory = songBelongsToCategory(song, activeCategory);
     const matchesStatus = song.status === activeFilter;
     
     // Debug logging
@@ -659,9 +678,8 @@ function PraiseNightPageContent() {
       console.log('🎵 Song category mismatch:', {
         songTitle: song.title,
         songCategory: song.category,
-        normalizedSongCategory: normalizedSongCategory,
+        songCategories: song.categories,
         activeCategory: activeCategory,
-        normalizedActiveCategory: normalizedActiveCategory,
         matches: matchesCategory
       });
     }
@@ -671,15 +689,11 @@ function PraiseNightPageContent() {
 
   // Get counts for current category
   const categoryHeardCount = finalSongData.filter(song => {
-    const normalizedSongCategory = (song.category || '').trim();
-    const normalizedActiveCategory = (activeCategory || '').trim();
-    return normalizedSongCategory === normalizedActiveCategory && song.status === 'heard';
+    return songBelongsToCategory(song, activeCategory) && song.status === 'heard';
   }).length;
   
   const categoryUnheardCount = finalSongData.filter(song => {
-    const normalizedSongCategory = (song.category || '').trim();
-    const normalizedActiveCategory = (activeCategory || '').trim();
-    return normalizedSongCategory === normalizedActiveCategory && song.status === 'unheard';
+    return songBelongsToCategory(song, activeCategory) && song.status === 'unheard';
   }).length;
   
   const categoryTotalCount = categoryHeardCount + categoryUnheardCount;

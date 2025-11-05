@@ -14,21 +14,51 @@ import {
 } from 'firebase/auth'
 import { auth, db } from './firebase-setup'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { SessionManager } from './session-manager'
+import { ErrorHandler } from './error-handler'
 
 export class FirebaseAuthService {
   // Sign in with email and password
   static async signIn(email: string, password: string) {
     try {
+      // Validate inputs
+      const emailError = ErrorHandler.validateEmail(email)
+      if (emailError) {
+        return { user: null, error: emailError, userFriendly: true }
+      }
+      
+      const passwordError = ErrorHandler.validatePassword(password)
+      if (passwordError) {
+        return { user: null, error: passwordError, userFriendly: true }
+      }
+      
       // Set persistence to LOCAL (keeps user signed in across browser sessions)
       await setPersistence(auth, browserLocalPersistence)
       
       const result = await signInWithEmailAndPassword(auth, email, password)
+      
+      // Enforce single-device: block login if another device is active
+      const sessionCheck = await SessionManager.canUserLogin(result.user.uid)
+      if (!sessionCheck.canLogin) {
+        // Sign out immediately
+        await signOut(auth)
+        return { 
+          user: null, 
+          error: `This account is already logged in on ${sessionCheck.activeDevice}. Please ask the account owner to log out from that device first, or sign up for your own account instead.`,
+          userFriendly: true 
+        }
+      }
+      
+      // Create new session
+      await SessionManager.createSession(result.user)
+      
       return { user: result.user, error: null }
     } catch (error: any) {
-      return { user: null, error: error.message }
+      const friendlyError = ErrorHandler.getErrorMessage(error, 'auth')
+      return { user: null, error: friendlyError, userFriendly: true }
     }
   }
-
+  
   // Sign up with email and password
   static async signUp(email: string, password: string, userData: any) {
     try {
@@ -53,10 +83,17 @@ export class FirebaseAuthService {
   // Sign out
   static async signOut() {
     try {
+      const currentUser = auth.currentUser
+      if (currentUser) {
+        // End session first
+        await SessionManager.endSession(currentUser.uid)
+      }
+      
       await signOut(auth)
       return { error: null }
     } catch (error: any) {
-      return { error: error.message }
+      const friendlyError = ErrorHandler.getErrorMessage(error, 'auth')
+      return { error: friendlyError }
     }
   }
 

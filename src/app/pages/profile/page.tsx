@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, LogOut, Menu, X, Bell, Music, BarChart3, HelpCircle, Home, Play, Loader2, AlertTriangle, Trash2, ChevronDown, ChevronUp, MapPin, Phone, Mail, Shield, Briefcase } from 'lucide-react'
+import { ArrowLeft, User, Users, Calendar, QrCode, CheckCircle, Clock, Award, Settings, Edit, Camera, LogOut, Menu, X, Bell, Music, BarChart3, HelpCircle, Home, Play, Loader2, AlertTriangle, Trash2, ChevronDown, ChevronUp, MapPin, Phone, Mail, Shield, Briefcase, Smartphone } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -57,6 +57,7 @@ function ProfilePage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
@@ -91,6 +92,7 @@ function ProfilePage() {
       loadUserGroups()
     }
   }, [user?.uid])
+  
 
   // Refresh profile data when component mounts
   useEffect(() => {
@@ -164,29 +166,55 @@ function ProfilePage() {
     }
   }
 
-  // Use default profile data if none is loaded yet - with president's data as demo
-  const profileData = currentProfile || {
-    id: user?.uid || 'president-demo-123',
-    first_name: user ? ((user as any)?.user_metadata?.first_name || '') : 'The',
-    middle_name: user ? ((user as any)?.user_metadata?.middle_name || '') : '',
-    last_name: user ? ((user as any)?.user_metadata?.last_name || '') : 'President',
-    email: user?.email || 'president@loveworld.com',
-    phone_number: user ? '' : '+1 (555) 000-0001',
-    gender: user ? '' : 'Male',
-    birthday: user ? '' : '1985-01-01',
-    region: user ? '' : 'Global',
-    zone: user ? '' : 'International',
-    church: user ? '' : 'LoveWorld International',
-    designation: user ? '' : 'President',
-    administration: user ? '' : 'President',
+  // Check if this is the president (local signin - no Firebase user)
+  const isPresident = !user
+  
+  // Use default profile data if none is loaded yet
+  const profileData = currentProfile || (isPresident ? {
+    // President's hardcoded data (only shown when no Firebase user)
+    id: 'president-demo-123',
+    first_name: 'The',
+    middle_name: '',
+    last_name: 'President',
+    email: 'president@loveworld.com',
+    phone_number: '+1 (555) 000-0001',
+    gender: 'Male',
+    birthday: '1985-01-01',
+    region: 'Global',
+    zone: 'International',
+    church: 'LoveWorld International',
+    designation: 'President',
+    administration: 'President',
     social_provider: 'email',
-    social_id: user?.email || 'president@loveworld.com',
+    social_id: 'president@loveworld.com',
     profile_image_url: '',
     profile_completed: true,
     email_verified: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
-  }
+  } : {
+    // Firebase users fallback (empty profile until data loads)
+    id: user?.uid || '',
+    first_name: (user as any)?.user_metadata?.first_name || '',
+    middle_name: (user as any)?.user_metadata?.middle_name || '',
+    last_name: (user as any)?.user_metadata?.last_name || '',
+    email: user?.email || '',
+    phone_number: '',
+    gender: '',
+    birthday: '',
+    region: '',
+    zone: '',
+    church: '',
+    designation: '',
+    administration: '',
+    social_provider: 'email',
+    social_id: user?.email || '',
+    profile_image_url: '',
+    profile_completed: false,
+    email_verified: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  })
 
   // Debug logging
   console.log('🔍 Profile Debug Info:')
@@ -796,6 +824,7 @@ function ProfilePage() {
                   </div>
                 </div>
               </div>
+              
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { ChevronRight, Calendar, Users, Music, Clock, MapPin, Bell } from 'lucide-react'
+import { ChevronRight, Calendar, Users, Music, MapPin, Bell } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -116,26 +116,26 @@ export default function RehearsalsPage() {
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600'
     },
-    {
-      id: 'rehearsal-reviews',
-      title: 'Rehearsal Reviews and Assessments',
-      description: 'Review performance and get feedback',
-      icon: Clock,
-      href: '/pages/praise-night?category=unassigned',
-      gradient: 'from-amber-600 via-orange-600 to-red-600',
-      iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600'
-    },
-    {
-      id: 'ministry-review',
-      title: 'Ministry Review and Assessment',
-      description: 'Comprehensive ministry performance evaluation',
-      icon: Users,
-      href: '/pages/praise-night?category=unassigned',
-      gradient: 'from-indigo-600 via-purple-600 to-pink-600',
-      iconBg: 'bg-indigo-100',
-      iconColor: 'text-indigo-600'
-    },
+    // {
+    //   id: 'rehearsal-reviews',
+    //   title: 'Rehearsal Reviews and Assessments',
+    //   description: 'Review performance and get feedback',
+    //   icon: Clock,
+    //   href: '/pages/praise-night?category=unassigned',
+    //   gradient: 'from-amber-600 via-orange-600 to-red-600',
+    //   iconBg: 'bg-amber-100',
+    //   iconColor: 'text-amber-600'
+    // },
+    // {
+    //   id: 'ministry-review',
+    //   title: 'Ministry Review and Assessment',
+    //   description: 'Comprehensive ministry performance evaluation',
+    //   icon: Users,
+    //   href: '/pages/praise-night?category=unassigned',
+    //   gradient: 'from-indigo-600 via-purple-600 to-pink-600',
+    //   iconBg: 'bg-indigo-100',
+    //   iconColor: 'text-indigo-600'
+    // },
     {
       id: 'archives',
       title: 'Archives',

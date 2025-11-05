@@ -40,6 +40,7 @@ export default function EditSongModal({
   // Form state
   const [songTitle, setSongTitle] = useState('');
   const [songCategory, setSongCategory] = useState('');
+  const [songCategories, setSongCategories] = useState<string[]>([]);
   const [songPraiseNight, setSongPraiseNight] = useState('');
   const [songStatus, setSongStatus] = useState<'heard' | 'unheard'>('unheard');
   const [songLeadSinger, setSongLeadSinger] = useState('');
@@ -428,6 +429,15 @@ export default function EditSongModal({
       // Editing existing song - populate form with song data
       setSongTitle(song.title || '');
       setSongCategory(song.category || '');
+      // Initialize categories from existing song data
+      if (song.categories && Array.isArray(song.categories)) {
+        setSongCategories(song.categories);
+      } else if (song.category) {
+        // Fallback: convert single category to array for backward compatibility
+        setSongCategories([song.category]);
+      } else {
+        setSongCategories([]);
+      }
       // Find the praise night name from the praiseNightId
       const praiseNight = praiseNightCategories.find(pn => pn.id === song.praiseNightId);
       setSongPraiseNight(praiseNight?.name || '');
@@ -481,6 +491,7 @@ export default function EditSongModal({
       // Adding new song - reset all form fields to empty/default values
       setSongTitle('');
       setSongCategory('');
+      setSongCategories([]);
       // Set default praise night to the first available one
       setSongPraiseNight(praiseNightCategories.length > 0 ? praiseNightCategories[0].name : '');
       setSongStatus('unheard');
@@ -558,11 +569,12 @@ export default function EditSongModal({
           author: 'Pastor'
         }
       ] : [];
-
+      
       const songData: PraiseNightSong = {
         title: songTitle.trim(),
         status: songStatus,
-        category: songCategory,
+        category: songCategory, // Keep for backward compatibility
+        categories: songCategories, // New multi-category support
         praiseNightId: selectedPraiseNight?.id,
         lyrics: songLyrics, // BasicTextEditor provides HTML
         leadSinger: songLeadSinger,
@@ -748,18 +760,35 @@ export default function EditSongModal({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Category *
+                            Categories * (Select one or more)
                           </label>
-                          <select
-                            value={songCategory}
-                            onChange={(e) => setSongCategory(e.target.value)}
-                            className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                          >
-                            <option value="">Select Category</option>
+                          <div className="border-2 border-slate-300 rounded-lg p-3 bg-slate-50 max-h-48 overflow-y-auto">
                             {categories.map(category => (
-                              <option key={category.id} value={category.name}>{category.name}</option>
+                              <label key={category.id} className="flex items-center space-x-3 py-2 hover:bg-slate-100 rounded px-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={songCategories.includes(category.name)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      const newCategories = [...songCategories, category.name];
+                                      setSongCategories(newCategories);
+                                      // Also update single category for backward compatibility (use first selected)
+                                      setSongCategory(newCategories[0] || '');
+                                    } else {
+                                      const newCategories = songCategories.filter(cat => cat !== category.name);
+                                      setSongCategories(newCategories);
+                                      setSongCategory(newCategories[0] || '');
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500 focus:ring-2"
+                                />
+                                <span className="text-sm text-slate-700">{category.name}</span>
+                              </label>
                             ))}
-                          </select>
+                          </div>
+                          <div className="mt-2 text-xs text-slate-500">
+                            Selected: {songCategories.length > 0 ? songCategories.join(', ') : 'None'}
+                          </div>
                         </div>
 
                         <div>
@@ -1161,10 +1190,10 @@ Do Re Mi Fa Sol La Ti Do"
                   <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50 rounded-t-lg">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-base sm:text-lg font-semibold text-slate-900 flex items-center gap-2">
-                          <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                      <h4 className="text-base sm:text-lg font-semibold text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
                           Pastor Comment
-                        </h4>
+                      </h4>
                         <button
                           onClick={() => handleCreateHistory('comments')}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-md transition-colors"
@@ -1184,11 +1213,11 @@ Do Re Mi Fa Sol La Ti Do"
                         onChange={(value) => setPastorComment(value)}
                         placeholder="Enter Pastor's comment here..."
                         className="w-full"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                            />
+                          </div>
+                          </div>
+                        </div>
+                      </div>
             </div>
           </div>
           

@@ -1,4 +1,4 @@
-import { Home, User, Bell, Users, Music, Calendar, Play, BarChart3, HelpCircle, LogOut, Headphones, MessageCircle, RefreshCw, RotateCcw, RotateCw } from 'lucide-react'
+import { Home, User, Bell, Users, Music, Calendar, Play, BarChart3, HelpCircle, LogOut, Headphones, MessageCircle, RefreshCw, RotateCcw, RotateCw, Mic } from 'lucide-react'
 
 export type MenuItem = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
@@ -52,6 +52,12 @@ export const getMenuItems = (onLogout?: () => void, onRefresh?: () => void): Men
     icon: Play,
     title: 'Media',
     href: '#',
+    badge: null,
+  },
+  {
+    icon: Mic,
+    title: 'Audio Lab',
+    href: '/pages/audio-lab',
     badge: null,
   },
   {

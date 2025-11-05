@@ -33,6 +33,7 @@ export class WebRTCService {
     onCallStateChange?: (state: CallState) => void
     onRemoteStream?: (stream: MediaStream) => void
     onCallEnded?: () => void
+    onIncomingCall?: (signal: any) => void
   } = {}
 
   private defaultConfig: CallConfig = {
@@ -59,6 +60,43 @@ export class WebRTCService {
   // Get current call state
   getCallState(): CallState {
     return { ...this.callState }
+  }
+
+  // Start listening for incoming signals
+  async startListeningForCalls(): Promise<void> {
+    const { callSignalingService } = await import('./call-signaling-service')
+    
+    await callSignalingService.listenForSignals(
+      // On offer received
+      async (signal) => {
+        console.log('📞 Incoming call from:', signal.from)
+        // Show incoming call UI
+        this.callbacks.onIncomingCall?.(signal)
+      },
+      // On answer received
+      async (signal) => {
+        if (this.callState.peerConnection) {
+          await this.callState.peerConnection.setRemoteDescription(signal.data)
+        }
+      },
+      // On ICE candidate received
+      async (signal) => {
+        if (this.callState.peerConnection) {
+          await this.callState.peerConnection.addIceCandidate(new RTCIceCandidate(signal.data))
+        }
+      },
+      // On call end received
+      () => {
+        this.endCall()
+      }
+    )
+  }
+
+  // Stop listening for calls
+  stopListeningForCalls(): void {
+    import('./call-signaling-service').then(({ callSignalingService }) => {
+      callSignalingService.stopListening()
+    })
   }
 
   // Start a call (video or voice)
@@ -218,8 +256,15 @@ export class WebRTCService {
   }
 
   // End the current call
-  endCall(): void {
+  async endCall(): Promise<void> {
     console.log('Ending call')
+    
+    // Send call end signal to other peer
+    if (this.callState.isInCall) {
+      const { callSignalingService } = await import('./call-signaling-service')
+      // You'll need to store the target user ID in callState
+      // await callSignalingService.sendCallEnd(targetUserId)
+    }
     
     // Stop local stream
     if (this.callState.localStream) {
@@ -275,11 +320,24 @@ export class WebRTCService {
     return false
   }
 
-  // Send signaling message (in a real app, this would go through a signaling server)
-  private sendSignalingMessage(type: string, data: any, targetUserId: string): void {
+  // Send signaling message through Firebase
+  private async sendSignalingMessage(type: string, data: any, targetUserId: string): Promise<void> {
     console.log(`Sending ${type} to ${targetUserId}:`, data)
-    // In a real implementation, this would send the message through a WebSocket or similar
-    // For now, we'll just log it
+    
+    // Import signaling service dynamically to avoid circular dependencies
+    const { callSignalingService } = await import('./call-signaling-service')
+    
+    switch (type) {
+      case 'offer':
+        await callSignalingService.sendOffer(targetUserId, data, this.callState.callType!)
+        break
+      case 'answer':
+        await callSignalingService.sendAnswer(targetUserId, data)
+        break
+      case 'ice-candidate':
+        await callSignalingService.sendIceCandidate(targetUserId, data)
+        break
+    }
   }
 
   // Update call state and notify callbacks

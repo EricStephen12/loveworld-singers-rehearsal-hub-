@@ -64,6 +64,8 @@ interface PagesSectionProps {
   setNewPageDescription: (description: string) => void;
   newPageCategory: 'unassigned' | 'pre-rehearsal' | 'ongoing' | 'archive';
   setNewPageCategory: (category: 'unassigned' | 'pre-rehearsal' | 'ongoing' | 'archive') => void;
+  newPagePageCategory: string; // New prop
+  setNewPagePageCategory: (pageCategory: string) => void; // New prop
   newPageDays: number;
   setNewPageDays: (days: number) => void;
   newPageHours: number;
@@ -126,6 +128,8 @@ export default function PagesSection(props: PagesSectionProps) {
     setNewPageDescription,
     newPageCategory,
     setNewPageCategory,
+    newPagePageCategory, // New prop
+    setNewPagePageCategory, // New prop
     newPageDays,
     setNewPageDays,
     newPageHours,

@@ -1,20 +1,22 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get server time (UTC)
-    const serverTime = new Date()
+    // Get the current server time
+    const serverTime = new Date();
     
+    // Return server time with timezone info
     return NextResponse.json({
       serverTime: serverTime.toISOString(),
       timestamp: serverTime.getTime(),
-      timezone: 'UTC'
-    })
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      unix: Math.floor(serverTime.getTime() / 1000)
+    });
   } catch (error) {
-    console.error('Error getting server time:', error)
+    console.error('Error getting server time:', error);
     return NextResponse.json(
       { error: 'Failed to get server time' },
       { status: 500 }
-    )
+    );
   }
 }

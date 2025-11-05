@@ -21,6 +21,7 @@ import { EmergencyRecovery } from '@/utils/emergency-recovery'
 import FeatureUpdateChecker from '@/components/FeatureUpdateChecker'
 import OfflineIndicator from '@/components/OfflineIndicator'
 import ForceUpdateButton from '@/components/ForceUpdateButton'
+import { AnalyticsProvider } from '@/components/AnalyticsProvider'
 import '@/utils/auth-debug'
 import '@/utils/safeAreaManager'
 
@@ -206,16 +207,18 @@ export default function RootLayout({
         <ErrorBoundary>
           <AuthProvider>
             <AudioProvider>
-              {/* <ScreenshotPrevention /> */}
-              <main className="h-full w-full bg-gray-50">
-                {children}
-              </main>
-              <PWAInstall />
-              <RealtimeNotifications />
-              <PushNotificationListener />
-              <OfflineIndicator />
-              <FeatureUpdateChecker />
-              <ForceUpdateButton />
+              <AnalyticsProvider>
+                {/* <ScreenshotPrevention /> */}
+                <main className="h-full w-full bg-gray-50">
+                  {children}
+                </main>
+                <PWAInstall />
+                <RealtimeNotifications />
+                <PushNotificationListener />
+                <OfflineIndicator />
+                <FeatureUpdateChecker />
+                <ForceUpdateButton />
+              </AnalyticsProvider>
             </AudioProvider>
           </AuthProvider>
         </ErrorBoundary>

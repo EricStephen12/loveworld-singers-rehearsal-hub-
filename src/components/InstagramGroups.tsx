@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { MessageCircle, Send, Search, MoreVertical, Camera, Paperclip, Mic, Phone, Video, ChevronLeft, ChevronRight, ArrowLeft, Check, CheckCheck, Users, UserPlus, Info, Heart, Reply, Share, ArrowUpRight, X, Play, Pause, Volume2 } from 'lucide-react'
+import { MessageCircle, Send, Search, MoreVertical, Camera, Paperclip, Mic, Phone, Video, ChevronLeft, ChevronRight, ChevronDown, ArrowLeft, Check, CheckCheck, Users, UserPlus, Info, Heart, Reply, Share, ArrowUpRight, X, Play, Pause, Volume2, Copy, Edit, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
 import { cacheService, CACHE_KEYS } from '@/lib/cache-service'
@@ -61,6 +61,32 @@ interface Friend {
   unread_count: number
 }
 
+// Message Loading Skeleton
+const MessageSkeleton = () => (
+  <div className="space-y-3 p-4">
+    {[1, 2, 3, 4, 5].map((i) => (
+      <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'} animate-pulse`}>
+        <div className="max-w-[70%] space-y-2">
+          <div className={`h-16 rounded-lg ${i % 2 === 0 ? 'bg-purple-200' : 'bg-gray-200'}`}></div>
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
+// Typing Indicator
+const TypingIndicator = () => (
+  <div className="flex justify-start mb-2 animate-fadeIn">
+    <div className="bg-white rounded-lg px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-1">
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+      </div>
+    </div>
+  </div>
+)
+
 export default function WhatsAppChat() {
   const { user, profile } = useAuth()
   const router = useRouter()
@@ -86,6 +112,10 @@ export default function WhatsAppChat() {
   const [callState, setCallState] = useState<any>(null)
   const [recordingState, setRecordingState] = useState<any>(null)
   const [messageReactions, setMessageReactions] = useState<Map<string, any>>(new Map())
+  const [showScrollButton, setShowScrollButton] = useState(false)
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   
   // Services
   const webrtcService = useRef(WebRTCService.getInstance())
@@ -187,7 +217,11 @@ export default function WhatsAppChat() {
               // Get all members from Firebase profiles collection who have this group
               const allUsers = await FirebaseDatabaseService.getCollection('profiles')
               const groupMembers = allUsers
-                .filter((u: any) => u.groups && u.groups.includes(groupName))
+                .filter((u: any) => {
+                  // Check if user has this group in their groups array
+                  const userGroups = u.groups || []
+                  return Array.isArray(userGroups) && userGroups.includes(groupName)
+                })
                 .map((u: any) => ({
                   id: u.id,
                   user_id: u.id,
@@ -198,6 +232,8 @@ export default function WhatsAppChat() {
                   administration: u.administration || 'Member',
                   is_admin: false
                 }))
+              
+              console.log(`👥 Found ${groupMembers.length} members for ${mapping.name}`)
 
               return {
                 id: groupName,
@@ -371,8 +407,9 @@ export default function WhatsAppChat() {
       if (!selectedGroup && !selectedFriend) return
 
       try {
+        setIsLoadingMessages(true)
         const chatId = selectedGroup ? selectedGroup.id : `dm_${selectedFriend?.user_id}`
-        console.log('Loading messages for chat:', chatId)
+        console.log('📨 Loading messages for chat:', chatId)
         
         const msgs = await FirebaseDatabaseService.getCollectionWhere(
           'group_messages',
@@ -382,32 +419,129 @@ export default function WhatsAppChat() {
         )
         
         if (msgs && msgs.length > 0) {
-        setMessages((msgs as Message[]).sort((a, b) => 
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        ))
-        } else {
-          // If no messages found, create some sample messages for demo
-          const sampleMessages: Message[] = [
-            {
-              id: '1',
-              group_id: chatId,
-              sender_id: selectedGroup ? selectedGroup.members[0]?.user_id || 'demo' : selectedFriend?.user_id || 'demo',
-              sender_name: selectedGroup ? selectedGroup.members[0]?.first_name || 'Demo User' : selectedFriend?.first_name || 'Demo User',
-              content: selectedGroup ? `Welcome to ${selectedGroup.name}! 🎵` : 'Hello! How are you?',
-              timestamp: new Date(Date.now() - 60000).toISOString(),
-              read: true
+          const sortedMessages = (msgs as Message[]).sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          )
+          setMessages(sortedMessages)
+          console.log(`✅ Loaded ${sortedMessages.length} messages`)
+          
+          // Load reactions for all messages
+          const reactionsMap = new Map()
+          for (const msg of sortedMessages) {
+            const likes = await FirebaseDatabaseService.getCollectionWhere('message_likes', 'message_id', '==', msg.id)
+            if (likes && likes.length > 0) {
+              reactionsMap.set(msg.id, { likes, shares: [] })
             }
-          ]
-          setMessages(sampleMessages)
+          }
+          setMessageReactions(reactionsMap)
+        } else {
+          // If no messages found, show welcome message
+          const welcomeMessage: Message = {
+            id: `welcome_${chatId}`,
+            group_id: chatId,
+            sender_id: 'system',
+            sender_name: 'System',
+            content: selectedGroup 
+              ? `Welcome to ${selectedGroup.name}! 🎵 Start chatting with your group members.` 
+              : `Start your conversation with ${selectedFriend?.first_name}!`,
+            timestamp: new Date().toISOString(),
+            read: true
+          }
+          setMessages([welcomeMessage])
+          console.log('📭 No messages found, showing welcome message')
         }
       } catch (error) {
-        console.error('Error loading messages:', error)
+        console.error('❌ Error loading messages:', error)
         setMessages([])
+      } finally {
+        setIsLoadingMessages(false)
       }
     }
 
     loadMessages()
+    
+    // Set up real-time listener for new messages
+    const chatId = selectedGroup ? selectedGroup.id : selectedFriend ? `dm_${selectedFriend.user_id}` : null
+    if (!chatId) return
+    
+    // Poll for new messages every 5 seconds
+    const interval = setInterval(async () => {
+      try {
+        const msgs = await FirebaseDatabaseService.getCollectionWhere(
+          'group_messages',
+          'group_id',
+          '==',
+          chatId
+        )
+        
+        if (msgs && msgs.length > 0) {
+          const sortedMessages = (msgs as Message[]).sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          )
+          setMessages(sortedMessages)
+        }
+      } catch (error) {
+        console.error('Error polling messages:', error)
+      }
+    }, 5000)
+    
+    return () => clearInterval(interval)
   }, [selectedGroup, selectedFriend])
+
+  // Scroll detection for scroll-to-bottom button
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+      setShowScrollButton(!isNearBottom)
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [selectedGroup, selectedFriend])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC to close modals
+      if (e.key === 'Escape') {
+        if (showCallInterface) {
+          webrtcService.current.endCall()
+          setShowCallInterface(false)
+        } else if (showMessageMenu) {
+          setShowMessageMenu(false)
+          setSelectedMessage(null)
+        } else if (showGroupInfo) {
+          setShowGroupInfo(false)
+        } else if (isSearchOpen) {
+          setIsSearchOpen(false)
+          setSearchQuery('')
+        } else if (replyingTo) {
+          setReplyingTo(null)
+          setReplyText('')
+        }
+      }
+      
+      // Ctrl/Cmd + K for search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setIsSearchOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showCallInterface, showMessageMenu, showGroupInfo, isSearchOpen, replyingTo])
+
+  const scrollToBottom = () => {
+    messagesContainerRef.current?.scrollTo({
+      top: messagesContainerRef.current.scrollHeight,
+      behavior: 'smooth'
+    })
+  }
 
   const handleSendMessage = async () => {
     if (!user?.uid || !newMessage.trim()) return
@@ -415,21 +549,43 @@ export default function WhatsAppChat() {
 
     try {
       const chatId = selectedGroup ? selectedGroup.id : `dm_${selectedFriend?.user_id}`
+      const messageId = `msg_${Date.now()}_${user.uid}`
+      
+      let content = newMessage.trim()
+      
+      // If replying, prepend reply reference
+      if (replyingTo) {
+        content = `↩️ Replying to "${replyingTo.content.substring(0, 30)}..."\n\n${content}`
+      }
+      
       const message: Message = {
-        id: Date.now().toString(),
+        id: messageId,
         group_id: chatId,
         sender_id: user.uid,
-        sender_name: `${profile?.first_name} ${profile?.last_name}`,
-        content: newMessage,
+        sender_name: `${profile?.first_name || 'User'} ${profile?.last_name || ''}`.trim(),
+        content,
         timestamp: new Date().toISOString(),
         read: false
       }
 
-      await FirebaseDatabaseService.createDocument('group_messages', message.id, message as any)
+      // Optimistic update - show message immediately
       setMessages(prev => [...prev, message])
       setNewMessage('')
+      setReplyingTo(null)
+      setReplyText('')
+
+      // Save to Firebase in background
+      await FirebaseDatabaseService.createDocument('group_messages', messageId, {
+        ...message,
+        reply_to: replyingTo?.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      
+      console.log('✅ Message sent successfully:', messageId)
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('❌ Error sending message:', error)
+      alert('Failed to send message. Please try again.')
     }
   }
 
@@ -607,13 +763,37 @@ export default function WhatsAppChat() {
   // Message interaction handlers
   const handleLikeMessage = async (messageId: string) => {
     if (!user?.uid) return
-    await interactionService.current.likeMessage(messageId, user.uid)
-    // Refresh reactions
-    const reactions = await interactionService.current.getMessageReactions(messageId)
-    setMessageReactions(prev => new Map(prev.set(messageId, reactions)))
+    
+    try {
+      const likeId = `like_${messageId}_${user.uid}`
+      
+      // Check if already liked
+      const existingLike = await FirebaseDatabaseService.getDocument('message_likes', likeId)
+      
+      if (existingLike) {
+        // Unlike
+        await FirebaseDatabaseService.deleteDocument('message_likes', likeId)
+        console.log('❤️ Unliked message:', messageId)
+      } else {
+        // Like
+        await FirebaseDatabaseService.createDocument('message_likes', likeId, {
+          message_id: messageId,
+          user_id: user.uid,
+          user_name: `${profile?.first_name || 'User'} ${profile?.last_name || ''}`.trim(),
+          created_at: new Date().toISOString()
+        })
+        console.log('❤️ Liked message:', messageId)
+      }
+      
+      // Refresh reactions
+      const likes = await FirebaseDatabaseService.getCollectionWhere('message_likes', 'message_id', '==', messageId)
+      setMessageReactions(prev => new Map(prev.set(messageId, { likes: likes || [], shares: [] })))
+    } catch (error) {
+      console.error('❌ Error liking message:', error)
+    }
   }
 
-  const handleReplyToMessage = async (messageId: string) => {
+  const handleReplyToMessage = (messageId: string) => {
     const message = messages.find(m => m.id === messageId)
     if (message) {
       setReplyingTo(message)
@@ -623,30 +803,48 @@ export default function WhatsAppChat() {
 
   const handleShareMessage = async (messageId: string) => {
     if (!user?.uid) return
-    const targetGroupId = selectedGroup?.id
-    const targetFriendId = selectedFriend?.user_id
-    await interactionService.current.shareMessage(messageId, user.uid, targetGroupId, targetFriendId)
+    alert('Share feature coming soon!')
   }
 
   const handleForwardMessage = async (messageId: string) => {
     if (!user?.uid) return
-    const targetGroupId = selectedGroup?.id
-    const targetFriendId = selectedFriend?.user_id
-    await interactionService.current.forwardMessage(messageId, user.uid, targetGroupId, targetFriendId)
+    alert('Forward feature coming soon!')
   }
 
   const handleSendReply = async () => {
     if (!user?.uid || !profile || !replyingTo || !replyText.trim()) return
     
-    await interactionService.current.replyToMessage(
-      replyingTo.id,
-      user.uid,
-      `${profile.first_name} ${profile.last_name}`,
-      replyText.trim()
-    )
-    
-    setReplyingTo(null)
-    setReplyText('')
+    try {
+      const chatId = selectedGroup ? selectedGroup.id : `dm_${selectedFriend?.user_id}`
+      const replyId = `reply_${Date.now()}_${user.uid}`
+      
+      const replyMessage: Message = {
+        id: replyId,
+        group_id: chatId,
+        sender_id: user.uid,
+        sender_name: `${profile.first_name || 'User'} ${profile.last_name || ''}`.trim(),
+        content: `↩️ Replying to "${replyingTo.content.substring(0, 30)}..."\n\n${replyText.trim()}`,
+        timestamp: new Date().toISOString(),
+        read: false
+      }
+      
+      // Optimistic update
+      setMessages(prev => [...prev, replyMessage])
+      setReplyingTo(null)
+      setReplyText('')
+      
+      // Save to Firebase
+      await FirebaseDatabaseService.createDocument('group_messages', replyId, {
+        ...replyMessage,
+        reply_to: replyingTo.id,
+        created_at: new Date().toISOString()
+      })
+      
+      console.log('✅ Reply sent successfully')
+    } catch (error) {
+      console.error('❌ Error sending reply:', error)
+      alert('Failed to send reply. Please try again.')
+    }
   }
 
   const handlePlayVoiceMessage = (message: Message) => {
@@ -1200,7 +1398,8 @@ export default function WhatsAppChat() {
 
           {/* Messages Area - Telegram Style with Background */}
           <div
-            className="flex-1 overflow-y-auto p-4 space-y-1 content-bottom-safe"
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-4 space-y-1 content-bottom-safe relative"
             style={{
               backgroundImage: chatBackground
                 ? `url(${chatBackground})`
@@ -1211,12 +1410,30 @@ export default function WhatsAppChat() {
               backgroundRepeat: chatBackground ? 'no-repeat' : 'repeat'
             }}
           >
-            {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
+            {isLoadingMessages ? (
+              <MessageSkeleton />
+            ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center animate-fadeIn">
                 <div className="bg-white rounded-2xl shadow-sm p-8 max-w-sm">
-                  <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-700 font-medium">No messages yet</p>
-                  <p className="text-gray-400 text-sm mt-2">Start the conversation!</p>
+                  <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageCircle className="w-10 h-10 text-purple-600" />
+                  </div>
+                  <p className="text-gray-900 font-semibold text-lg mb-2">No messages yet</p>
+                  <p className="text-gray-500 text-sm mb-6">Start the conversation with a friendly message!</p>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      onClick={() => setNewMessage('Hello! 👋')}
+                      className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
+                    >
+                      Say Hi 👋
+                    </button>
+                    <button
+                      onClick={() => setNewMessage('How are you?')}
+                      className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
+                    >
+                      Ask How They Are
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -1248,8 +1465,8 @@ export default function WhatsAppChat() {
                     <div
                       className={`max-w-[70%] rounded-lg px-3 py-2 relative group ${
                         isMe
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-white text-gray-900'
+                          ? 'bg-purple-500 text-white animate-slide-in-right'
+                          : 'bg-white text-gray-900 animate-slide-in-left'
                       }`}
                       onTouchStart={(e) => {
                         const touch = e.touches[0]
@@ -1343,34 +1560,45 @@ export default function WhatsAppChat() {
                       </div>
 
                       {/* Reactions */}
-                      {reactions && (reactions.likes.length > 0 || reactions.shares.length > 0) && (
-                        <div className="absolute -bottom-2 right-2 flex items-center gap-1 bg-white rounded-full px-1.5 py-0.5 shadow-sm border border-gray-200">
-                          {reactions.likes.length > 0 && (
-                            <span className="text-xs flex items-center gap-0.5">
-                              ❤️ {reactions.likes.length}
-                            </span>
-                          )}
-                          {reactions.shares.length > 0 && (
-                            <span className="text-xs flex items-center gap-0.5">
-                              👍 {reactions.shares.length}
-                            </span>
-                          )}
+                      {reactions && reactions.likes && reactions.likes.length > 0 && (
+                        <div className="absolute -bottom-2 right-2 flex items-center gap-1 bg-white rounded-full px-2 py-0.5 shadow-md border border-gray-200">
+                          <span className="text-xs flex items-center gap-0.5">
+                            ❤️ <span className="font-medium">{reactions.likes.length}</span>
+                          </span>
                         </div>
                       )}
 
-                      {/* Quick Reaction on Long Press (Mobile) */}
-                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 hidden group-active:flex items-center gap-1.5 bg-white rounded-full shadow-lg px-2.5 py-1.5 border border-gray-200">
-                        <button onClick={() => handleLikeMessage(message.id)} className="text-base hover:scale-110 transition-transform">
+                      {/* Message Actions - Always visible on hover/tap */}
+                      <div className="absolute -top-8 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white rounded-full shadow-lg px-2 py-1 border border-gray-200">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleLikeMessage(message.id)
+                          }} 
+                          className="text-base hover:scale-125 transition-transform p-1"
+                          title="Like"
+                        >
                           ❤️
                         </button>
-                        <button onClick={() => handleLikeMessage(message.id)} className="text-base hover:scale-110 transition-transform">
-                          👍
-                        </button>
-                        <button onClick={() => handleLikeMessage(message.id)} className="text-base hover:scale-110 transition-transform">
-                          😂
-                        </button>
-                        <button onClick={() => handleReplyToMessage(message.id)} className="p-1 hover:bg-gray-100 rounded-full">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleReplyToMessage(message.id)
+                          }} 
+                          className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                          title="Reply"
+                        >
                           <Reply className="w-3.5 h-3.5 text-gray-600" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleShareMessage(message.id)
+                          }} 
+                          className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                          title="Share"
+                        >
+                          <Share className="w-3.5 h-3.5 text-gray-600" />
                         </button>
                       </div>
                     </div>
@@ -1378,7 +1606,50 @@ export default function WhatsAppChat() {
                 )
               })
             )}
+            
+            {/* Typing Indicator */}
+            {isTyping && <TypingIndicator />}
+            
+            {/* Scroll to Bottom Button */}
+            {showScrollButton && (
+              <button
+                onClick={scrollToBottom}
+                className="fixed bottom-24 right-6 bg-purple-600 text-white p-3 rounded-full shadow-lg hover:bg-purple-700 transition-all z-10"
+                style={{ animation: 'bounce 2s infinite' }}
+                title="Scroll to bottom"
+              >
+                <ChevronDown className="w-5 h-5" />
+              </button>
+            )}
           </div>
+
+          {/* Reply Indicator - Above Input */}
+          {replyingTo && (
+            <div className="bg-purple-50 border-t border-purple-200 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Reply className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-purple-900">
+                      Replying to {replyingTo.sender_name}
+                    </span>
+                  </div>
+                  <p className="text-sm text-purple-700 truncate">
+                    {replyingTo.content}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setReplyingTo(null)
+                    setReplyText('')
+                  }}
+                  className="p-1 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-full transition-colors flex-shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Message Input - With Safe Area (like praise night categories) */}
           <div className="bottom-bar-enhanced bg-white border-t border-gray-200 px-3 py-2 flex items-center gap-2 min-w-0">
@@ -1422,47 +1693,117 @@ export default function WhatsAppChat() {
             )}
           </div>
 
-          {/* Reply Input */}
-          {replyingTo && (
-            <div className="bg-blue-50 border-t border-blue-200 px-3 py-2">
-              <div className="flex items-center gap-2 mb-2">
-                <Reply className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-blue-800">Replying to {replyingTo.sender_name}</span>
-                <button
-                  onClick={() => setReplyingTo(null)}
-                  className="ml-auto text-blue-600 hover:text-blue-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex gap-2 min-w-0">
-                <input
-                  type="text"
-                  placeholder="Type your reply..."
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendReply()}
-                  className="flex-1 px-3 py-2 border border-blue-300 rounded-lg text-sm outline-none focus:border-blue-500 min-w-0"
-                />
-                <button
-                  onClick={handleSendReply}
-                  disabled={!replyText.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex-shrink-0"
-                >
-                  Send
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Call Interface */}
+      {/* Message Context Menu Modal */}
+      {showMessageMenu && selectedMessage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center sm:justify-center animate-fadeIn">
+          <div 
+            className="bg-white rounded-t-2xl sm:rounded-lg w-full sm:w-96 p-4"
+            style={{ animation: 'slideUp 0.3s ease-out' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Message Options</h3>
+              <button
+                onClick={() => {
+                  setShowMessageMenu(false)
+                  setSelectedMessage(null)
+                }}
+                className="p-1 text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  handleReplyToMessage(selectedMessage.id)
+                  setShowMessageMenu(false)
+                  setSelectedMessage(null)
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left"
+              >
+                <Reply className="w-5 h-5 text-gray-600" />
+                <span className="text-gray-900">Reply</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(selectedMessage.content)
+                  setShowMessageMenu(false)
+                  setSelectedMessage(null)
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left"
+              >
+                <Copy className="w-5 h-5 text-gray-600" />
+                <span className="text-gray-900">Copy Text</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleShareMessage(selectedMessage.id)
+                  setShowMessageMenu(false)
+                  setSelectedMessage(null)
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left"
+              >
+                <Share className="w-5 h-5 text-gray-600" />
+                <span className="text-gray-900">Share</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleForwardMessage(selectedMessage.id)
+                  setShowMessageMenu(false)
+                  setSelectedMessage(null)
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left"
+              >
+                <ArrowUpRight className="w-5 h-5 text-gray-600" />
+                <span className="text-gray-900">Forward</span>
+              </button>
+
+              {selectedMessage.sender_id === user?.uid && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowMessageMenu(false)
+                      setSelectedMessage(null)
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left"
+                  >
+                    <Edit className="w-5 h-5 text-gray-600" />
+                    <span className="text-gray-900">Edit</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (confirm('Delete this message?')) {
+                        setMessages(prev => prev.filter(m => m.id !== selectedMessage.id))
+                      }
+                      setShowMessageMenu(false)
+                      setSelectedMessage(null)
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-lg transition-colors text-left"
+                  >
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                    <span className="text-red-600">Delete</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Call Interface - Improved Mobile Support */}
       {showCallInterface && callState && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
+          className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4"
           onClick={(e) => {
-            // Close call if clicking on backdrop
             if (e.target === e.currentTarget) {
               webrtcService.current.endCall()
               setShowCallInterface(false)
@@ -1470,7 +1811,7 @@ export default function WhatsAppChat() {
           }}
         >
           <div 
-            className="bg-white rounded-lg p-6 w-full max-w-md mx-4 relative"
+            className="w-full max-w-4xl mx-auto relative"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
@@ -1479,50 +1820,67 @@ export default function WhatsAppChat() {
                 webrtcService.current.endCall()
                 setShowCallInterface(false)
               }}
-              className="absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              className="absolute top-4 right-4 z-10 p-3 bg-black bg-opacity-50 text-white hover:bg-opacity-70 rounded-full transition-colors"
               title="Close Call"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
 
-            <div className="text-center mb-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                {callState.callType === 'video' ? 'Video Call' : 'Voice Call'}
-              </h3>
-              <p className="text-gray-600">
+            {/* Call Info */}
+            <div className="absolute top-4 left-4 z-10 bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg">
+              <p className="font-semibold">
                 {selectedGroup ? selectedGroup.name : `${selectedFriend?.first_name} ${selectedFriend?.last_name}`}
+              </p>
+              <p className="text-sm text-gray-300">
+                {callState.isCallActive ? 'Connected' : 'Connecting...'}
               </p>
             </div>
 
             {/* Video Display */}
-            {callState.callType === 'video' && (
-              <div className="mb-6">
-                <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video">
+            {callState.callType === 'video' ? (
+              <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video">
+                {/* Remote Video (Full Screen) */}
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* Local Video (Picture-in-Picture) */}
+                <div className="absolute bottom-4 right-4 w-32 h-40 sm:w-40 sm:h-52 bg-gray-800 rounded-lg overflow-hidden shadow-2xl border-2 border-white">
                   <video
-                    ref={remoteVideoRef}
+                    ref={localVideoRef}
                     autoPlay
                     playsInline
+                    muted
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-2 right-2 w-24 h-32 bg-gray-800 rounded-lg overflow-hidden">
-                    <video
-                      ref={localVideoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
                 </div>
+              </div>
+            ) : (
+              // Voice Call UI
+              <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg p-12 text-center">
+                <div className="w-32 h-32 mx-auto mb-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <Phone className="w-16 h-16 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  {selectedGroup ? selectedGroup.name : `${selectedFriend?.first_name} ${selectedFriend?.last_name}`}
+                </h3>
+                <p className="text-purple-200">
+                  {callState.isCallActive ? 'Connected' : 'Calling...'}
+                </p>
               </div>
             )}
 
             {/* Call Controls */}
-            <div className="flex justify-center gap-4">
+            <div className="flex justify-center gap-4 mt-6">
               <button
                 onClick={() => webrtcService.current.toggleMute()}
-                className={`p-3 rounded-full ${
-                  callState.isMuted ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'
+                className={`p-4 rounded-full transition-all ${
+                  callState.isMuted 
+                    ? 'bg-red-600 text-white hover:bg-red-700' 
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
                 }`}
                 title={callState.isMuted ? 'Unmute' : 'Mute'}
               >
@@ -1532,8 +1890,10 @@ export default function WhatsAppChat() {
               {callState.callType === 'video' && (
                 <button
                   onClick={() => webrtcService.current.toggleVideo()}
-                  className={`p-3 rounded-full ${
-                    callState.isVideoEnabled ? 'bg-gray-200 text-gray-700' : 'bg-red-600 text-white'
+                  className={`p-4 rounded-full transition-all ${
+                    callState.isVideoEnabled 
+                      ? 'bg-white text-gray-700 hover:bg-gray-100' 
+                      : 'bg-red-600 text-white hover:bg-red-700'
                   }`}
                   title={callState.isVideoEnabled ? 'Turn off video' : 'Turn on video'}
                 >
@@ -1546,22 +1906,17 @@ export default function WhatsAppChat() {
                   webrtcService.current.endCall()
                   setShowCallInterface(false)
                 }}
-                className="p-3 bg-red-600 text-white rounded-full hover:bg-red-700"
+                className="p-4 bg-red-600 text-white rounded-full hover:bg-red-700 transition-all"
                 title="End Call"
               >
-                <Phone className="w-6 h-6" />
+                <Phone className="w-6 h-6 rotate-135" />
               </button>
             </div>
 
-            {/* Call Status */}
-            <div className="text-center mt-4">
-              <p className="text-sm text-gray-600">
-                {callState.isCallActive ? 'Connected' : 'Connecting...'}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                Press ESC or click outside to end call
-              </p>
-            </div>
+            {/* Keyboard Hint */}
+            <p className="text-center text-white text-sm mt-4 opacity-75">
+              Press ESC to end call
+            </p>
           </div>
         </div>
       )}

@@ -7,7 +7,9 @@ import {
   Users,
   Music,
   ChevronRight,
-  Bell
+  Bell,
+  BarChart3,
+  FolderOpen
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -26,9 +28,11 @@ export default function AdminSidebar({
   const sidebarItems = [
     { icon: FileText, label: 'Pages', active: activeSection === 'Pages' },
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
+    { icon: FolderOpen, label: 'Page Categories', active: activeSection === 'Page Categories' },
     { icon: Users, label: 'Members', active: activeSection === 'Members' },
     { icon: Music, label: 'Media', active: activeSection === 'Media' },
     { icon: Bell, label: 'Notifications', active: activeSection === 'Notifications' },
+    { icon: BarChart3, label: 'Analytics', active: activeSection === 'Analytics' },
   ];
 
   return (
@@ -75,9 +79,11 @@ export default function AdminSidebar({
                   onClick={() => {
                     if (item.label === 'Pages') setActiveSection('Pages');
                     else if (item.label === 'Categories') setActiveSection('Categories');
+                    else if (item.label === 'Page Categories') setActiveSection('Page Categories');
                     else if (item.label === 'Members') setActiveSection('Members');
                     else if (item.label === 'Media') setActiveSection('Media');
                     else if (item.label === 'Notifications') setActiveSection('Notifications');
+                    else if (item.label === 'Analytics') setActiveSection('Analytics');
                     // Auto-close sidebar on mobile after clicking
                     setSidebarCollapsed(true);
                   }}

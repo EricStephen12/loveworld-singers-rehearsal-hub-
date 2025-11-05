@@ -132,7 +132,7 @@ export function useServerCountdown({
         } else if (countdownData) {
           // Check if we have a stored target date for this praise night in Firebase
           let storedTargetDate: string | null = null
-          
+
           if (praiseNightId) {
             try {
               // Try to get the stored target date from Firebase
@@ -142,27 +142,16 @@ export function useServerCountdown({
                 console.log('🕐 Found stored target date in Firebase:', storedTargetDate)
               }
             } catch (error) {
-              console.log('🕐 No stored target date in Firebase, checking localStorage fallback')
-              // Fallback to localStorage if Firebase fails
-              const storageKey = `server_target_date_${praiseNightId}`
-              const localStoredDate = localStorage.getItem(storageKey)
-              if (localStoredDate) {
-                storedTargetDate = localStoredDate
-                console.log('🕐 Found stored target date in localStorage:', storedTargetDate)
-              }
+              console.warn('🕐 Failed to fetch stored target date from Firebase:', error)
             }
           }
 
-          // Check if countdown data has changed by comparing with stored hash
-          const currentCountdownHash = JSON.stringify(countdownData)
-          const storedCountdownHash = localStorage.getItem(`countdown_hash_${praiseNightId}`)
-          
-          if (storedTargetDate && currentCountdownHash === storedCountdownHash) {
-            // Use stored target date if countdown data hasn't changed
+          if (storedTargetDate) {
+            // Use stored target date from Firebase if available
             target = new Date(storedTargetDate)
-            console.log('🕐 Using stored target date (no changes):', target.toISOString());
+            console.log('🕐 Using stored target date:', target.toISOString());
           } else {
-            // Countdown data changed or first time - calculate new target date
+            // No stored target date - calculate new target date from countdown data
             const totalMs =
               (countdownData.days * 24 * 60 * 60 * 1000) +
               (countdownData.hours * 60 * 60 * 1000) +
@@ -171,14 +160,14 @@ export function useServerCountdown({
 
             target = new Date(serverTime.getTime() + totalMs);
 
-            console.log('🕐 First time - calculating target date:', {
+            console.log('🕐 Calculated target date from countdown data:', {
               countdownData,
               totalMs,
               serverTime: serverTime.toISOString(),
               target: target.toISOString()
             });
 
-            // Store it in Firebase for future use (persistent across devices)
+            // Store in Firebase for persistence across devices
             if (praiseNightId) {
               try {
                 await FirebaseDatabaseService.createDocument('countdowns', praiseNightId.toString(), {
@@ -190,12 +179,6 @@ export function useServerCountdown({
               } catch (error) {
                 console.error('🕐 Failed to store target date in Firebase:', error)
               }
-              
-              // Also store in localStorage as backup
-              const storageKey = `server_target_date_${praiseNightId}`
-              localStorage.setItem(storageKey, target.toISOString())
-              localStorage.setItem(`countdown_hash_${praiseNightId}`, currentCountdownHash)
-              console.log('🕐 Stored new target date and hash in localStorage')
             }
           }
         } else {
