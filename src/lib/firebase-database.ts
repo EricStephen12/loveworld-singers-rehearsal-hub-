@@ -500,55 +500,6 @@ export class FirebaseDatabaseService {
     }
   }
 
-  // Page Category methods
-  static async createPageCategory(categoryData: any) {
-    try {
-      const docRef = await addDoc(collection(db, 'page_categories'), categoryData);
-      console.log('✅ Page category created successfully with ID:', docRef.id);
-      return { success: true, id: docRef.id, ...categoryData };
-    } catch (error) {
-      console.error('❌ Error creating page category:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-    }
-  }
-
-  static async updatePageCategory(categoryId: string, data: any) {
-    try {
-      console.log('🔄 Updating page category with ID:', categoryId, 'Data:', data);
-      await updateDoc(doc(db, 'page_categories', categoryId), data);
-      console.log('✅ Page category updated successfully');
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Error updating page category:', error);
-      return { success: false };
-    }
-  }
-
-  static async deletePageCategory(categoryId: string) {
-    try {
-      console.log('🔥 Deleting page category with ID:', categoryId);
-      await deleteDoc(doc(db, 'page_categories', categoryId));
-      console.log('✅ Page category deleted successfully');
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Error deleting page category:', error);
-      return { success: false };
-    }
-  }
-
-  static async getPageCategories() {
-    try {
-      const querySnapshot = await getDocs(collection(db, 'page_categories'));
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      console.error('Error getting page categories:', error);
-      return [];
-    }
-  }
-
   // Page methods
   static async createPage(pageData: any) {
     try {
@@ -738,6 +689,66 @@ export class FirebaseDatabaseService {
     } catch (error) {
       console.error('Error deleting history entry:', error)
       return false
+    }
+  }
+
+  // Page Category functions
+  static async getPageCategories() {
+    try {
+      const q = query(
+        collection(db, 'page_categories'),
+        orderBy('createdAt', 'desc')
+      )
+      
+      const querySnapshot = await getDocs(q)
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+    } catch (error) {
+      console.error('Error getting page categories:', error)
+      return []
+    }
+  }
+
+  static async createPageCategory(data: any) {
+    try {
+      const categoryData = {
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      const docRef = await addDoc(collection(db, 'page_categories'), categoryData)
+      return { success: true, id: docRef.id }
+    } catch (error) {
+      console.error('Error creating page category:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to create page category' }
+    }
+  }
+
+  static async updatePageCategory(id: string, data: any) {
+    try {
+      const docRef = doc(db, 'page_categories', id)
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: new Date()
+      })
+      return { success: true }
+    } catch (error) {
+      console.error('Error updating page category:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to update page category' }
+    }
+  }
+
+  static async deletePageCategory(id: string) {
+    try {
+      const docRef = doc(db, 'page_categories', id)
+      await deleteDoc(docRef)
+      return { success: true }
+    } catch (error) {
+      console.error('Error deleting page category:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to delete page category' }
     }
   }
 }

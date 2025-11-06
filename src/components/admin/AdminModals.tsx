@@ -39,8 +39,6 @@ interface AdminModalsProps {
   setNewPageBannerImage: (image: string) => void;
   newPageBannerFile: File | null;
   setNewPageBannerFile: (file: File | null) => void;
-  newPagePageCategory: string; // Add page category field
-  setNewPagePageCategory: (val: string) => void; // Setter for page category
   handleAddPage: () => void;
   handleUpdatePage: () => void;
 
@@ -60,6 +58,11 @@ interface AdminModalsProps {
   handleAddPageCategory: () => void; // New prop for adding page categories
   handleUpdatePageCategory: () => void; // New prop for updating page categories
   activeSection: string;
+  pageCategories: any[]; // New prop for available page categories
+  
+  // Page Category Selection
+  newPagePageCategory: string; // New prop for page category selection
+  setNewPagePageCategory: (pageCategory: string) => void; // New prop for page category selection
 
   // Song Modal
   showSongModal: boolean;
@@ -125,8 +128,6 @@ export default function AdminModals(props: AdminModalsProps) {
     setNewPageBannerImage,
     newPageBannerFile,
     setNewPageBannerFile,
-    newPagePageCategory,
-    setNewPagePageCategory,
     handleAddPage,
     handleUpdatePage,
     
@@ -146,6 +147,9 @@ export default function AdminModals(props: AdminModalsProps) {
     handleAddPageCategory, // New prop
     handleUpdatePageCategory, // New prop
     activeSection,
+    pageCategories, // New prop
+    newPagePageCategory, // New prop
+    setNewPagePageCategory, // New prop
     
     // Song Modal
     showSongModal,
@@ -426,13 +430,18 @@ export default function AdminModals(props: AdminModalsProps) {
                 <label className="block text-sm font-medium text-gray-700 mb-2 transition-all duration-200">
                   Page Category
                 </label>
-                <input
-                  type="text"
+                <select
                   value={newPagePageCategory}
                   onChange={(e) => setNewPagePageCategory(e.target.value)}
                   className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-400 focus:border-purple-600 focus:shadow-xl focus:bg-purple-50 transition-all duration-200"
-                  placeholder="e.g., Healing, Worship, Thanksgiving"
-                />
+                >
+                  <option value="">Select a page category (optional)</option>
+                  {pageCategories.map((category) => (
+                    <option key={category.id} value={category.name}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
                 <p className="text-xs text-gray-500 mt-1">
                   Assign this page to a specific category for better organization
                 </p>

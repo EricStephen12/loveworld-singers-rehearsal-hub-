@@ -40,6 +40,8 @@ export interface SongSubmission {
   solfas: string;
   notes: string;
   status: 'pending' | 'approved' | 'rejected';
+  seen?: boolean;
+  delivered?: boolean;
   submittedBy: {
     userId: string;
     userName: string;
@@ -403,6 +405,54 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
     });
   } catch (error) {
     console.error('❌ [SongSubmission] Error marking notification as read:', error);
+  }
+}
+
+/**
+ * Mark song as seen by admin
+ */
+export async function markSongAsSeen(submissionId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log('👁️ [SongSubmission] Marking song as seen:', submissionId);
+    
+    const submissionRef = doc(db, SUBMITTED_SONGS_COLLECTION, submissionId);
+    await updateDoc(submissionRef, {
+      seen: true,
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log('✅ [SongSubmission] Song marked as seen');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [SongSubmission] Error marking song as seen:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to mark song as seen'
+    };
+  }
+}
+
+/**
+ * Mark song as delivered
+ */
+export async function markSongAsDelivered(submissionId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log('📦 [SongSubmission] Marking song as delivered:', submissionId);
+    
+    const submissionRef = doc(db, SUBMITTED_SONGS_COLLECTION, submissionId);
+    await updateDoc(submissionRef, {
+      delivered: true,
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log('✅ [SongSubmission] Song marked as delivered');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [SongSubmission] Error marking song as delivered:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to mark song as delivered'
+    };
   }
 }
 

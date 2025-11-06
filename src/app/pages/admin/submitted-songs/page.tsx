@@ -11,6 +11,8 @@ import {
   getPendingSongs, 
   approveSong, 
   rejectSong,
+  markSongAsSeen,
+  markSongAsDelivered,
   SongSubmission 
 } from '@/lib/song-submission-service'
 import { useAuth } from '@/contexts/AuthContext'
@@ -63,7 +65,7 @@ export default function SubmittedSongsPage() {
       const result = await approveSong(
         song.id,
         user.uid,
-        profile?.name || user.email || 'Admin'
+        profile?.first_name || user.email || 'Admin'
       )
       
       if (result.success) {
@@ -468,4 +470,7 @@ export default function SubmittedSongsPage() {
     </div>
   )
 }
+
+
+
 
