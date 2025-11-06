@@ -1359,8 +1359,7 @@ export default function AdminPage() {
         categoryToDelete={categoryToDelete}
         setCategoryToDelete={setCategoryToDelete}
         confirmDeleteCategory={confirmDeleteCategory}
-        cancelDeleteCategory={cancelDeleteCategory}
-      />
+        cancelDeleteCategory={cancelDeleteCategory} pageCategories={[]}      />
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
