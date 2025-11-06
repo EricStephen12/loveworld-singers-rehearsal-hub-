@@ -94,7 +94,7 @@ export default function SubmittedSongsPage() {
       const result = await rejectSong(
         song.id,
         user.uid,
-        profile?.name || user.email || 'Admin',
+        profile?.first_name || user.email || 'Admin',
         rejectNotes
       )
       
