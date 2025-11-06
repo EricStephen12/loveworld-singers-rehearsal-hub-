@@ -39,7 +39,7 @@ export const getMenuItems = (onLogout?: () => void, onRefresh?: () => void): Men
   {
     icon: Music,
     title: 'Submit Song',
-    href: '#',
+    href: '/pages/submit-song',
     badge: null,
   },
   {

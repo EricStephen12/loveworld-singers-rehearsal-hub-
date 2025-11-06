@@ -4,14 +4,12 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Music, Upload, Save, X, FileText, User, Key, Guitar, Drum, Piano, Mic } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { collection, addDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase-setup'
+import { submitSong } from '@/lib/song-submission-service'
 
 interface SongSubmissionForm {
   title: string
   lyrics: string
   writer: string
-  category: string
   key: string
   tempo: string
   leadSinger: string
@@ -29,11 +27,17 @@ export default function SubmitSongPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   
+  // Helper function to get user's display name
+  const getUserName = () => {
+    if (!profile) return ''
+    const parts = [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean)
+    return parts.join(' ') || user?.email || ''
+  }
+
   const [formData, setFormData] = useState<SongSubmissionForm>({
     title: '',
     lyrics: '',
-    writer: profile?.name || '',
-    category: '',
+    writer: getUserName(),
     key: '',
     tempo: '',
     leadSinger: '',
@@ -45,24 +49,14 @@ export default function SubmitSongPage() {
     notes: ''
   })
 
-  const categories = [
-    'Worship',
-    'Praise',
-    'Hymn',
-    'Contemporary',
-    'Traditional',
-    'Gospel',
-    'Inspirational',
-    'Other'
-  ]
-
   const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
   useEffect(() => {
-    if (profile?.name && !formData.writer) {
-      setFormData(prev => ({ ...prev, writer: profile.name }))
+    const userName = getUserName()
+    if (userName && !formData.writer) {
+      setFormData(prev => ({ ...prev, writer: userName }))
     }
-  }, [profile])
+  }, [profile, user])
 
   const handleInputChange = (field: keyof SongSubmissionForm, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -85,12 +79,12 @@ export default function SubmitSongPage() {
     setSubmitStatus('idle')
 
     try {
-      // Create song document in Firebase
-      const songData = {
+      // Submit song for review
+      const result = await submitSong({
         title: formData.title.trim(),
         lyrics: formData.lyrics.trim(),
-        writer: formData.writer.trim() || profile?.name || 'Unknown',
-        category: formData.category || 'Other',
+        writer: formData.writer.trim() || getUserName() || 'Unknown',
+        category: 'Other', // Default category
         key: formData.key || '',
         tempo: formData.tempo || '',
         leadSinger: formData.leadSinger.trim() || '',
@@ -100,19 +94,17 @@ export default function SubmitSongPage() {
         drummer: formData.drummer.trim() || '',
         solfas: formData.solfas.trim() || '',
         notes: formData.notes.trim() || '',
-        status: 'unheard',
         submittedBy: {
           userId: user.uid,
-          userName: profile?.name || user.email || 'Unknown',
+          userName: getUserName() || user.email || 'Unknown',
           email: user.email || '',
           submittedAt: new Date().toISOString()
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        rehearsalCount: 0
-      }
+        }
+      })
 
-      await addDoc(collection(db, 'songs'), songData)
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to submit song')
+      }
 
       setSubmitStatus('success')
       
@@ -121,8 +113,7 @@ export default function SubmitSongPage() {
         setFormData({
           title: '',
           lyrics: '',
-          writer: profile?.name || '',
-          category: '',
+          writer: getUserName(),
           key: '',
           tempo: '',
           leadSinger: '',
@@ -240,23 +231,6 @@ export default function SubmitSongPage() {
                 placeholder="Song writer or composer"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => handleInputChange('category', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select category</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
             </div>
 
             {/* Key */}
@@ -430,7 +404,7 @@ export default function SubmitSongPage() {
           {user && (
             <div className="mt-6 pt-6 border-t border-gray-200">
               <p className="text-sm text-gray-600">
-                Submitting as: <span className="font-medium text-gray-900">{profile?.name || user.email}</span>
+                Submitting as: <span className="font-medium text-gray-900">{getUserName() || user.email}</span>
               </p>
             </div>
           )}
