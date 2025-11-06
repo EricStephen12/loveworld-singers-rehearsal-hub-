@@ -11,13 +11,17 @@ import {
   getPendingSongs, 
   approveSong, 
   rejectSong,
-  markSongAsSeen,
-  markSongAsDelivered,
+  markSubmissionSeen,
+  replyToSubmission,
   SongSubmission 
 } from '@/lib/song-submission-service'
 import { useAuth } from '@/contexts/AuthContext'
 
-export default function SubmittedSongsPage() {
+interface SubmittedSongsPageProps {
+  embedded?: boolean
+}
+
+export default function SubmittedSongsPage({ embedded = false }: SubmittedSongsPageProps = { embedded: false }) {
   const router = useRouter()
   const { user, profile } = useAuth()
   const [songs, setSongs] = useState<SongSubmission[]>([])
@@ -27,6 +31,15 @@ export default function SubmittedSongsPage() {
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectNotes, setRejectNotes] = useState('')
   const [processing, setProcessing] = useState<string | null>(null)
+  const [showReplyModal, setShowReplyModal] = useState(false)
+  const [replyMessage, setReplyMessage] = useState('')
+
+  // Helper function to get user's display name
+  const getUserName = () => {
+    if (!profile) return ''
+    const parts = [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean)
+    return parts.join(' ') || user?.email || 'Admin'
+  }
 
   useEffect(() => {
     loadSongs()
@@ -65,7 +78,7 @@ export default function SubmittedSongsPage() {
       const result = await approveSong(
         song.id,
         user.uid,
-        profile?.first_name || user.email || 'Admin'
+        getUserName()
       )
       
       if (result.success) {
@@ -94,7 +107,7 @@ export default function SubmittedSongsPage() {
       const result = await rejectSong(
         song.id,
         user.uid,
-        profile?.first_name || user.email || 'Admin',
+        getUserName(),
         rejectNotes
       )
       
@@ -114,6 +127,47 @@ export default function SubmittedSongsPage() {
     }
   }
 
+  const handleSeen = async (song: SongSubmission) => {
+    if (!user || !song.id) return
+    setProcessing(song.id)
+    try {
+      const result = await markSubmissionSeen(song.id, getUserName())
+      if (result.success) {
+        loadSongs()
+      } else {
+        alert(`❌ Failed to mark seen: ${result.error}`)
+      }
+    } catch (e) {
+      alert('❌ Error marking seen')
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  const handleReply = async (song: SongSubmission) => {
+    if (!user || !song.id) return
+    if (!replyMessage.trim()) {
+      alert('Please enter a reply message')
+      return
+    }
+    setProcessing(song.id)
+    try {
+      const result = await replyToSubmission(song.id, getUserName(), replyMessage)
+      if (result.success) {
+        setShowReplyModal(false)
+        setReplyMessage('')
+        setSelectedSong(null)
+        loadSongs()
+      } else {
+        alert(`❌ Failed to send reply: ${result.error}`)
+      }
+    } catch (e) {
+      alert('❌ Error sending reply')
+    } finally {
+      setProcessing(null)
+    }
+  }
+
   const filteredSongs = songs.filter(song => {
     if (filter === 'all') return true
     return song.status === filter
@@ -122,24 +176,49 @@ export default function SubmittedSongsPage() {
   const pendingCount = songs.filter(s => s.status === 'pending').length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8">
+    <div className={`${embedded ? 'h-full' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-white to-purple-50 p-4 sm:p-6 lg:p-8`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        {!embedded && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => router.back()}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Music className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Submitted Songs</h1>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Review and manage song submissions
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => router.back()}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={loadSongs}
+                disabled={loading}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Music className="w-6 h-6 text-white" />
+            </div>
+          </div>
+        )}
+        
+        {embedded && (
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Music className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Submitted Songs</h1>
-                <p className="text-sm text-gray-600 mt-1">
+                <h1 className="text-xl font-bold text-gray-900">Submitted Songs</h1>
+                <p className="text-xs text-gray-600 mt-0.5">
                   Review and manage song submissions
                 </p>
               </div>
@@ -152,7 +231,7 @@ export default function SubmittedSongsPage() {
               <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-        </div>
+        )}
 
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
@@ -161,7 +240,7 @@ export default function SubmittedSongsPage() {
               onClick={() => setFilter('all')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 filter === 'all' 
-                  ? 'bg-blue-500 text-white' 
+                  ? 'bg-purple-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -171,7 +250,7 @@ export default function SubmittedSongsPage() {
               onClick={() => setFilter('pending')}
               className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                 filter === 'pending' 
-                  ? 'bg-orange-500 text-white' 
+                  ? 'bg-purple-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -204,7 +283,7 @@ export default function SubmittedSongsPage() {
         {/* Songs List */}
         {loading ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-4" />
+            <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-4" />
             <p className="text-gray-600">Loading submitted songs...</p>
           </div>
         ) : filteredSongs.length === 0 ? (
@@ -226,7 +305,7 @@ export default function SubmittedSongsPage() {
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           song.status === 'pending'
-                            ? 'bg-orange-100 text-orange-800'
+                            ? 'bg-purple-100 text-purple-800'
                             : song.status === 'approved'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
@@ -270,15 +349,31 @@ export default function SubmittedSongsPage() {
                     </div>
 
                     {/* Actions */}
-                    {song.status === 'pending' && (
-                      <div className="flex gap-3">
+                    <div className="flex flex-wrap gap-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${song.adminSeen ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-700'}`}>
+                        {song.adminSeen ? 'Seen' : 'Unseen'}
+                      </span>
+                      {song.replyMessage && (
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          Replied
+                        </span>
+                      )}
+                      {song.status === 'pending' && (
+                        <>
                         <button
                           onClick={() => setSelectedSong(song)}
-                          className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2"
+                          className="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors flex items-center gap-2"
                         >
                           <Eye className="w-4 h-4" />
                           View Details
                         </button>
+                          <button
+                            onClick={() => handleSeen(song)}
+                            disabled={processing === song.id || song.adminSeen}
+                            className="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
+                          >
+                            Mark as Seen
+                          </button>
                         <button
                           onClick={() => handleApprove(song)}
                           disabled={processing === song.id}
@@ -298,8 +393,17 @@ export default function SubmittedSongsPage() {
                           <XCircle className="w-4 h-4" />
                           Reject
                         </button>
-                      </div>
-                    )}
+                          <button
+                            onClick={() => { setSelectedSong(song); setShowReplyModal(true); }}
+                            disabled={processing === song.id}
+                            className="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Reply
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -466,11 +570,48 @@ export default function SubmittedSongsPage() {
             </div>
           </div>
         )}
+
+        {/* Reply Modal */}
+        {showReplyModal && selectedSong && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900">Reply to {selectedSong.title}</h2>
+                <p className="text-sm text-gray-600 mt-1">This message will be sent to the submitter</p>
+              </div>
+              <div className="p-6">
+                <textarea
+                  value={replyMessage}
+                  onChange={(e) => setReplyMessage(e.target.value)}
+                  placeholder="Enter your reply..."
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-y"
+                  required
+                />
+              </div>
+              <div className="p-6 border-t border-gray-200 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowReplyModal(false)
+                    setReplyMessage('')
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleReply(selectedSong)}
+                  disabled={!replyMessage.trim() || processing === selectedSong.id}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                >
+                  Send Reply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
 }
-
-
-
 

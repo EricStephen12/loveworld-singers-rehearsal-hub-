@@ -84,9 +84,35 @@ class AnalyticsTracker {
     if (typeof window === 'undefined') return;
     
     this.isTracking = true;
+    // Track session start immediately
+    this.trackEvent('session_start', {
+      page: window.location.pathname,
+      referrer: document.referrer
+    });
+    // Store session start in Firebase immediately
+    this.storeSessionStart();
     this.trackPageView();
     this.setupEventListeners();
     this.setupSessionEnd();
+  }
+
+  private async storeSessionStart(): Promise<void> {
+    try {
+      const location = await this.getLocation();
+      const sessionData: Partial<SessionData> = {
+        sessionId: this.sessionId,
+        startTime: this.startTime,
+        pageViews: 0,
+        pages: [],
+        deviceType: this.getDeviceType(),
+        browser: this.getBrowser(),
+        ...location
+      };
+      // Store initial session data
+      await FirebaseDatabaseService.createDocument('analytics_sessions', this.sessionId, sessionData as any);
+    } catch (error) {
+      console.warn('Failed to store session start in Firebase:', error);
+    }
   }
 
   private setupEventListeners(): void {
@@ -145,7 +171,11 @@ class AnalyticsTracker {
   }
 
   public trackPageView(page?: string): void {
-    if (!this.isTracking) return;
+    if (!this.isTracking) {
+      // Re-initialize if tracking stopped
+      this.initializeTracking();
+      return;
+    }
 
     const currentPage = page || window.location.pathname;
     this.pageViews++;
@@ -156,6 +186,20 @@ class AnalyticsTracker {
       title: document.title,
       referrer: document.referrer
     });
+
+    // Update session page views in Firebase
+    this.updateSessionPageViews();
+  }
+
+  private async updateSessionPageViews(): Promise<void> {
+    try {
+      await FirebaseDatabaseService.updateDocument('analytics_sessions', this.sessionId, {
+        pageViews: this.pageViews,
+        pages: [...new Set(this.pages)]
+      } as any);
+    } catch (error) {
+      // Silently fail - session might not exist yet
+    }
   }
 
   public trackEvent(type: AnalyticsEvent['type'], metadata?: Record<string, any>): void {
@@ -202,8 +246,8 @@ class AnalyticsTracker {
       ...location
     });
 
-    // Store session data in Firebase
-    await this.storeSessionDataInFirebase(sessionData);
+    // Update existing session data in Firebase (not create new)
+    await this.updateSessionDataInFirebase(sessionData);
     
     this.isTracking = false;
   }
@@ -225,11 +269,17 @@ class AnalyticsTracker {
     }
   }
 
-  private async storeSessionDataInFirebase(sessionData: SessionData): Promise<void> {
+  private async updateSessionDataInFirebase(sessionData: SessionData): Promise<void> {
     try {
-      await FirebaseDatabaseService.createDocument('analytics_sessions', sessionData.sessionId, sessionData as any);
+      // Update existing session instead of creating new one
+      await FirebaseDatabaseService.updateDocument('analytics_sessions', sessionData.sessionId, sessionData as any);
     } catch (error) {
-      console.warn('Failed to store session data in Firebase:', error);
+      // If update fails, try to create (in case session start wasn't stored)
+      try {
+        await FirebaseDatabaseService.createDocument('analytics_sessions', sessionData.sessionId, sessionData as any);
+      } catch (createError) {
+        console.warn('Failed to update/create session data in Firebase:', createError);
+      }
     }
   }
 

@@ -9,7 +9,8 @@ import {
   ChevronRight,
   Bell,
   BarChart3,
-  FolderOpen
+  FolderOpen,
+  Upload
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -29,6 +30,7 @@ export default function AdminSidebar({
     { icon: FileText, label: 'Pages', active: activeSection === 'Pages' },
     { icon: Tag, label: 'Categories', active: activeSection === 'Categories' },
     { icon: FolderOpen, label: 'Page Categories', active: activeSection === 'Page Categories' },
+    { icon: Upload, label: 'Submitted Songs', active: activeSection === 'Submitted Songs' },
     { icon: Users, label: 'Members', active: activeSection === 'Members' },
     { icon: Music, label: 'Media', active: activeSection === 'Media' },
     { icon: Bell, label: 'Notifications', active: activeSection === 'Notifications' },
@@ -80,6 +82,7 @@ export default function AdminSidebar({
                     if (item.label === 'Pages') setActiveSection('Pages');
                     else if (item.label === 'Categories') setActiveSection('Categories');
                     else if (item.label === 'Page Categories') setActiveSection('Page Categories');
+                    else if (item.label === 'Submitted Songs') setActiveSection('Submitted Songs');
                     else if (item.label === 'Members') setActiveSection('Members');
                     else if (item.label === 'Media') setActiveSection('Media');
                     else if (item.label === 'Notifications') setActiveSection('Notifications');

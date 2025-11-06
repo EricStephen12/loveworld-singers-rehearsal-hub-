@@ -40,8 +40,8 @@ export interface SongSubmission {
   solfas: string;
   notes: string;
   status: 'pending' | 'approved' | 'rejected';
-  seen?: boolean;
-  delivered?: boolean;
+  adminSeen?: boolean;
+  replyMessage?: string;
   submittedBy: {
     userId: string;
     userName: string;
@@ -64,7 +64,7 @@ export interface SongNotification {
   songTitle: string;
   submittedBy: string;
   submittedByEmail: string;
-  type: 'new_submission' | 'approved' | 'rejected';
+  type: 'new_submission' | 'approved' | 'rejected' | 'seen' | 'replied';
   message: string;
   read: boolean;
   createdAt: string;
@@ -157,6 +157,7 @@ export async function getAllSubmittedSongs(): Promise<SongSubmission[]> {
       return {
         id: docSnap.id,
         ...data,
+        adminSeen: data.adminSeen || false,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString(),
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt || new Date().toISOString(),
       } as SongSubmission;
@@ -340,7 +341,8 @@ async function createStatusNotification(
   songId: string,
   songTitle: string,
   submittedBy: SongSubmission['submittedBy'],
-  status: 'approved' | 'rejected'
+  status: 'approved' | 'rejected' | 'seen' | 'replied',
+  customMessage?: string
 ): Promise<void> {
   try {
     const notificationData: Omit<SongNotification, 'id'> = {
@@ -349,7 +351,7 @@ async function createStatusNotification(
       submittedBy: submittedBy.userName,
       submittedByEmail: submittedBy.email,
       type: status,
-      message: `Your song "${songTitle}" has been ${status}`,
+      message: customMessage || `Your song "${songTitle}" has been ${status}`,
       read: false,
       createdAt: new Date().toISOString(),
       timestamp: serverTimestamp()
@@ -409,50 +411,68 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
 }
 
 /**
- * Mark song as seen by admin
+ * Mark submission as seen by admin and notify user
  */
-export async function markSongAsSeen(submissionId: string): Promise<{ success: boolean; error?: string }> {
+export async function markSubmissionSeen(submissionId: string, adminName: string): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('👁️ [SongSubmission] Marking song as seen:', submissionId);
-    
     const submissionRef = doc(db, SUBMITTED_SONGS_COLLECTION, submissionId);
+    const submissionDoc = await getDoc(submissionRef);
+    if (!submissionDoc.exists()) {
+      throw new Error('Submission not found');
+    }
+
+    const submissionData = submissionDoc.data() as SongSubmission;
+
     await updateDoc(submissionRef, {
-      seen: true,
+      adminSeen: true,
       updatedAt: serverTimestamp()
     });
-    
-    console.log('✅ [SongSubmission] Song marked as seen');
+
+    await createStatusNotification(
+      submissionId,
+      submissionData.title,
+      submissionData.submittedBy,
+      'seen',
+      `${adminName} has seen your submission`
+    );
+
     return { success: true };
   } catch (error) {
-    console.error('❌ [SongSubmission] Error marking song as seen:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to mark song as seen'
-    };
+    console.error('❌ [SongSubmission] Error marking seen:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to mark seen' };
   }
 }
 
 /**
- * Mark song as delivered
+ * Reply to a submission and notify user
  */
-export async function markSongAsDelivered(submissionId: string): Promise<{ success: boolean; error?: string }> {
+export async function replyToSubmission(submissionId: string, adminName: string, message: string): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('📦 [SongSubmission] Marking song as delivered:', submissionId);
-    
     const submissionRef = doc(db, SUBMITTED_SONGS_COLLECTION, submissionId);
+    const submissionDoc = await getDoc(submissionRef);
+    if (!submissionDoc.exists()) {
+      throw new Error('Submission not found');
+    }
+
+    const submissionData = submissionDoc.data() as SongSubmission;
+
     await updateDoc(submissionRef, {
-      delivered: true,
+      replyMessage: message,
       updatedAt: serverTimestamp()
     });
-    
-    console.log('✅ [SongSubmission] Song marked as delivered');
+
+    await createStatusNotification(
+      submissionId,
+      submissionData.title,
+      submissionData.submittedBy,
+      'replied',
+      `${adminName} replied: ${message}`
+    );
+
     return { success: true };
   } catch (error) {
-    console.error('❌ [SongSubmission] Error marking song as delivered:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to mark song as delivered'
-    };
+    console.error('❌ [SongSubmission] Error replying to submission:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to reply' };
   }
 }
 

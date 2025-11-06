@@ -22,6 +22,8 @@ import MembersSection from '../../components/admin/MembersSection';
 import SimpleNotificationsSection from '../../components/admin/SimpleNotificationsSection';
 import AdminModals from '../../components/admin/AdminModals';
 import PageCategoriesSection from '../../components/admin/PageCategoriesSection';
+import SubmittedSongsPage from '../pages/admin/submitted-songs/page';
+import AnalyticsPage from '../pages/admin/analytics/page';
 
 export default function AdminPage() {
   // Admin authentication state
@@ -1274,16 +1276,17 @@ export default function AdminPage() {
           />
         )}
 
+        {activeSection === 'Submitted Songs' && (
+          <div className="h-full overflow-auto bg-gray-50">
+            <SubmittedSongsPage embedded={true} />
+          </div>
+        )}
         {activeSection === 'Members' && <MembersSection />}
         {activeSection === 'Media' && <MediaSection />}
         {activeSection === 'Notifications' && <SimpleNotificationsSection />}
         {activeSection === 'Analytics' && (
-          <div className="h-full overflow-auto">
-            <iframe 
-              src="/pages/admin/analytics" 
-              className="w-full h-full border-0"
-              title="Analytics Dashboard"
-            />
+          <div className="h-full overflow-auto bg-gray-50">
+            <AnalyticsPage />
           </div>
         )}
       </div>
