@@ -137,8 +137,8 @@ function HomePageContent() {
     },
     {
       icon: Music,
-      title: 'Audio Lab Studio',
-      href: '/pages/audio-lab',
+      title: 'Submit Song',
+      href: '/pages/submit-song',
       badge: null,
     },
     {
