@@ -24,6 +24,7 @@ import ForceUpdateButton from '@/components/ForceUpdateButton'
 import { AnalyticsProvider } from '@/components/AnalyticsProvider'
 import '@/utils/auth-debug'
 import '@/utils/safeAreaManager'
+import '@/utils/logger' // Disable console logs in production
 
 // Auto-optimize for low data on app startup
 if (typeof window !== 'undefined') {

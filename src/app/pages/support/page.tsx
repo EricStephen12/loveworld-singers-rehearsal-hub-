@@ -13,8 +13,6 @@ import {
   Settings,
   ChevronRight,
   Wrench,
-  User,
-  Lightbulb,
   BookOpen
 } from 'lucide-react';
 
@@ -47,24 +45,6 @@ const supportOptions = [
     href: '/pages/support/technical',
     iconBg: 'bg-orange-100',
     iconColor: 'text-orange-600'
-  },
-  {
-    id: 'account',
-    title: 'Account Support',
-    description: 'Manage your profile and account settings',
-    icon: User,
-    href: '/pages/support/account',
-    iconBg: 'bg-purple-100',
-    iconColor: 'text-purple-600'
-  },
-  {
-    id: 'features',
-    title: 'Feature Requests',
-    description: 'Suggest new features and improvements',
-    icon: Lightbulb,
-    href: '/pages/support/features',
-    iconBg: 'bg-yellow-100',
-    iconColor: 'text-yellow-600'
   }
 ];
 

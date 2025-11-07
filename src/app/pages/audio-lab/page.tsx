@@ -174,7 +174,7 @@ export default function AudioLabUpload() {
   };
 
   return (
-    <div className="bg-gray-900 min-h-screen">
+    <div className="bg-gray-900 min-h-screen overflow-y-auto">
       {/* Content */}
       <div className="relative z-10">
       {/* Header with User Profile - Responsive */}

@@ -149,7 +149,6 @@ export class ErrorHandler {
   static validatePassword(password: string): string | null {
     if (!password) return 'Password is required'
     if (password.length < 6) return 'Password must be at least 6 characters long'
-    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) return 'Password must contain both letters and numbers'
     return null
   }
   

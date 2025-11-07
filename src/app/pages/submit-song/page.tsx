@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Music, Upload, ArrowLeft, FileText, User, Key, Guitar, Drum, Piano, Mic, CheckCircle, XCircle } from 'lucide-react'
+import { ArrowLeft, Upload, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { submitSong } from '@/lib/song-submission-service'
-import ScreenHeader from '@/components/ScreenHeader'
 
 interface SongSubmissionForm {
   title: string
@@ -28,7 +27,6 @@ export default function SubmitSongPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   
-  // Helper function to get user's display name
   const getUserName = () => {
     if (!profile) return ''
     const parts = [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean)
@@ -49,8 +47,6 @@ export default function SubmitSongPage() {
     solfas: '',
     notes: ''
   })
-
-  const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
   useEffect(() => {
     const userName = getUserName()
@@ -80,12 +76,11 @@ export default function SubmitSongPage() {
     setSubmitStatus('idle')
 
     try {
-      // Submit song for review
       const result = await submitSong({
         title: formData.title.trim(),
         lyrics: formData.lyrics.trim(),
         writer: formData.writer.trim() || getUserName() || 'Unknown',
-        category: 'Other', // Default category
+        category: 'Other',
         key: formData.key || '',
         tempo: formData.tempo || '',
         leadSinger: formData.leadSinger.trim() || '',
@@ -109,7 +104,6 @@ export default function SubmitSongPage() {
 
       setSubmitStatus('success')
       
-      // Reset form after successful submission
       setTimeout(() => {
         setFormData({
           title: '',
@@ -138,320 +132,219 @@ export default function SubmitSongPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-      {/* Mobile App Header */}
-      <ScreenHeader
-        title="Submit Song"
-        subtitle={user ? `Submitting as: ${(getUserName() || user.email || '').slice(0, 40)}` : undefined}
-        leftButtons={
-          <button
-            onClick={() => router.back()}
-            className="p-2 -ml-2 rounded-lg hover:bg-gray-100 active:scale-95 transition-all touch-optimized"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-        }
-        rightButtons={
-          <button
-            onClick={() => router.push('/pages/support')}
-            className="px-3 py-1.5 bg-white/80 rounded-lg text-xs font-outfit-medium text-gray-700 hover:bg-white active:scale-95 ring-1 ring-black/5 shadow-sm"
-          >
-            Help
-          </button>
-        }
-        onTitleClick={() => {
-          if (typeof window !== 'undefined') {
-            window.scrollTo({ top: 0, behavior: 'smooth' })
-          }
-        }}
-        showMenuButton={false}
-      />
+    <div className="relative flex min-h-screen w-full flex-col bg-gray-50 overflow-x-hidden overflow-y-auto">
+        {/* Header */}
+      <header className="sticky top-0 z-10 flex items-center bg-gray-50/80 backdrop-blur-sm p-4 justify-between border-b border-gray-200">
+            <button
+              onClick={() => router.back()}
+          className="flex size-10 shrink-0 items-center justify-center text-gray-900"
+            >
+          <ArrowLeft className="w-5 h-5" />
+            </button>
+        <h1 className="text-gray-900 text-lg font-bold leading-tight tracking-tight flex-1 text-center">
+          Submit a Song
+        </h1>
+        <div className="w-10"></div>
+      </header>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin" style={{ WebkitOverflowScrolling: 'touch', overflowY: 'auto' }}>
-        <div className="px-4 py-4 space-y-4 pb-8">
+      {/* Main Content */}
+      <main className="flex flex-col flex-1 pb-24">
+        <section className="flex flex-col gap-6 p-4">
           {/* Status Messages */}
-          {submitStatus === 'success' && (
-            <div className="bg-green-50 border-0 rounded-2xl shadow-sm p-4 flex items-start gap-3 ring-1 ring-green-200/50 animate-fadeIn">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-                <CheckCircle className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="font-outfit-semibold text-green-900 mb-1">Song submitted successfully!</p>
-                <p className="text-sm text-green-700">Your song is now under review by the admin team.</p>
-              </div>
+        {submitStatus === 'success' && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-green-900">Song submitted successfully!</p>
+              <p className="text-sm text-green-700">Your song is now under review.</p>
             </div>
-          )}
+          </div>
+        )}
 
-          {submitStatus === 'error' && (
-            <div className="bg-red-50 border-0 rounded-2xl shadow-sm p-4 flex items-start gap-3 ring-1 ring-red-200/50 animate-fadeIn">
-              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-                <XCircle className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="font-outfit-semibold text-red-900 mb-1">Submission failed</p>
-                <p className="text-sm text-red-700">Please check your connection and try again.</p>
-              </div>
-            </div>
-          )}
+        {submitStatus === 'error' && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+              <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <p className="font-medium text-red-900">Failed to submit song. Please try again.</p>
+          </div>
+        )}
 
-          {/* Main Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Song Information Card */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm p-5 ring-1 ring-black/5 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center shadow-sm">
-                  <Music className="w-4 h-4 text-purple-600" />
-                </div>
-                <h2 className="text-lg font-outfit-semibold text-gray-800">Song Information</h2>
-              </div>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          {/* Song Title */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">
+              Song Title <span className="text-red-500">*</span>
+              </p>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+                placeholder="Enter the title of the song"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              required
+            />
+          </div>
 
-              {/* Song Title */}
-              <div>
-                <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                  Song Title <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                  placeholder="Enter song title"
-                  className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base"
-                  required
-                />
-              </div>
-
-              {/* Lyrics */}
-              <div>
-                <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                  Lyrics <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={formData.lyrics}
-                  onChange={(e) => handleInputChange('lyrics', e.target.value)}
-                  placeholder="Enter full song lyrics..."
-                  rows={10}
-                  className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base resize-none font-mono text-sm"
-                  required
-                />
-              </div>
+            {/* Drummer */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Drummer</p>
+              <input
+                type="text"
+                value={formData.drummer}
+                onChange={(e) => handleInputChange('drummer', e.target.value)}
+                placeholder="Enter drummer's name"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              />
             </div>
 
-            {/* Song Details Card */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm p-5 ring-1 ring-black/5 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center shadow-sm">
-                  <Key className="w-4 h-4 text-blue-600" />
-                </div>
-                <h2 className="text-lg font-outfit-semibold text-gray-800">Song Details</h2>
-              </div>
-
-              <div className="space-y-4">
-                {/* Writer */}
-                <div>
-                  <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                    <User className="w-4 h-4 inline mr-1" />
-                    Writer/Composer
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.writer}
-                    onChange={(e) => handleInputChange('writer', e.target.value)}
-                    placeholder="Song writer or composer"
-                    className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base"
-                  />
-                </div>
-
-                {/* Key and Tempo Row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                      Key
-                    </label>
-                    <select
-                      value={formData.key}
-                      onChange={(e) => handleInputChange('key', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 text-base"
-                    >
-                      <option value="">Select</option>
-                      {keys.map(key => (
-                        <option key={key} value={key}>{key}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                      Tempo (BPM)
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.tempo}
-                      onChange={(e) => handleInputChange('tempo', e.target.value)}
-                      placeholder="120"
-                      min="1"
-                      max="300"
-                      className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base"
-                    />
-                  </div>
-                </div>
-              </div>
+            {/* Key */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Key</p>
+              <input
+                type="text"
+                value={formData.key}
+                onChange={(e) => handleInputChange('key', e.target.value)}
+                placeholder="e.g., C Major"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              />
             </div>
 
-            {/* Team Members Card */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm p-5 ring-1 ring-black/5 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center shadow-sm">
-                  <User className="w-4 h-4 text-green-600" />
-                </div>
-                <h2 className="text-lg font-outfit-semibold text-gray-800">Team Members</h2>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                    <Mic className="w-4 h-4 inline mr-1" />
-                    Lead Singer
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.leadSinger}
-                    onChange={(e) => handleInputChange('leadSinger', e.target.value)}
-                    placeholder="Lead singer name"
-                    className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                    Conductor
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.conductor}
-                    onChange={(e) => handleInputChange('conductor', e.target.value)}
-                    placeholder="Conductor name"
-                    className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                      <Piano className="w-4 h-4 inline mr-1" />
-                      Keyboardist
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.leadKeyboardist}
-                      onChange={(e) => handleInputChange('leadKeyboardist', e.target.value)}
-                      placeholder="Name"
-                      className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                      <Guitar className="w-4 h-4 inline mr-1" />
-                      Guitarist
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.leadGuitarist}
-                      onChange={(e) => handleInputChange('leadGuitarist', e.target.value)}
-                      placeholder="Name"
-                      className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                    <Drum className="w-4 h-4 inline mr-1" />
-                    Drummer
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.drummer}
-                    onChange={(e) => handleInputChange('drummer', e.target.value)}
-                    placeholder="Drummer name"
-                    className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base"
-                  />
-                </div>
-              </div>
+            {/* Lead Keyboardist */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Lead Keyboardist</p>
+              <input
+                type="text"
+                value={formData.leadKeyboardist}
+                onChange={(e) => handleInputChange('leadKeyboardist', e.target.value)}
+                placeholder="Enter keyboardist's name"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              />
             </div>
 
-            {/* Additional Information Card */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm p-5 ring-1 ring-black/5 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center shadow-sm">
-                  <FileText className="w-4 h-4 text-orange-600" />
-                </div>
-                <h2 className="text-lg font-outfit-semibold text-gray-800">Additional Information</h2>
-              </div>
-
-              <div className="space-y-4">
-                {/* Solfas */}
-                <div>
-                  <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                    Solfas (Solfège Notation)
-                  </label>
-                  <textarea
-                    value={formData.solfas}
-                    onChange={(e) => handleInputChange('solfas', e.target.value)}
-                    placeholder="Enter solfas notation if available..."
-                    rows={5}
-                    className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base resize-none font-mono text-sm"
-                  />
-                </div>
-
-                {/* Notes */}
-                <div>
-                  <label className="block text-sm font-outfit-medium text-gray-700 mb-2">
-                    Additional Notes
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    placeholder="Any additional information or instructions..."
-                    rows={4}
-                    className="w-full px-4 py-3 bg-white border-0 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 ring-1 ring-black/5 text-gray-800 placeholder-gray-400 text-base resize-none"
-                  />
-                </div>
-              </div>
+            {/* Lead Guitarist */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Lead Guitarist</p>
+              <input
+                type="text"
+                value={formData.leadGuitarist}
+                onChange={(e) => handleInputChange('leadGuitarist', e.target.value)}
+                placeholder="Enter guitarist's name"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              />
             </div>
 
-            {/* Submit Button */}
-            <div className="pt-4 pb-6">
-              <button
-                type="submit"
-                disabled={isSubmitting || !formData.title.trim() || !formData.lyrics.trim()}
-                className="w-full py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-colors font-outfit-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg active:scale-95 touch-optimized text-base"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Submitting...</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-5 h-5" />
-                    <span>Submit Song</span>
-                  </>
-                )}
-              </button>
-
-              {/* User Info */}
-              {user && (
-                <p className="text-xs text-gray-500 text-center mt-3">
-                  Submitting as: <span className="font-outfit-medium text-gray-700">{getUserName() || user.email}</span>
-                </p>
-              )}
+            {/* Lead Singer */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Lead Singer</p>
+              <input
+                type="text"
+                value={formData.leadSinger}
+                onChange={(e) => handleInputChange('leadSinger', e.target.value)}
+                placeholder="Enter singer's name"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              />
             </div>
+
+            {/* Conductor */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Conductor</p>
+              <input
+                type="text"
+                value={formData.conductor}
+                onChange={(e) => handleInputChange('conductor', e.target.value)}
+                placeholder="Enter conductor's name"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+            />
+          </div>
+
+            {/* Writer */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Writer/Composer</p>
+              <input
+                type="text"
+                value={formData.writer}
+                onChange={(e) => handleInputChange('writer', e.target.value)}
+                placeholder="Enter writer's name"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              />
+            </div>
+
+            {/* Tempo */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Tempo (BPM)</p>
+              <input
+                type="number"
+                value={formData.tempo}
+                onChange={(e) => handleInputChange('tempo', e.target.value)}
+                placeholder="e.g., 120"
+                min="1"
+                max="300"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              />
+          </div>
+
+            {/* Lyrics */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">
+                Lyrics <span className="text-red-500">*</span>
+              </p>
+              <textarea
+                value={formData.lyrics}
+                onChange={(e) => handleInputChange('lyrics', e.target.value)}
+                placeholder="Enter the song lyrics..."
+                rows={10}
+                className="flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-40 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+                required
+              />
+          </div>
+
+          {/* Solfas */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Solfas</p>
+            <textarea
+              value={formData.solfas}
+              onChange={(e) => handleInputChange('solfas', e.target.value)}
+                placeholder="Enter solfège notation..."
+                rows={8}
+                className="flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-32 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+            />
+          </div>
+
+          {/* Additional Notes */}
+            <div className="flex flex-col">
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Additional Notes</p>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Any other details or instructions..."
+                rows={8}
+                className="flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-32 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+            />
+          </div>
           </form>
-        </div>
-      </div>
+        </section>
+      </main>
+
+      {/* Fixed Footer with Submit Button */}
+      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-gray-50 border-t border-gray-200">
+            <button
+              type="submit"
+          onClick={handleSubmit}
+              disabled={isSubmitting || !formData.title.trim() || !formData.lyrics.trim()}
+          className="flex w-full items-center justify-center rounded-2xl bg-purple-600 h-14 px-6 text-base font-bold text-white shadow-lg shadow-purple-600/30 transition-all hover:bg-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+              <Upload className="w-5 h-5 mr-2" />
+              Submit
+                </>
+              )}
+            </button>
+      </footer>
     </div>
   )
 }
