@@ -8,16 +8,10 @@ import { submitSong } from '@/lib/song-submission-service'
 
 interface SongSubmissionForm {
   title: string
-  lyrics: string
   writer: string
-  key: string
-  tempo: string
   leadSinger: string
-  conductor: string
-  leadKeyboardist: string
-  leadGuitarist: string
-  drummer: string
-  solfas: string
+  lyrics: string
+  key: string
   notes: string
 }
 
@@ -35,16 +29,10 @@ export default function SubmitSongPage() {
 
   const [formData, setFormData] = useState<SongSubmissionForm>({
     title: '',
-    lyrics: '',
     writer: getUserName(),
-    key: '',
-    tempo: '',
     leadSinger: '',
-    conductor: '',
-    leadKeyboardist: '',
-    leadGuitarist: '',
-    drummer: '',
-    solfas: '',
+    lyrics: '',
+    key: '',
     notes: ''
   })
 
@@ -81,14 +69,14 @@ export default function SubmitSongPage() {
         lyrics: formData.lyrics.trim(),
         writer: formData.writer.trim() || getUserName() || 'Unknown',
         category: 'Other',
-        key: formData.key || '',
-        tempo: formData.tempo || '',
+        key: formData.key.trim() || '',
+        tempo: '',
         leadSinger: formData.leadSinger.trim() || '',
-        conductor: formData.conductor.trim() || '',
-        leadKeyboardist: formData.leadKeyboardist.trim() || '',
-        leadGuitarist: formData.leadGuitarist.trim() || '',
-        drummer: formData.drummer.trim() || '',
-        solfas: formData.solfas.trim() || '',
+        conductor: '',
+        leadKeyboardist: '',
+        leadGuitarist: '',
+        drummer: '',
+        solfas: '',
         notes: formData.notes.trim() || '',
         submittedBy: {
           userId: user.uid,
@@ -107,16 +95,10 @@ export default function SubmitSongPage() {
       setTimeout(() => {
         setFormData({
           title: '',
-          lyrics: '',
           writer: getUserName(),
-          key: '',
-          tempo: '',
           leadSinger: '',
-          conductor: '',
-          leadKeyboardist: '',
-          leadGuitarist: '',
-          drummer: '',
-          solfas: '',
+          lyrics: '',
+          key: '',
           notes: ''
         })
         setSubmitStatus('idle')
@@ -132,7 +114,7 @@ export default function SubmitSongPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-gray-50 overflow-x-hidden overflow-y-auto">
+    <div className="fixed inset-0 flex flex-col bg-gray-50 overflow-hidden">
         {/* Header */}
       <header className="sticky top-0 z-10 flex items-center bg-gray-50/80 backdrop-blur-sm p-4 justify-between border-b border-gray-200">
             <button
@@ -148,7 +130,7 @@ export default function SubmitSongPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex flex-col flex-1 pb-24">
+      <main className="flex-1 overflow-y-auto pb-24">
         <section className="flex flex-col gap-6 p-4">
           {/* Status Messages */}
         {submitStatus === 'success' && (
@@ -169,92 +151,20 @@ export default function SubmitSongPage() {
         )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {/* Song Title */}
+            {/* Song Title */}
             <div className="flex flex-col">
               <p className="text-gray-900 text-base font-medium leading-normal pb-2">
-              Song Title <span className="text-red-500">*</span>
+                Song Title <span className="text-red-500">*</span>
               </p>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
                 placeholder="Enter the title of the song"
                 className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
-              required
-            />
-          </div>
-
-            {/* Drummer */}
-            <div className="flex flex-col">
-              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Drummer</p>
-              <input
-                type="text"
-                value={formData.drummer}
-                onChange={(e) => handleInputChange('drummer', e.target.value)}
-                placeholder="Enter drummer's name"
-                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+                required
               />
             </div>
-
-            {/* Key */}
-            <div className="flex flex-col">
-              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Key</p>
-              <input
-                type="text"
-                value={formData.key}
-                onChange={(e) => handleInputChange('key', e.target.value)}
-                placeholder="e.g., C Major"
-                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
-              />
-            </div>
-
-            {/* Lead Keyboardist */}
-            <div className="flex flex-col">
-              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Lead Keyboardist</p>
-              <input
-                type="text"
-                value={formData.leadKeyboardist}
-                onChange={(e) => handleInputChange('leadKeyboardist', e.target.value)}
-                placeholder="Enter keyboardist's name"
-                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
-              />
-            </div>
-
-            {/* Lead Guitarist */}
-            <div className="flex flex-col">
-              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Lead Guitarist</p>
-              <input
-                type="text"
-                value={formData.leadGuitarist}
-                onChange={(e) => handleInputChange('leadGuitarist', e.target.value)}
-                placeholder="Enter guitarist's name"
-                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
-              />
-            </div>
-
-            {/* Lead Singer */}
-            <div className="flex flex-col">
-              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Lead Singer</p>
-              <input
-                type="text"
-                value={formData.leadSinger}
-                onChange={(e) => handleInputChange('leadSinger', e.target.value)}
-                placeholder="Enter singer's name"
-                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
-              />
-            </div>
-
-            {/* Conductor */}
-            <div className="flex flex-col">
-              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Conductor</p>
-              <input
-                type="text"
-                value={formData.conductor}
-                onChange={(e) => handleInputChange('conductor', e.target.value)}
-                placeholder="Enter conductor's name"
-                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
-            />
-          </div>
 
             {/* Writer */}
             <div className="flex flex-col">
@@ -268,19 +178,17 @@ export default function SubmitSongPage() {
               />
             </div>
 
-            {/* Tempo */}
+            {/* Lead Singer */}
             <div className="flex flex-col">
-              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Tempo (BPM)</p>
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Lead Singer</p>
               <input
-                type="number"
-                value={formData.tempo}
-                onChange={(e) => handleInputChange('tempo', e.target.value)}
-                placeholder="e.g., 120"
-                min="1"
-                max="300"
+                type="text"
+                value={formData.leadSinger}
+                onChange={(e) => handleInputChange('leadSinger', e.target.value)}
+                placeholder="Enter lead singer's name"
                 className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
               />
-          </div>
+            </div>
 
             {/* Lyrics */}
             <div className="flex flex-col">
@@ -292,34 +200,34 @@ export default function SubmitSongPage() {
                 onChange={(e) => handleInputChange('lyrics', e.target.value)}
                 placeholder="Enter the song lyrics..."
                 rows={10}
-                className="flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-40 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+                className="flex w-full min-w-0 flex-1 resize-y rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white min-h-[200px] placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
                 required
               />
-          </div>
+            </div>
 
-          {/* Solfas */}
+            {/* Key */}
             <div className="flex flex-col">
-              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Solfas</p>
-            <textarea
-              value={formData.solfas}
-              onChange={(e) => handleInputChange('solfas', e.target.value)}
-                placeholder="Enter solfège notation..."
-                rows={8}
-                className="flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-32 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
-            />
-          </div>
+              <p className="text-gray-900 text-base font-medium leading-normal pb-2">Key</p>
+              <input
+                type="text"
+                value={formData.key}
+                onChange={(e) => handleInputChange('key', e.target.value)}
+                placeholder="e.g., C Major, D Minor"
+                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              />
+            </div>
 
-          {/* Additional Notes */}
+            {/* Additional Notes */}
             <div className="flex flex-col">
               <p className="text-gray-900 text-base font-medium leading-normal pb-2">Additional Notes</p>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
+              <textarea
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
                 placeholder="Any other details or instructions..."
-                rows={8}
-                className="flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white h-32 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
-            />
-          </div>
+                rows={6}
+                className="flex w-full min-w-0 flex-1 resize-y rounded-xl text-gray-900 focus:outline-2 focus:outline-purple-600 focus:ring-2 focus:ring-purple-600 border-2 border-gray-300 bg-white min-h-[120px] placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal shadow-sm"
+              />
+            </div>
           </form>
         </section>
       </main>

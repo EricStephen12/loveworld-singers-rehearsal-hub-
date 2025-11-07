@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { FirebaseAuthService } from '@/lib/firebase-auth'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
+import { KingsChatAuthService } from '@/lib/kingschat-auth'
+import { AccountLinkingService } from '@/lib/account-linking'
 import AuthCheck from '@/components/AuthCheck'
 // Removed Supabase import - using Firebase now
 
@@ -199,12 +201,59 @@ function AuthPageContent() {
     setIsCheckingAccount(true)
     
     try {
-    if (provider === 'kingschat') {
-      // KingsChat integration - placeholder for future implementation
-      setError('KingsChat integration coming soon!')
-        setIsLoading(false)
-        setIsCheckingAccount(false)
-      return
+      if (provider === 'kingschat') {
+        setSuccess('Opening KingsChat login...')
+        
+        // Initiate KingsChat OAuth flow
+        const authTokens = await KingsChatAuthService.login()
+        
+        if (!authTokens) {
+          setError('KingsChat login was cancelled or failed. Please try again.')
+          setIsLoading(false)
+          setIsCheckingAccount(false)
+          return
+        }
+        
+        setSuccess('KingsChat login successful! Setting up your account...')
+        
+        // Handle KingsChat login with account linking
+        const result = await AccountLinkingService.handleKingsChatLogin(authTokens.accessToken)
+        
+        if (!result.success) {
+          setError(result.error || 'Failed to process KingsChat login')
+          setIsLoading(false)
+          setIsCheckingAccount(false)
+          return
+        }
+        
+        // Check if account needs linking (existing user with same email)
+        if (result.needsLinking) {
+          setSuccess('We found an existing account with your email. Please sign in with your password first, then link your KingsChat account from your profile settings.')
+          setIsLoading(false)
+          setIsCheckingAccount(false)
+          return
+        }
+        
+        // Store authentication data
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('userAuthenticated', 'true')
+          localStorage.setItem('lastAuthTime', Date.now().toString())
+          localStorage.setItem('hasCompletedProfile', 'true')
+          localStorage.setItem('bypassLogin', 'true')
+          localStorage.setItem('authProvider', 'kingschat')
+        }
+        
+        if (result.isNewUser) {
+          setSuccess('Welcome to LoveWorld Singers! Your account has been created. Redirecting...')
+        } else {
+          setSuccess('Welcome back! Redirecting to home...')
+        }
+        
+        setTimeout(() => {
+          router.push('/home')
+        }, 1500)
+        
+        return
       }
     } catch (error: any) {
       console.error('Social login error:', error)

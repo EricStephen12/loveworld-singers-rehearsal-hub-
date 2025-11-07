@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import 'kingschat-web-sdk/dist/stylesheets/style.min.css'
 import PWAInstall from '@/components/PWAInstall'
 import { AudioProvider } from '@/contexts/AudioContext'
 import { AuthProvider } from '@/contexts/AuthContext'

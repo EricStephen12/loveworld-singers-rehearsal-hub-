@@ -23,6 +23,11 @@ export interface UserProfile {
   email_verified: boolean;
   created_at: string;
   updated_at: string;
+  // KingsChat linking fields
+  kingschatUserId?: string;
+  kingschatEmail?: string;
+  kingschatLinkedAt?: string;
+  authProviders?: string[];
 }
 
 export interface UserGroup {

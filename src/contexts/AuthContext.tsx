@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { User } from 'firebase/auth'
 import { FirebaseAuthService } from '@/lib/firebase-auth'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
+import { KingsChatAuthService } from '@/lib/kingschat-auth'
 import type { UserProfile } from '@/types/supabase'
 
 interface AuthContextType {
@@ -45,6 +46,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear all state immediately
     setUser(null)
     setProfile(null)
+    
+    // Check if user is authenticated with KingsChat
+    const authProvider = typeof window !== 'undefined' ? localStorage.getItem('authProvider') : null
+    
+    // Clear KingsChat tokens if authenticated with KingsChat
+    if (authProvider === 'kingschat') {
+      KingsChatAuthService.clearTokens()
+      console.log('✅ KingsChat tokens cleared')
+    }
     
     // Clear storage
     try {
