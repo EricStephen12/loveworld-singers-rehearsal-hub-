@@ -67,7 +67,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen bg-[#E5DDD5] flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-[#E5DDD5] flex flex-col overflow-hidden">
       {/* WhatsApp-style header - Fixed */}
       <div className="flex-shrink-0 bg-gradient-to-r from-purple-400 to-purple-500 shadow-md w-full">
         <div className="px-3 sm:px-4 py-3 flex items-center justify-between w-full">

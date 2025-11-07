@@ -2,23 +2,17 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import ScreenHeader from '@/components/ScreenHeader';
 import SharedDrawer from '@/components/SharedDrawer';
 import { getMenuItems } from '@/config/menuItems';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  ChevronRight,
   Wrench,
-  MessageCircle,
   ArrowLeft,
   Smartphone,
   Monitor,
   Wifi,
-  Volume2,
-  RefreshCw,
-  Bug,
-  AlertTriangle
+  Volume2
 } from 'lucide-react';
 
 export default function TechnicalSupportPage() {
@@ -101,7 +95,7 @@ export default function TechnicalSupportPage() {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-pink-50 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-slate-50">
       <ScreenHeader
         title="Technical Support"
         onMenuClick={() => setIsMenuOpen(true)}
@@ -116,9 +110,7 @@ export default function TechnicalSupportPage() {
         rightImageSrc="/logo.png"
       />
 
-      {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
+      <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
         {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-600 rounded-full mb-4">
@@ -133,9 +125,9 @@ export default function TechnicalSupportPage() {
         </div>
 
         {/* Common Issues */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {technicalIssues.map((issue) => (
-            <div key={issue.id} className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 ring-1 ring-black/5">
+            <div key={issue.id} className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group ring-1 ring-black/5">
               <div className="flex items-center gap-3 mb-3">
                 <div className={`w-10 h-10 ${issue.iconBg} rounded-xl flex items-center justify-center`}>
                   <issue.icon className={`w-5 h-5 ${issue.iconColor}`} />
@@ -164,43 +156,6 @@ export default function TechnicalSupportPage() {
             </div>
           ))}
         </div>
-
-        {/* Still Need Help */}
-        <div className="mt-8 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-          <div className="text-center">
-            <AlertTriangle className="w-8 h-8 text-orange-600 mx-auto mb-3" />
-            <h3 className="font-semibold text-gray-900 mb-2">Still having issues?</h3>
-            <p className="text-gray-600 text-sm mb-4">
-              If these solutions don't resolve your problem, our technical support team is ready to help.
-            </p>
-            <div className="space-y-2">
-              <Link
-                href="/pages/chat"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors w-full justify-center"
-              >
-                <MessageCircle className="w-4 h-4" />
-                Chat with Technical Support
-              </Link>
-              <button className="inline-flex items-center gap-2 px-6 py-3 bg-white text-orange-600 font-medium rounded-lg border border-orange-200 hover:bg-orange-50 transition-colors w-full justify-center">
-                <Bug className="w-4 h-4" />
-                Report a Bug
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <button className="bg-white/70 backdrop-blur-sm border-0 rounded-xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 ring-1 ring-black/5 text-center">
-            <RefreshCw className="w-5 h-5 text-blue-600 mx-auto mb-2" />
-            <span className="text-xs font-medium text-gray-700">Clear Cache</span>
-          </button>
-          <button className="bg-white/70 backdrop-blur-sm border-0 rounded-xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 ring-1 ring-black/5 text-center">
-            <Monitor className="w-5 h-5 text-green-600 mx-auto mb-2" />
-            <span className="text-xs font-medium text-gray-700">Check Status</span>
-          </button>
-        </div>
-        </div> {/* End Scrollable Content */}
       </div>
 
       <SharedDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Menu" items={menuItems} />

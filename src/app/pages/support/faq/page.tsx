@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import ScreenHeader from '@/components/ScreenHeader';
 import SharedDrawer from '@/components/SharedDrawer';
 import { getMenuItems } from '@/config/menuItems';
@@ -12,7 +11,6 @@ import {
   Search,
   BookOpen,
   HelpCircle,
-  MessageCircle,
   ArrowLeft
 } from 'lucide-react';
 
@@ -111,7 +109,7 @@ export default function FAQPage() {
   const menuItems = getMenuItems(handleLogout);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-pink-50 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-slate-50">
       <ScreenHeader
         title="FAQ & Help Center"
         onMenuClick={() => setIsMenuOpen(true)}
@@ -126,9 +124,7 @@ export default function FAQPage() {
         rightImageSrc="/logo.png"
       />
 
-      {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
+      <div className="mx-auto max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
         {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
@@ -178,7 +174,7 @@ export default function FAQPage() {
           {filteredFAQs.length > 0 ? (
             <div className="space-y-3">
               {filteredFAQs.map((faq) => (
-                <div key={faq.id} className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 ring-1 ring-black/5">
+                <div key={faq.id} className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-3 shadow-sm hover:shadow-lg hover:bg-white/90 transition-all duration-300 active:scale-[0.97] group ring-1 ring-black/5">
                   <button
                     onClick={() => setExpandedFAQ(expandedFAQ === faq.id ? null : faq.id)}
                     className="w-full text-left flex items-center justify-between"
@@ -220,25 +216,6 @@ export default function FAQPage() {
             </div>
           )}
         </div>
-
-        {/* Still Need Help */}
-        <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-          <div className="text-center">
-            <MessageCircle className="w-8 h-8 text-blue-600 mx-auto mb-3" />
-            <h3 className="font-semibold text-gray-900 mb-2">Still need help?</h3>
-            <p className="text-gray-600 text-sm mb-4">
-              Can't find what you're looking for? Our support team is here to help.
-            </p>
-            <Link
-              href="/pages/chat"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <MessageCircle className="w-4 h-4" />
-              Chat with Support
-            </Link>
-          </div>
-        </div>
-        </div> {/* End Scrollable Content */}
       </div>
 
       <SharedDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Menu" items={menuItems} />
