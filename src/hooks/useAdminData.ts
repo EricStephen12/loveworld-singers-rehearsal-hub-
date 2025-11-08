@@ -51,6 +51,7 @@ async function fetchAdminData(): Promise<PraiseNight[]> {
         date: (page as any).date || new Date().toISOString(),
         location: (page as any).location || '',
         category: (page as any).category || 'ongoing',
+        pageCategory: (page as any).pageCategory || undefined, // Add page category field
         bannerImage: (page as any).bannerImage || '',
         countdown: {
           days: (page as any).countdownDays || (page as any).countdown?.days || 0,

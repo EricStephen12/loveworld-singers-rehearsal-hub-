@@ -176,9 +176,20 @@ export default function PagesSection(props: PagesSectionProps) {
     return allPraiseNights;
   }, [allPraiseNights, loading]);
 
+  // Filter pages by page category (when searchTerm matches a page category name)
+  const filteredPages = useMemo(() => {
+    if (!searchTerm) return pages;
+    
+    // Filter by page category name or page name
+    return pages.filter(page => 
+      page.pageCategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      page.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [pages, searchTerm]);
+
   // Get page categories for filtering
   const pageCategories = useMemo(() => {
-    const categories = pages.map(page => ({
+    const categories = filteredPages.map(page => ({
       id: page.id,
       name: page.name,
       description: 'Praise Night Event',
@@ -194,7 +205,7 @@ export default function PagesSection(props: PagesSectionProps) {
     
     console.log('📂 Page categories:', categories.length);
     return categories;
-  }, [pages]);
+  }, [filteredPages]);
 
   // Get available song categories for filtering
   const availableCategories = useMemo(() => {
@@ -286,7 +297,7 @@ export default function PagesSection(props: PagesSectionProps) {
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-3">
-            {pages.map((page) => (
+            {filteredPages.map((page) => (
               <div
                 key={page.id}
                 onClick={() => {

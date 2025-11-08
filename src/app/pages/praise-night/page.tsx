@@ -70,21 +70,61 @@ function PraiseNightPageContent() {
   }, [categoryFilter]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [selectedPageCategory, setSelectedPageCategory] = useState<string | null>(null);
+  const [pageCategories, setPageCategories] = useState<any[]>([]);
   
   // Load songs on demand like admin does
   const [allSongsFromFirebase, setAllSongsFromFirebase] = useState<PraiseNightSong[]>([]);
   const [songsLoading, setSongsLoading] = useState(false);
 
+  // Load page categories
+  useEffect(() => {
+    const loadPageCategories = async () => {
+      try {
+        const { FirebaseDatabaseService } = await import('@/lib/firebase-database');
+        const categories = await FirebaseDatabaseService.getPageCategories();
+        console.log('📂 Loaded page categories:', categories);
+        setPageCategories(categories);
+      } catch (error) {
+        console.error('❌ Error loading page categories:', error);
+      }
+    };
+    loadPageCategories();
+  }, []);
+
   // Filter praise nights by category if specified
   const filteredPraiseNights = useMemo(() => {
     if (loading || !allPraiseNights) return [];
 
-    if (!categoryFilter) {
+    let filtered = allPraiseNights;
+
+    // Filter by category (archive, ongoing, etc.)
+    if (categoryFilter) {
+      filtered = filtered.filter(praiseNight => praiseNight.category === categoryFilter);
+      console.log(`🔍 After category filter (${categoryFilter}):`, filtered.length, 'pages');
+    } else {
       // When no category filter, exclude unassigned pages from regular view
-      return allPraiseNights.filter(praiseNight => praiseNight.category !== 'unassigned');
+      filtered = filtered.filter(praiseNight => praiseNight.category !== 'unassigned');
     }
-    return allPraiseNights.filter(praiseNight => praiseNight.category === categoryFilter);
-  }, [allPraiseNights, categoryFilter, loading]);
+
+    // Filter by page category if selected
+    if (selectedPageCategory) {
+      console.log(`🔍 Filtering by page category: "${selectedPageCategory}"`);
+      const beforeCount = filtered.length;
+      filtered = filtered.filter(praiseNight => {
+        const matches = praiseNight.pageCategory === selectedPageCategory;
+        if (!matches) {
+          console.log(`❌ Page "${praiseNight.name}" pageCategory="${praiseNight.pageCategory}" !== "${selectedPageCategory}"`);
+        } else {
+          console.log(`✅ Page "${praiseNight.name}" matches!`);
+        }
+        return matches;
+      });
+      console.log(`🔍 After page category filter: ${filtered.length} pages (was ${beforeCount})`);
+    }
+
+    return filtered;
+  }, [allPraiseNights, categoryFilter, selectedPageCategory, loading]);
 
   // Preload data for instant access
   // No preloading needed - data loads fresh on each request
@@ -1275,7 +1315,70 @@ function PraiseNightPageContent() {
         {/* Archive Cards Grid - Special layout for archive category */}
         {categoryFilter === 'archive' && (
           <div className="mb-6">
-            {filteredPraiseNights.length > 0 ? (
+            {/* Show page categories if in archive and no category selected */}
+            {categoryFilter === 'archive' && !selectedPageCategory && pageCategories.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Browse by Category</h3>
+                  <span className="text-sm text-slate-500">{pageCategories.length} categories</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {pageCategories.map((category) => {
+                    // Count pages in this category
+                    const pagesInCategory = allPraiseNights.filter(p => {
+                      const isArchive = p.category === 'archive';
+                      const matchesCategory = p.pageCategory === category.name;
+                      console.log(`🔍 Page "${p.name}": category="${p.category}", pageCategory="${p.pageCategory}", matches="${category.name}"? ${matchesCategory}`);
+                      return isArchive && matchesCategory;
+                    });
+                    const pageCount = pagesInCategory.length;
+                    
+                    console.log(`📊 Category "${category.name}" has ${pageCount} archived pages:`, pagesInCategory.map(p => p.name));
+                    
+                    // Show all categories, even with 0 pages (for testing)
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => {
+                          console.log(`🎯 Selected category: ${category.name}`);
+                          setSelectedPageCategory(category.name);
+                        }}
+                        className="bg-white border-2 border-slate-200 rounded-xl p-6 hover:border-purple-400 hover:shadow-lg transition-all duration-200 text-left"
+                      >
+                        {category.image && (
+                          <img 
+                            src={category.image} 
+                            alt={category.name}
+                            className="w-full h-40 object-cover rounded-lg mb-4"
+                          />
+                        )}
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{category.name}</h4>
+                        <p className="text-sm text-slate-500 mb-3 line-clamp-2">{category.description}</p>
+                        <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                          {pageCount} {pageCount === 1 ? 'page' : 'pages'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Show back button if page category is selected */}
+            {selectedPageCategory && (
+              <div className="mb-4">
+                <button
+                  onClick={() => setSelectedPageCategory(null)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Back to Categories
+                </button>
+              </div>
+            )}
+
+            {/* Show pages only if category is selected OR no categories exist */}
+            {(selectedPageCategory || pageCategories.length === 0) && filteredPraiseNights.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {filteredPraiseNights.map((praiseNight) => (
                   <button
@@ -1324,17 +1427,15 @@ function PraiseNightPageContent() {
                   </button>
                 ))}
               </div>
-            ) : (
-              <div className="py-12 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <div className="text-slate-500 text-sm mb-2 font-medium">No Archived pages yet</div>
-                <div className="text-slate-400 text-xs">Pages will appear here when added to this category</div>
+            ) : selectedPageCategory ? (
+              <div className="text-center py-12">
+                <Archive className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No pages in this category</h3>
+                <p className="text-slate-500">
+                  No archived pages have been assigned to "{selectedPageCategory}" yet
+                </p>
               </div>
-            )}
+            ) : null}
           </div>
         )}
 

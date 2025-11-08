@@ -132,11 +132,17 @@ class AnalyticsTracker {
     document.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
       if (target.tagName === 'A' || target.tagName === 'BUTTON') {
-        this.trackEvent('click', {
+        const metadata: Record<string, any> = {
           element: target.tagName,
-          text: target.textContent?.slice(0, 50),
-          href: (target as HTMLAnchorElement).href
-        });
+          text: target.textContent?.slice(0, 50) || ''
+        };
+        
+        // Only add href if it exists (for anchor tags)
+        if (target.tagName === 'A' && (target as HTMLAnchorElement).href) {
+          metadata.href = (target as HTMLAnchorElement).href;
+        }
+        
+        this.trackEvent('click', metadata);
       }
     });
 

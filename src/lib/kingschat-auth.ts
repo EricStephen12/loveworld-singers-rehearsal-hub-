@@ -1,8 +1,16 @@
 // KingsChat Authentication Service
 import kingsChatWebSdk from 'kingschat-web-sdk'
 
-// Replace with your actual KingsChat Client ID from KingsChat Developer Site
-const KINGSCHAT_CLIENT_ID = process.env.NEXT_PUBLIC_KINGSCHAT_CLIENT_ID || 'YOUR_CLIENT_ID_HERE'
+// TEMPORARY: Hardcode your Client ID here for testing
+// TODO: Replace this with your actual KingsChat Client ID from KingsChat Developer Portal
+const HARDCODED_CLIENT_ID = '331c9eda-a130-4bb8-9a00-9231a817207d' // Your KingsChat Client ID
+
+// Try to get from env first, fallback to hardcoded
+const KINGSCHAT_CLIENT_ID = process.env.NEXT_PUBLIC_KINGSCHAT_CLIENT_ID || HARDCODED_CLIENT_ID
+
+// Debug: Log what we're using
+console.log('🔍 Using Client ID:', KINGSCHAT_CLIENT_ID)
+console.log('🔍 From env?', !!process.env.NEXT_PUBLIC_KINGSCHAT_CLIENT_ID)
 
 interface KingsChatAuthTokens {
   accessToken: string
@@ -26,26 +34,57 @@ export class KingsChatAuthService {
   static async login(): Promise<KingsChatAuthTokens | null> {
     try {
       console.log('🔐 Initiating KingsChat login...')
+      console.log('📋 Client ID:', KINGSCHAT_CLIENT_ID)
+      console.log('🌐 Current Origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A')
+      
+      if (!KINGSCHAT_CLIENT_ID || KINGSCHAT_CLIENT_ID === 'YOUR_CLIENT_ID_HERE') {
+        console.error('❌ KingsChat Client ID is not configured!')
+        alert('KingsChat Client ID is missing. Please configure NEXT_PUBLIC_KINGSCHAT_CLIENT_ID in your .env.local file')
+        return null
+      }
       
       const loginOptions = {
-        scopes: ['profile', 'email'], // Request profile and email access
+        scopes: ['profile', 'email', 'send_chat_message'], // Request all available scopes
         clientId: KINGSCHAT_CLIENT_ID
       }
+      
+      console.log('📋 Login options:', loginOptions)
 
+      console.log('🚀 Calling KingsChat SDK login...')
       const authResponse = await kingsChatWebSdk.login(loginOptions)
       
       console.log('✅ KingsChat login successful')
+      console.log('📦 Full auth response:', authResponse)
       
       // Store tokens in localStorage for persistence
       if (typeof window !== 'undefined') {
         localStorage.setItem('kingschat_access_token', authResponse.accessToken)
         localStorage.setItem('kingschat_refresh_token', authResponse.refreshToken)
         localStorage.setItem('kingschat_token_expiry', (Date.now() + authResponse.expiresInMillis).toString())
+        
+        // Store user profile if it's in the response
+        if ((authResponse as any).user || (authResponse as any).profile) {
+          const userProfile = (authResponse as any).user || (authResponse as any).profile
+          localStorage.setItem('kingschat_user_profile', JSON.stringify(userProfile))
+          console.log('💾 Stored KingsChat user profile:', userProfile)
+        }
       }
       
       return authResponse
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ KingsChat login failed:', error)
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        stack: error.stack
+      })
+      
+      // Show user-friendly error message
+      if (error.code === 1) {
+        alert('KingsChat Error: Invalid Client ID or configuration. Please check:\n1. Client ID is correct\n2. Domain is whitelisted in KingsChat Developer Portal\n3. Scopes are enabled')
+      }
+      
       return null
     }
   }
@@ -157,41 +196,84 @@ export class KingsChatAuthService {
   }
 
   /**
-   * Get KingsChat user profile from KingsChat API
+   * Get KingsChat user profile from stored data or decode from token
    */
   static async getUserProfile(accessToken: string): Promise<KingsChatUserProfile | null> {
     try {
       console.log('📋 Fetching KingsChat user profile...')
+      console.log('🔑 Access Token:', accessToken?.substring(0, 20) + '...')
       
-      // Make API call to KingsChat to get user profile
-      // Note: Update the endpoint based on KingsChat's actual API documentation
-      const response = await fetch('https://api.kingsch.at/v1/user/me', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
+      // First, try to get profile from localStorage (stored during login)
+      if (typeof window !== 'undefined') {
+        const storedProfile = localStorage.getItem('kingschat_user_profile')
+        if (storedProfile) {
+          console.log('💾 Found stored profile in localStorage')
+          const profileData = JSON.parse(storedProfile)
+          
+          const profile: KingsChatUserProfile = {
+            userId: profileData.id || profileData.userId || profileData.user_id || profileData.kingschatId || profileData.sub,
+            email: profileData.email || profileData.emailAddress,
+            firstName: profileData.firstName || profileData.first_name || profileData.givenName || profileData.given_name || profileData.name?.split(' ')[0],
+            lastName: profileData.lastName || profileData.last_name || profileData.familyName || profileData.family_name || profileData.name?.split(' ').slice(1).join(' '),
+            profilePicture: profileData.profilePicture || profileData.profile_picture || profileData.avatar || profileData.picture || profileData.photoUrl
+          }
+          
+          console.log('✅ Profile from localStorage:', profile)
+          
+          if (profile.userId) {
+            return profile
+          }
         }
+      }
+      
+      // If no stored profile, try to decode JWT token to get user info
+      console.log('🔍 Trying to decode access token...')
+      try {
+        // JWT tokens have 3 parts separated by dots
+        const tokenParts = accessToken.split('.')
+        if (tokenParts.length === 3) {
+          // Decode the payload (middle part)
+          const payload = JSON.parse(atob(tokenParts[1]))
+          console.log('📦 Decoded token payload:', payload)
+          console.log('📦 All token keys:', Object.keys(payload))
+          
+          // Extract all possible user info from token
+          const profile: KingsChatUserProfile = {
+            userId: payload.sub || payload.userId || payload.user_id || payload.id || payload.kingschatId,
+            email: payload.email || payload.emailAddress || payload.mail,
+            firstName: payload.given_name || payload.firstName || payload.first_name || payload.givenName || payload.name?.split(' ')[0],
+            lastName: payload.family_name || payload.lastName || payload.last_name || payload.familyName || payload.name?.split(' ').slice(1).join(' '),
+            profilePicture: payload.picture || payload.avatar || payload.profilePicture || payload.profile_picture || payload.photo
+          }
+          
+          console.log('✅ Profile from token:', profile)
+          console.log('📊 Profile completeness:', {
+            hasUserId: !!profile.userId,
+            hasEmail: !!profile.email,
+            hasFirstName: !!profile.firstName,
+            hasLastName: !!profile.lastName,
+            hasProfilePicture: !!profile.profilePicture
+          })
+          
+          if (profile.userId) {
+            // Store this profile for future use
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('kingschat_user_profile', JSON.stringify(profile))
+            }
+            return profile
+          }
+        }
+      } catch (decodeError) {
+        console.warn('⚠️ Could not decode token:', decodeError)
+      }
+      
+      throw new Error('Could not extract user profile from token or storage')
+    } catch (error: any) {
+      console.error('❌ Failed to get user profile:', error)
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack
       })
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch profile: ${response.statusText}`)
-      }
-      
-      const data = await response.json()
-      
-      // Map KingsChat response to our profile interface
-      const profile: KingsChatUserProfile = {
-        userId: data.id || data.userId || data.user_id,
-        email: data.email,
-        firstName: data.firstName || data.first_name || data.name?.split(' ')[0],
-        lastName: data.lastName || data.last_name || data.name?.split(' ').slice(1).join(' '),
-        profilePicture: data.profilePicture || data.profile_picture || data.avatar
-      }
-      
-      console.log('✅ KingsChat profile fetched successfully')
-      return profile
-    } catch (error) {
-      console.error('❌ Failed to fetch user profile:', error)
       return null
     }
   }

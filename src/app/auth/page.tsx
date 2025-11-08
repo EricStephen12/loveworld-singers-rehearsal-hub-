@@ -216,42 +216,63 @@ function AuthPageContent() {
         
         setSuccess('KingsChat login successful! Setting up your account...')
         
-        // Handle KingsChat login with account linking
-        const result = await AccountLinkingService.handleKingsChatLogin(authTokens.accessToken)
+        // Extract KingsChat UID from token
+        const { jwtDecode } = await import('jwt-decode')
+        const decoded: any = jwtDecode(authTokens.accessToken)
+        const kingschatUserId = decoded.userId || decoded.sub || decoded.id
         
-        if (!result.success) {
-          setError(result.error || 'Failed to process KingsChat login')
+        if (!kingschatUserId) {
+          setError('Could not extract user ID from KingsChat token')
           setIsLoading(false)
           setIsCheckingAccount(false)
           return
         }
         
-        // Check if account needs linking (existing user with same email)
-        if (result.needsLinking) {
-          setSuccess('We found an existing account with your email. Please sign in with your password first, then link your KingsChat account from your profile settings.')
+        console.log('🔐 KingsChat UID:', kingschatUserId)
+        
+        // SIMPLE APPROACH: Try to sign in with temp email
+        // If it works = existing user, if it fails = new user
+        const { FirebaseAuthService } = await import('@/lib/firebase-auth')
+        const tempEmail = `${kingschatUserId}@kingschat.temp`
+        
+        console.log('🔑 Trying to sign in with:', tempEmail)
+        
+        // Try to sign in using the UID as password
+        const signInResult = await FirebaseAuthService.signInWithEmailAndPassword(
+          tempEmail,
+          kingschatUserId // Use UID as password
+        )
+        
+        if (signInResult.error) {
+          // Sign-in failed = New user
+          console.log('🆕 New user - redirecting to profile completion')
+          
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('kingschatProfileSetup', 'true')
+            localStorage.setItem('kingschatUserId', kingschatUserId)
+          }
+          
           setIsLoading(false)
           setIsCheckingAccount(false)
+          
+          router.push(`/pages/complete-profile?from=kingschat&kingschatUserId=${kingschatUserId}`)
           return
-        }
-        
-        // Store authentication data
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('userAuthenticated', 'true')
-          localStorage.setItem('lastAuthTime', Date.now().toString())
-          localStorage.setItem('hasCompletedProfile', 'true')
-          localStorage.setItem('bypassLogin', 'true')
-          localStorage.setItem('authProvider', 'kingschat')
-        }
-        
-        if (result.isNewUser) {
-          setSuccess('Welcome to LoveWorld Singers! Your account has been created. Redirecting...')
         } else {
-          setSuccess('Welcome back! Redirecting to home...')
-        }
-        
-        setTimeout(() => {
+          // Sign-in success = Existing user
+          console.log('✅ Existing user - redirecting to home')
+          
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('userAuthenticated', 'true')
+            localStorage.setItem('hasCompletedProfile', 'true')
+            localStorage.setItem('authProvider', 'kingschat')
+          }
+          
+          setIsLoading(false)
+          setIsCheckingAccount(false)
+          
           router.push('/home')
-        }, 1500)
+          return
+        }
         
         return
       }

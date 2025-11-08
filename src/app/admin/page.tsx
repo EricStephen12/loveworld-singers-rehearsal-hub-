@@ -61,6 +61,8 @@ export default function AdminPage() {
   const [newPageBannerFile, setNewPageBannerFile] = useState<File | null>(null);
   const [newPageCategoryName, setNewPageCategoryName] = useState('');
   const [newPageCategoryDescription, setNewPageCategoryDescription] = useState(''); // New state for page category description
+  const [newPageCategoryImage, setNewPageCategoryImage] = useState(''); // New state for page category image
+  const [selectedPageCategoryFilter, setSelectedPageCategoryFilter] = useState<string | null>(null); // Filter pages by page category
 
   // Delete dialog states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -475,6 +477,7 @@ export default function AdminPage() {
       const newPageCategoryData: any = {
         name: newPageCategoryName.trim(),
         description: newPageCategoryDescription.trim() || `Page category: ${newPageCategoryName.trim()}`,
+        image: newPageCategoryImage.trim() || '',
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -494,6 +497,7 @@ export default function AdminPage() {
 
         setNewPageCategoryName('');
         setNewPageCategoryDescription('');
+        setNewPageCategoryImage('');
         setShowPageCategoryModal(false);
         refreshData();
 
@@ -517,6 +521,7 @@ export default function AdminPage() {
     setEditingPageCategory(pageCategory);
     setNewPageCategoryName(pageCategory.name);
     setNewPageCategoryDescription(pageCategory.description || '');
+    setNewPageCategoryImage(pageCategory.image || '');
     setShowPageCategoryModal(true);
   };
 
@@ -533,6 +538,7 @@ export default function AdminPage() {
       const updatedData = {
         name: newPageCategoryName.trim(),
         description: newPageCategoryDescription.trim() || `Page category: ${newPageCategoryName.trim()}`,
+        image: newPageCategoryImage.trim() || '',
         updatedAt: new Date()
       };
 
@@ -552,6 +558,7 @@ export default function AdminPage() {
         setEditingPageCategory(null);
         setNewPageCategoryName('');
         setNewPageCategoryDescription('');
+        setNewPageCategoryImage('');
         setShowPageCategoryModal(false);
         refreshData();
 
@@ -710,6 +717,8 @@ export default function AdminPage() {
   };
 
   const handleEditPage = (page: PraiseNight) => {
+    console.log('📝 Editing page:', page);
+    console.log('📂 Page category from DB:', page.pageCategory);
     setEditingPage(page);
     setNewPageName(page.name);
     setNewPageDate(page.date);
@@ -717,6 +726,7 @@ export default function AdminPage() {
     setNewPageDescription(''); // Description not supported in PraiseNight type
     setNewPageCategory(page.category);
     setNewPagePageCategory(page.pageCategory || ''); // Set page category
+    console.log('✅ Set page category to:', page.pageCategory || '');
     // Use countdown object directly
     setNewPageDays(page.countdown.days);
     setNewPageHours(page.countdown.hours);
@@ -1252,8 +1262,18 @@ export default function AdminPage() {
         {activeSection === 'Page Categories' && (
           <PageCategoriesSection
             pageCategories={pageCategories}
+            pages={pages}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
+            onPageClick={(page) => {
+              // Switch to Pages section and select this page
+              setActiveSection('Pages');
+              setSelectedPage(page);
+              addToast({
+                type: 'success',
+                message: `Viewing "${page.name}"`
+              });
+            }}
             showPageCategoryModal={showPageCategoryModal}
             setShowPageCategoryModal={setShowPageCategoryModal}
             editingPageCategory={editingPageCategory}
@@ -1262,6 +1282,8 @@ export default function AdminPage() {
             setNewPageCategoryName={setNewPageCategoryName}
             newPageCategoryDescription={newPageCategoryDescription}
             setNewPageCategoryDescription={setNewPageCategoryDescription}
+            newPageCategoryImage={newPageCategoryImage}
+            setNewPageCategoryImage={setNewPageCategoryImage}
             showDeletePageCategoryDialog={showDeletePageCategoryDialog}
             setShowDeletePageCategoryDialog={setShowDeletePageCategoryDialog}
             pageCategoryToDelete={pageCategoryToDelete}
@@ -1362,7 +1384,9 @@ export default function AdminPage() {
         categoryToDelete={categoryToDelete}
         setCategoryToDelete={setCategoryToDelete}
         confirmDeleteCategory={confirmDeleteCategory}
-        cancelDeleteCategory={cancelDeleteCategory} pageCategories={[]}      />
+        cancelDeleteCategory={cancelDeleteCategory}
+        pageCategories={pageCategories}
+      />
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />

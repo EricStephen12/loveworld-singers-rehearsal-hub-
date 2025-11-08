@@ -70,6 +70,7 @@ if (typeof window !== 'undefined') {
 const APP_VERSION = '3.0.0'; // ✅ Updated for instant loading optimizations
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: 'LoveWorld Singers Rehearsal Hub - Praise & Worship App',
   description: 'Join the LoveWorld Singers community! Access rehearsals, chat with fellow singers, and grow in praise and worship. Install our app for the best experience!',
   manifest: `/manifest.json`,

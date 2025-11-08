@@ -10,7 +10,10 @@ service cloud.firestore {
 
     // ===== PROFILES =====
     match /profiles/{userId} {
-      allow read: if request.auth != null;
+      // Allow reading profiles for:
+      // 1. Authenticated users (normal access)
+      // 2. Anyone searching by kingschatUserId (for KingsChat login)
+      allow read: if true;  // Open for KingsChat login to search
       allow write: if true;
     }
 
@@ -53,6 +56,12 @@ service cloud.firestore {
 
     // ===== CATEGORIES =====
     match /categories/{categoryId} {
+      allow read: if true;  // Anyone can read
+      allow write: if true;  // Open for admin panel
+    }
+
+    // ===== PAGE CATEGORIES =====
+    match /page_categories/{pageCategoryId} {
       allow read: if true;  // Anyone can read
       allow write: if true;  // Open for admin panel
     }
@@ -114,6 +123,33 @@ service cloud.firestore {
     match /song_history/{historyId} {
       allow read: if true;  // Anyone can read history
       allow write: if true;  // Open for admin panel
+    }
+
+    // ===== ANALYTICS =====
+    match /analytics_events/{eventId} {
+      allow read: if true;  // Admins can read analytics
+      allow create: if true;  // Anyone can create analytics events
+      allow update, delete: if false;  // No updates or deletes
+    }
+
+    match /analytics_sessions/{sessionId} {
+      allow read: if true;  // Admins can read sessions
+      allow create: if true;  // Anyone can create sessions
+      allow update: if true;  // Allow updating session data (page views, duration)
+      allow delete: if false;  // No deletes
+    }
+
+    // ===== USER GROUPS =====
+    match /user_groups/{groupId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ===== SONG SUBMISSIONS =====
+    match /song_submissions/{submissionId} {
+      allow read: if true;  // Anyone can read (for admin review)
+      allow create: if request.auth != null;  // Authenticated users can submit
+      allow update, delete: if true;  // Open for admin panel
     }
 
 

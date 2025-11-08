@@ -26,6 +26,7 @@ export interface UserProfile {
   // KingsChat linking fields
   kingschatUserId?: string;
   kingschatEmail?: string;
+  kingschatPassword?: string; // Stored password for auto sign-in
   kingschatLinkedAt?: string;
   authProviders?: string[];
 }

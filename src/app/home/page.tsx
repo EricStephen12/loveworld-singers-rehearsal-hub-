@@ -15,7 +15,7 @@ function HomePageContent() {
   const router = useRouter()
   const { signOut } = useAuth()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)  
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
   const [openAbout, setOpenAbout] = useState<number | null>(null)
@@ -143,8 +143,8 @@ function HomePageContent() {
     },
     {
       icon: Play,
-      title: 'Media Player',
-      href: '/pages/audio-lab',
+      title: 'Media',
+      href: '#',
       badge: null,
     },
     {

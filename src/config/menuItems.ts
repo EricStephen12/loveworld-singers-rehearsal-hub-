@@ -49,29 +49,12 @@ export const getMenuItems = (onLogout?: () => void, onRefresh?: () => void): Men
     badge: null,
   },
   {
-    icon: Play,
-    title: 'Media',
-    href: '#',
-    badge: null,
-  },
-  {
-    icon: Mic,
-    title: 'Audio Lab',
-    href: '/pages/audio-lab',
-    badge: null,
-  },
-  {
     icon: Calendar,
     title: 'Ministry Calendar',
     href: '/pages/calendar',
     badge: null,
   },
-  {
-    icon: BarChart3,
-    title: 'Analytics',
-    href: '#',
-    badge: null,
-  },
+ 
   {
     icon: HelpCircle,
     title: 'Admin Support',

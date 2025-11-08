@@ -70,6 +70,7 @@ async function fetchFirebaseData(): Promise<PraiseNight[]> {
         date: (page as any).date || new Date().toISOString(),
         location: (page as any).location || '',
         category: (page as any).category || 'ongoing',
+        pageCategory: (page as any).pageCategory || undefined, // Add page category field
         bannerImage: (page as any).bannerImage || (page as any).bannerimage || '',
         countdown: (() => {
           const countdownData = {

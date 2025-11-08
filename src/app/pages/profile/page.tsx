@@ -223,10 +223,33 @@ function ProfilePage() {
 
   // Debug logging
   console.log('🔍 Profile Debug Info:')
-  console.log('👤 User:', user?.uid)
-  console.log('📋 Current Profile:', currentProfile)
+  console.log('👤 User UID:', user?.uid)
+  console.log('📋 Current Profile ID:', currentProfile?.id)
   console.log('📊 Profile Data:', profileData)
   console.log('🔄 Is Loading:', isLoading)
+  
+  // ✅ SECURITY: Ensure user can only see their own profile
+  useEffect(() => {
+    if (user && currentProfile) {
+      // Check if the loaded profile belongs to the current user
+      if (currentProfile.id !== user.uid) {
+        console.error('❌ SECURITY: Profile ID mismatch!')
+        console.error('User UID:', user.uid)
+        console.error('Profile ID:', currentProfile.id)
+        console.error('🔄 Refreshing to load correct profile...')
+        refreshProfile()
+      }
+      
+      // Check if user is trying to view President's profile without permission
+      if ((currentProfile as any).isPresident === true) {
+        const isSpecialUser = typeof window !== 'undefined' && localStorage.getItem('specialUser') === 'true'
+        if (!isSpecialUser) {
+          console.error('❌ SECURITY: Unauthorized access to President profile!')
+          router.push('/home')
+        }
+      }
+    }
+  }, [user, currentProfile, router, refreshProfile])
 
   // Initialize edit form with profile data (only once on mount)
   useEffect(() => {
@@ -680,7 +703,10 @@ function ProfilePage() {
     middleName: profileData.middle_name || '',
     lastName: profileData.last_name || '',
     fullName: `${profileData.first_name || ''} ${profileData.middle_name || ''} ${profileData.last_name || ''}`.trim(),
-    email: profileData.email || '',
+    // Show "KingsChat" for KingsChat users, otherwise show email
+    email: (profileData as any).kingschatUserId 
+      ? 'KingsChat' 
+      : (profileData.email || ''),
     phoneNumber: profileData.phone_number || '',
     gender: profileData.gender || '',
     birthday: profileData.birthday || '',
@@ -693,8 +719,8 @@ function ProfilePage() {
     // Ministry Information
     designation: profileData.designation || '',
     administration: profileData.administration || '',
-    socialProvider: profileData.social_provider || 'email',
-    socialId: profileData.social_id || profileData.email || '',
+    socialProvider: (profileData as any).kingschatUserId ? 'kingschat' : (profileData.social_provider || 'email'),
+    socialId: (profileData as any).kingschatUserId || profileData.social_id || profileData.email || '',
     
     // Additional Profile Data (these would come from other tables in a real app)
     groups: selectedGroup ? [selectedGroup] : ["Your LoveWorld Singers"], // Default to president's group
@@ -745,7 +771,7 @@ function ProfilePage() {
       {/* Animated Header */}
       <ScreenHeader 
         title="Profile" 
-        onMenuClick={() => setIsMenuOpen(!isMenuOpen)}
+        showMenuButton={false}
         rightButtons={rightButtons}
         rightImageSrc="/logo.png"
         leftButtons={
@@ -877,99 +903,50 @@ function ProfilePage() {
 
           <div className={`overflow-hidden transition-all duration-300 ${expandedSections.account ? 'max-h-[600px]' : 'max-h-0'}`}>
             <div className="px-3 pb-3 pt-1 space-y-3">
-              {/* Primary Account */}
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-2.5 border border-gray-200">
-                <div className="flex items-center gap-2">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md ${
-                userProfile.socialProvider === 'google' ? 'bg-blue-500' : 
-                userProfile.socialProvider === 'kingschat' ? 'bg-purple-500' : 'bg-gray-500'
-              }`}>
-                {userProfile.socialProvider === 'google' ? (
-                  <svg className="w-4 h-4 text-white" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  </svg>
-                ) : userProfile.socialProvider === 'kingschat' ? (
-                  <img 
-                    src="/kingschat.jpeg" 
-                    alt="KingsChat" 
-                    className="w-4 h-4 rounded-full object-cover"
-                  />
-                ) : (
-                      <Mail className="w-4 h-4 text-white" />
-                )}
-              </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-gray-900">
-                  {userProfile.socialProvider === 'google' ? 'Google Account' : 
-                   userProfile.socialProvider === 'kingschat' ? 'KingsChat Account' : 'Email Account'}
-                </p>
-                    <p className="text-[10px] text-gray-600 truncate">{userProfile.socialId}</p>
+              {/* Primary Account - Only show for non-KingsChat users */}
+              {userProfile.socialProvider !== 'kingschat' && (
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-2.5 border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md ${
+                  userProfile.socialProvider === 'google' ? 'bg-blue-500' : 'bg-gray-500'
+                }`}>
+                  {userProfile.socialProvider === 'google' ? (
+                    <svg className="w-4 h-4 text-white" viewBox="0 0 24 24">
+                      <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    </svg>
+                  ) : (
+                    <Mail className="w-4 h-4 text-white" />
+                  )}
+                </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-gray-900">
+                    {userProfile.socialProvider === 'google' ? 'Google Account' : 'Email Account'}
+                  </p>
+                      <p className="text-[10px] text-gray-600 truncate">{userProfile.socialId}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* KingsChat Linking Section */}
-              <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
-                <div className="flex items-start gap-2 mb-2">
-                  <img 
-                    src="/kingschat.jpeg" 
-                    alt="KingsChat" 
-                    className="w-6 h-6 rounded-full object-cover mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-gray-900">KingsChat Account</p>
-                    <p className="text-[10px] text-gray-600 mt-0.5">
-                      {kingsChatLinked ? 'Linked and active' : 'Link your KingsChat for easy sign-in'}
-                    </p>
+              {/* Show status for users who registered with KingsChat */}
+              {userProfile.socialProvider === 'kingschat' && (
+                <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src="/kingschat.jpeg" 
+                      alt="KingsChat" 
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-gray-900">KingsChat Account</p>
+                      <p className="text-[10px] text-gray-600 mt-0.5">
+                        Primary authentication method
+                      </p>
+                    </div>
+                    <CheckCircle className="w-5 h-5 text-green-500" />
                   </div>
                 </div>
-
-                {linkingMessage && (
-                  <div className={`text-[10px] px-2 py-1.5 rounded mb-2 ${
-                    linkingMessage.includes('✅') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {linkingMessage}
-                  </div>
-                )}
-
-                {kingsChatLinked ? (
-                  <button
-                    onClick={handleUnlinkKingsChat}
-                    disabled={isLinkingKingsChat}
-                    className="w-full px-3 py-2 bg-white border border-purple-300 text-purple-700 rounded-lg text-xs font-medium hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isLinkingKingsChat ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Unlinking...
-                      </>
-                    ) : (
-                      <>
-                        <X className="w-3 h-3" />
-                        Unlink KingsChat
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleLinkKingsChat}
-                    disabled={isLinkingKingsChat}
-                    className="w-full px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isLinkingKingsChat ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Linking...
-                      </>
-                    ) : (
-                      <>
-                        <Smartphone className="w-3 h-3" />
-                        Link KingsChat Account
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
+              )}
               
             </div>
           </div>

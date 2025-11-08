@@ -202,16 +202,29 @@ export class FirebaseAuthService {
       
       const result = await createUserWithEmailAndPassword(auth, email, password)
       
-      // Create user profile in Firestore with profile_completed: true (no completion page needed)
-      await setDoc(doc(db, 'profiles', result.user.uid), {
-        id: result.user.uid,
-        email: result.user.email,
-        profile_completed: true, // Mark as completed since we have basic info
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        // Include user data if provided
-        ...(userData || {})
-      })
+      // Only create profile if userData is provided (not empty object)
+      // This prevents creating duplicate profiles when linking KingsChat
+      if (userData && Object.keys(userData).length > 0) {
+        // Create user profile in Firestore with profile_completed: true (no completion page needed)
+        const profileData = {
+          id: result.user.uid,
+          email: result.user.email, // Default to Firebase Auth email
+          profile_completed: true, // Mark as completed since we have basic info
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          // Include user data if provided (this can override email with real email)
+          ...userData
+        }
+        
+        console.log('💾 Saving profile to Firestore:', {
+          ...profileData,
+          kingschatPassword: profileData.kingschatPassword ? '***hidden***' : undefined
+        })
+        
+        await setDoc(doc(db, 'profiles', result.user.uid), profileData)
+      } else {
+        console.log('ℹ️ Skipping profile creation (linking mode - profile already exists)')
+      }
       
       return { user: result.user, error: null }
     } catch (error: any) {
