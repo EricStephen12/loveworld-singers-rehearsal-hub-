@@ -95,16 +95,18 @@ export default function KingsChatOAuthModal({
       
       console.log('🔐 Using authorization code as KingsChat ID:', kingschatUserId.substring(0, 10) + '...')
 
-      // Create a simple profile using the auth code as the ID
+      // Try to get real user info from KingsChat if available
+      // For now, we'll use the auth code as ID and prompt user to update their info later
       const userProfile = {
         userId: kingschatUserId,
         id: kingschatUserId,
-        email: 'user@kingschat.com', // Can be updated later
-        firstName: 'KingsChat',
-        lastName: 'User',
+        email: '', // Will be filled during profile completion
+        firstName: '',
+        lastName: '',
         name: 'KingsChat User',
         profilePicture: '/kingschat.jpeg',
-        verified: true
+        verified: true,
+        needsProfileCompletion: true // Flag to indicate user needs to complete profile
       }
 
       console.log('✅ KingsChat profile created using auth code as ID')
