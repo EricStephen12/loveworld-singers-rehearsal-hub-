@@ -38,45 +38,7 @@ function KingsChatIdBanner() {
     return null
   }
 
-  return (
-    <div className="mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl p-4 shadow-lg relative overflow-hidden">
-      {/* Decorative background */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
-      </div>
-
-      <div className="relative">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <img 
-              src="/kingschat.jpeg" 
-              alt="KingsChat" 
-              className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-md"
-            />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-white font-bold text-sm mb-1">🎉 New Feature: KingsChat Login!</h3>
-            <p className="text-white/90 text-xs mb-3">
-              Add your KingsChat ID to sign in faster and access group features
-            </p>
-            <button
-              onClick={() => router.push('/pages/add-kingschat-id')}
-              className="bg-white text-purple-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors shadow-md"
-            >
-              Add KingsChat ID
-            </button>
-          </div>
-          <button
-            onClick={handleDismiss}
-            className="flex-shrink-0 text-white/80 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+  
 }
 
 function HomePageContent() {
