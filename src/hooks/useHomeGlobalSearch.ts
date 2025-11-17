@@ -136,7 +136,7 @@ export function useHomeGlobalSearch() {
     const features = [
       { title: 'Rehearsals', url: '/pages/rehearsals', icon: 'Calendar' },
       { title: 'Profile', url: '/pages/profile', icon: 'User' },
-      { title: 'Push Notifications', url: '#', icon: 'Bell' },
+      { title: 'Notifications', url: '#', icon: 'Bell' },
       { title: 'Groups', url: '#', icon: 'Users' },
       { title: 'Submit Song', url: '#', icon: 'Music' },
       { title: 'Media', url: '#', icon: 'Play' },

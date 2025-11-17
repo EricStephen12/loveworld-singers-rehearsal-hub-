@@ -3,13 +3,81 @@
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { Music, Settings, Calendar, Users, BarChart3, Download, Search, Menu, X, Home, User, Bell, HelpCircle, FileText, MessageCircle, Newspaper, Flag, Coffee, Play, Heart, Plus, MoreHorizontal, Shuffle, ChevronDown, ChevronUp, Info, AlertCircle } from 'lucide-react'
 import { getMenuItems } from '@/config/menuItems'
 import SharedDrawer from '@/components/SharedDrawer'
 import { useHomeGlobalSearch, HomeSearchResult } from '@/hooks/useHomeGlobalSearch'
 import { useAuth } from '@/contexts/AuthContext'
 import AuthGuard from '@/components/AuthGuard'
 import { handleAppRefresh } from '@/utils/refresh-utils'
+
+// Banner component for old users without KingsChat ID
+function KingsChatIdBanner() {
+  const router = useRouter()
+  const { profile } = useAuth()
+  const [isDismissed, setIsDismissed] = useState(false)
+
+  // Check if user has KingsChat ID
+  const hasKingsChatId = (profile as any)?.kingschat_id
+  
+  // Check if banner was dismissed (stored in localStorage)
+  useEffect(() => {
+    const dismissed = localStorage.getItem('kingschatBannerDismissed')
+    if (dismissed === 'true') {
+      setIsDismissed(true)
+    }
+  }, [])
+
+  const handleDismiss = () => {
+    setIsDismissed(true)
+    localStorage.setItem('kingschatBannerDismissed', 'true')
+  }
+
+  // Don't show if user has KingsChat ID or banner is dismissed
+  if (hasKingsChatId || isDismissed || !profile) {
+    return null
+  }
+
+  return (
+    <div className="mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl p-4 shadow-lg relative overflow-hidden">
+      {/* Decorative background */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
+      </div>
+
+      <div className="relative">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <img 
+              src="/kingschat.jpeg" 
+              alt="KingsChat" 
+              className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-md"
+            />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-white font-bold text-sm mb-1">🎉 New Feature: KingsChat Login!</h3>
+            <p className="text-white/90 text-xs mb-3">
+              Add your KingsChat ID to sign in faster and access group features
+            </p>
+            <button
+              onClick={() => router.push('/pages/add-kingschat-id')}
+              className="bg-white text-purple-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors shadow-md"
+            >
+              Add KingsChat ID
+            </button>
+          </div>
+          <button
+            onClick={handleDismiss}
+            className="flex-shrink-0 text-white/80 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function HomePageContent() {
   const router = useRouter()
@@ -125,7 +193,7 @@ function HomePageContent() {
     },
     {
       icon: Bell,
-      title: 'Push Notifications',
+      title: 'Notifications',
       href: '/pages/notifications',
       badge: true,
     },
@@ -387,6 +455,9 @@ function HomePageContent() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
             </div>
           </div>
+
+          {/* KingsChat ID Banner for Old Users */}
+          <KingsChatIdBanner />
 
           {/* Main Title */}
           <div className="text-center py-6">

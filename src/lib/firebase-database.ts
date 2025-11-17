@@ -116,6 +116,52 @@ export class FirebaseDatabaseService {
     }
   }
 
+  // Find user by KingsChat ID
+  static async findUserByKingsChatId(kingschatId: string): Promise<any | null> {
+    try {
+      // Try both field names since there's inconsistency in the codebase
+      let q = query(
+        collection(db, 'profiles'),
+        where('kingschat_id', '==', kingschatId),
+        limit(1)
+      )
+      
+      let querySnapshot = await getDocs(q)
+      
+      // If not found with kingschat_id, try kingschatUserId
+      if (querySnapshot.empty) {
+        q = query(
+          collection(db, 'profiles'),
+          where('kingschatUserId', '==', kingschatId),
+          limit(1)
+        )
+        querySnapshot = await getDocs(q)
+      }
+      
+      if (querySnapshot.empty) {
+        return null
+      }
+      
+      const doc = querySnapshot.docs[0]
+      const userData = { id: doc.id, ...doc.data() } as any
+      
+      // Ensure we have the required fields for auth
+      const kingschatUserId = userData.kingschat_id || userData.kingschatUserId || kingschatId
+      
+      return {
+        id: userData.id,
+        email: userData.email || `${kingschatUserId}@kingschat.temp`,
+        password: userData.password || kingschatUserId,
+        kingschat_id: kingschatUserId,
+        kingschatUserId: kingschatUserId,
+        ...userData
+      }
+    } catch (error) {
+      console.error('Error finding user by KingsChat ID:', error)
+      return null
+    }
+  }
+
   // Real-time listener for praise nights
   static subscribeToPraiseNights(callback: (data: any[]) => void) {
     const q = query(

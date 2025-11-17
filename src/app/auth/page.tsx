@@ -8,6 +8,7 @@ import { FirebaseDatabaseService } from '@/lib/firebase-database'
 import { KingsChatAuthService } from '@/lib/kingschat-auth'
 import { AccountLinkingService } from '@/lib/account-linking'
 import AuthCheck from '@/components/AuthCheck'
+import KingsChatOAuthModal from '@/components/KingsChatOAuthModal'
 // Removed Supabase import - using Firebase now
 
 function AuthPageContent() {
@@ -22,12 +23,14 @@ function AuthPageContent() {
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false)
+  const [showKingsChatModal, setShowKingsChatModal] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    kingschatId: ''
   })
 
   // NO AUTH CHECK - Let AuthContext handle redirects
@@ -81,7 +84,8 @@ function AuthPageContent() {
           {
             first_name: formData.firstName,
             last_name: formData.lastName,
-            email: formData.email
+            email: formData.email,
+            kingschat_id: formData.kingschatId || undefined
           }
         )
         
@@ -177,7 +181,8 @@ function AuthPageContent() {
       }
     } catch (error: any) {
       console.error('Auth error:', error)
-      setError(error.message || 'An error occurred during authentication')
+      // User-friendly error message - no technical details
+      setError('Unable to complete authentication. Please check your internet connection and try again.')
       setIsLoading(false)
       setIsCheckingAccount(false)
     } finally {
@@ -188,7 +193,44 @@ function AuthPageContent() {
     }
   }
 
-  const handleSocialLogin = async (provider: string, e?: React.MouseEvent) => {
+  const handleKingsChatConnect = (e: React.MouseEvent) => {
+    // Prevent form submission
+    e.preventDefault()
+    e.stopPropagation()
+    
+    setError('')
+    setSuccess('')
+    setShowKingsChatModal(true)
+  }
+
+  const handleKingsChatModalSuccess = (authData: any) => {
+    console.log('✅ KingsChat OAuth success:', authData)
+    
+    const userProfile = authData.userProfile
+    
+    if (userProfile && userProfile.userId) {
+      // Update form data with KingsChat ID
+      setFormData(prev => ({
+        ...prev,
+        kingschatId: userProfile.userId,
+        // Auto-fill name and email if available and form fields are empty
+        firstName: prev.firstName || userProfile.firstName || '',
+        lastName: prev.lastName || userProfile.lastName || '',
+        email: prev.email || userProfile.email || ''
+      }))
+      
+      setSuccess('KingsChat account connected! Your ID has been added to the form.')
+    } else {
+      setError('Could not retrieve KingsChat user information')
+    }
+  }
+
+  const handleKingsChatModalError = (error: string) => {
+    console.error('❌ KingsChat OAuth error:', error)
+    setError(`KingsChat authentication failed: ${error}`)
+  }
+
+  const handleSocialLogin = (provider: string, e?: React.MouseEvent) => {
     // Prevent form submission
     if (e) {
       e.preventDefault()
@@ -197,95 +239,104 @@ function AuthPageContent() {
     
     setError('')
     setSuccess('')
+    
+    if (provider === 'kingschat') {
+      setShowKingsChatModal(true)
+    }
+  }
+
+  const handleKingsChatLoginSuccess = async (authData: any) => {
     setIsLoading(true)
     setIsCheckingAccount(true)
     
     try {
-      if (provider === 'kingschat') {
-        setSuccess('Opening KingsChat login...')
+      setSuccess('KingsChat login successful! Setting up your account...')
+      
+      const userProfile = authData.userProfile
+      const kingschatUserId = userProfile.userId || userProfile.id
+      
+      if (!kingschatUserId) {
+        setError('Could not extract user ID from KingsChat profile')
+        setIsLoading(false)
+        setIsCheckingAccount(false)
+        return
+      }
+      
+      console.log('🔐 KingsChat UID:', kingschatUserId)
+      
+      // Search for existing user with this KingsChat ID
+      console.log('🔍 Searching for existing user with KingsChat ID:', kingschatUserId)
+      
+      const existingUser = await FirebaseDatabaseService.findUserByKingsChatId(kingschatUserId)
+      
+      if (existingUser) {
+        // User exists - sign them in with their regular email/password
+        console.log('✅ Found existing user:', existingUser.email)
+        setSuccess('Account found! Signing you in...')
         
-        // Initiate KingsChat OAuth flow
-        const authTokens = await KingsChatAuthService.login()
-        
-        if (!authTokens) {
-          setError('KingsChat login was cancelled or failed. Please try again.')
-          setIsLoading(false)
-          setIsCheckingAccount(false)
-          return
-        }
-        
-        setSuccess('KingsChat login successful! Setting up your account...')
-        
-        // Extract KingsChat UID from token
-        const { jwtDecode } = await import('jwt-decode')
-        const decoded: any = jwtDecode(authTokens.accessToken)
-        const kingschatUserId = decoded.userId || decoded.sub || decoded.id
-        
-        if (!kingschatUserId) {
-          setError('Could not extract user ID from KingsChat token')
-          setIsLoading(false)
-          setIsCheckingAccount(false)
-          return
-        }
-        
-        console.log('🔐 KingsChat UID:', kingschatUserId)
-        
-        // SIMPLE APPROACH: Try to sign in with temp email
-        // If it works = existing user, if it fails = new user
-        const { FirebaseAuthService } = await import('@/lib/firebase-auth')
-        const tempEmail = `${kingschatUserId}@kingschat.temp`
-        
-        console.log('🔑 Trying to sign in with:', tempEmail)
-        
-        // Try to sign in using the UID as password
+        // Sign in with their regular Firebase account
         const signInResult = await FirebaseAuthService.signInWithEmailAndPassword(
-          tempEmail,
-          kingschatUserId // Use UID as password
+          existingUser.email,
+          existingUser.password || kingschatUserId // Use stored password or fallback to kingschat ID
         )
         
         if (signInResult.error) {
-          // Sign-in failed = New user
-          console.log('🆕 New user - redirecting to profile completion')
+          // If regular password fails, try with kingschat ID as password
+          const fallbackSignIn = await FirebaseAuthService.signInWithEmailAndPassword(
+            existingUser.email,
+            kingschatUserId
+          )
           
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('kingschatProfileSetup', 'true')
-            localStorage.setItem('kingschatUserId', kingschatUserId)
+          if (fallbackSignIn.error) {
+            setError('Found your account but could not sign you in. Please use regular login.')
+            setIsLoading(false)
+            setIsCheckingAccount(false)
+            return
           }
-          
-          setIsLoading(false)
-          setIsCheckingAccount(false)
-          
-          router.push(`/pages/complete-profile?from=kingschat&kingschatUserId=${kingschatUserId}`)
-          return
-        } else {
-          // Sign-in success = Existing user
-          console.log('✅ Existing user - redirecting to home')
-          
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('userAuthenticated', 'true')
-            localStorage.setItem('hasCompletedProfile', 'true')
-            localStorage.setItem('authProvider', 'kingschat')
-          }
-          
-          setIsLoading(false)
-          setIsCheckingAccount(false)
-          
-          router.push('/home')
-          return
         }
         
+        console.log('✅ Existing user signed in successfully')
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('userAuthenticated', 'true')
+          localStorage.setItem('hasCompletedProfile', 'true')
+          localStorage.setItem('authProvider', 'kingschat')
+          localStorage.setItem('bypassLogin', 'true')
+        }
+        
+        setSuccess('Welcome back! Redirecting...')
+        
+        setTimeout(() => {
+          router.push('/home')
+        }, 1000)
+        
+        setIsLoading(false)
+        setIsCheckingAccount(false)
+        return
+      } else {
+        // No existing user found = New user
+        console.log('🆕 New user - redirecting to profile completion')
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('kingschatProfileSetup', 'true')
+          localStorage.setItem('kingschatUserId', kingschatUserId)
+        }
+        
+        setSuccess('Redirecting to complete your profile...')
+        
+        setTimeout(() => {
+          router.push(`/pages/profile-complete?from=kingschat&kingschatUserId=${kingschatUserId}`)
+        }, 1000)
+        
+        setIsLoading(false)
+        setIsCheckingAccount(false)
         return
       }
     } catch (error: any) {
       console.error('Social login error:', error)
-      setError(error.message || 'An error occurred during social login')
+      setError('Unable to sign in with KingsChat. Please check your internet connection and try again.')
       setIsLoading(false)
       setIsCheckingAccount(false)
-    } finally {
-      if (provider === 'google') {
-        setIsLoading(false)
-        setIsCheckingAccount(false)
-      }
     }
   }
 
@@ -320,7 +371,8 @@ function AuthPageContent() {
       setForgotPasswordSuccess(true)
     } catch (error: any) {
       console.error('Forgot password error:', error)
-      setError(error.message || 'Failed to send reset email')
+      // User-friendly error message
+      setError('Unable to send password reset email. Please check your internet connection and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -408,6 +460,31 @@ function AuthPageContent() {
                       required
                     />
                   </div>
+                  
+                  {/* KingsChat ID Field with Connect Button */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="kingschatId"
+                      placeholder="KingsChat ID (Optional)"
+                      value={formData.kingschatId}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm pr-20"
+                      readOnly={!!formData.kingschatId}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleKingsChatConnect}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-1"
+                    >
+                      <img 
+                        src="/kingschat.jpeg" 
+                        alt="KingsChat" 
+                        className="w-3 h-3 rounded-full object-cover"
+                      />
+                      {formData.kingschatId ? 'Connected' : 'Connect'}
+                    </button>
+                  </div>
                 </>
               )}
               
@@ -487,36 +564,40 @@ function AuthPageContent() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+          {/* Divider - Only show for Login */}
+          {isLogin && (
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
-            </div>
-          </div>
+          )}
 
-          {/* Social Login Buttons */}
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={(e) => handleSocialLogin('kingschat', e)}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading && isCheckingAccount ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-              <img 
-                src="/kingschat.jpeg" 
-                alt="KingsChat" 
-                className="w-5 h-5 rounded-full object-cover"
-              />
-              )}
-              {isLoading && isCheckingAccount ? 'Connecting...' : isLogin ? 'Continue with KingsChat' : 'Sign up with KingsChat'}
-            </button>
-          </div>
+          {/* Social Login Buttons - Only show for Login */}
+          {isLogin && (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={(e) => handleSocialLogin('kingschat', e)}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading && isCheckingAccount ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                <img 
+                  src="/kingschat.jpeg" 
+                  alt="KingsChat" 
+                  className="w-5 h-5 rounded-full object-cover"
+                />
+                )}
+                {isLoading && isCheckingAccount ? 'Connecting...' : 'Continue with KingsChat'}
+              </button>
+            </div>
+          )}
 
           {/* Toggle between Login and Signup */}
           <div className="mt-8 text-center">
@@ -611,6 +692,14 @@ function AuthPageContent() {
           </div>
         </div>
       )}
+
+      {/* KingsChat OAuth Modal */}
+      <KingsChatOAuthModal
+        isOpen={showKingsChatModal}
+        onClose={() => setShowKingsChatModal(false)}
+        onSuccess={isLogin ? handleKingsChatLoginSuccess : handleKingsChatModalSuccess}
+        onError={isLogin ? (error) => setError(error) : handleKingsChatModalError}
+      />
     </div>
   )
 }
