@@ -48,6 +48,8 @@ const AnalyticsPage = () => {
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       setLoading(true);
+      const startTime = Date.now();
+      const MIN_LOADING_TIME = 2000; // Show loading for at least 2 seconds
       
       try {
         // Get real analytics data from Firebase
@@ -64,7 +66,15 @@ const AnalyticsPage = () => {
         setAnalyticsData(null);
       }
       
-      setLoading(false);
+      // Ensure minimum loading time to prevent flickering on slow networks
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
+      
+      if (remainingTime > 0) {
+        setTimeout(() => setLoading(false), remainingTime);
+      } else {
+        setLoading(false);
+      }
     };
 
     fetchAnalyticsData();

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { X, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { X, Loader2, ExternalLink, CheckCircle } from 'lucide-react'
+import { FirebaseDatabaseService } from '@/lib/firebase-database'
 
 interface KingsChatOAuthModalProps {
   isOpen: boolean
@@ -13,138 +14,134 @@ interface KingsChatOAuthModalProps {
 export default function KingsChatOAuthModal({ 
   isOpen, 
   onClose, 
-  onSuccess, 
-  onError 
+  onSuccess 
 }: KingsChatOAuthModalProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [authUrl, setAuthUrl] = useState('')
+  const [isLoading] = useState(false)
   const [error, setError] = useState('')
-  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [sessionId] = useState(() => Math.random().toString(36).substring(7))
+  const [showOtpInput, setShowOtpInput] = useState(false)
+  const [otp, setOtp] = useState('')
+  const [verifyingOtp, setVerifyingOtp] = useState(false)
 
-  // KingsChat OAuth configuration
-  const KINGSCHAT_CLIENT_ID = process.env.NEXT_PUBLIC_KINGSCHAT_CLIENT_ID || '331c9eda-a130-4bb8-9a00-9231a817207d'
-  const REDIRECT_URI = typeof window !== 'undefined' ? `${window.location.origin}/auth/kingschat/callback` : ''
+  // No cleanup needed for OTP approach
 
-  useEffect(() => {
-    if (isOpen && REDIRECT_URI) {
-      generateAuthUrl()
-    }
-  }, [isOpen, REDIRECT_URI])
-
-  const generateAuthUrl = () => {
-    const params = new URLSearchParams({
-      client_id: KINGSCHAT_CLIENT_ID,
-      redirect_uri: REDIRECT_URI,
-      response_type: 'code',
-      scope: 'profile email',
-      state: Math.random().toString(36).substring(7) // Random state for security
-    })
-
-    const url = `https://kingschat.online/oauth/authorize?${params.toString()}`
-    console.log('🔗 Generated KingsChat OAuth URL:', url)
-    setAuthUrl(url)
-    setIsLoading(true)
-  }
-
-  const handleIframeLoad = () => {
-    console.log('📱 OAuth iframe loaded')
-    setIsLoading(false)
+  const startKingsChatAuth = () => {
+    setError('')
     
-    // Listen for postMessage from the callback page
-    window.addEventListener('message', handlePostMessage)
-  }
-
-  const handlePostMessage = (event: MessageEvent) => {
-    try {
-      // Verify origin for security
-      if (event.origin !== window.location.origin) {
-        console.warn('🚨 Ignoring message from unknown origin:', event.origin)
+    // Create auth URL to our brilliant dedicated page
+    const authUrl = `/auth/kingschat-login?session=${sessionId}`
+    
+    // Detect if we're in a WebView or regular browser
+    const isWebView = navigator.userAgent.includes('wv') || (window as any).ReactNativeWebView
+    
+    if (isWebView) {
+      // WebView: Navigate in same window to our auth page
+      window.location.href = authUrl
+    } else {
+      // Regular browser: Open our auth page in new tab
+      const authWindow = window.open(authUrl, '_blank')
+      
+      if (!authWindow) {
+        setError('Popup blocked. Please allow popups for this site.')
         return
       }
-
-      console.log('📨 Received postMessage:', event.data)
-
-      if (event.data && event.data.type === 'KINGSCHAT_AUTH_SUCCESS') {
-        console.log('✅ OAuth success via postMessage')
-        if (event.data.code) {
-          handleAuthSuccess(event.data.code)
-        } else {
-          onError('No authorization code received')
-          onClose()
-        }
-      } else if (event.data && event.data.type === 'KINGSCHAT_AUTH_ERROR') {
-        console.error('❌ OAuth error via postMessage:', event.data.error)
-        onError(`Authentication failed: ${event.data.description || event.data.error}`)
-        onClose()
-      }
-    } catch (error: any) {
-      console.error('❌ PostMessage handling error:', error)
-      onError('Error processing authentication response')
-      onClose()
-    }
-  }
-
-  const handleAuthSuccess = async (authCode: string) => {
-    try {
-      setIsLoading(true)
-      console.log('🔄 Processing authorization code...')
-
-      // Use the authorization code as the KingsChat ID (just like in original signup)
-      // This is what we did before - the code itself becomes the unique identifier
-      const kingschatUserId = authCode
       
-      console.log('🔐 Using authorization code as KingsChat ID:', kingschatUserId.substring(0, 10) + '...')
-
-      // Try to get real user info from KingsChat if available
-      // For now, we'll use the auth code as ID and prompt user to update their info later
-      const userProfile = {
-        userId: kingschatUserId,
-        id: kingschatUserId,
-        email: '', // Will be filled during profile completion
-        firstName: '',
-        lastName: '',
-        name: 'KingsChat User',
-        profilePicture: '/kingschat.jpeg',
-        verified: true,
-        needsProfileCompletion: true // Flag to indicate user needs to complete profile
-      }
-
-      console.log('✅ KingsChat profile created using auth code as ID')
-
-      // Return success with auth data
-      onSuccess({
-        accessToken: kingschatUserId, // Use the code as token too
-        refreshToken: `refresh_${kingschatUserId}`,
-        expiresIn: 3600,
-        userProfile: userProfile
-      })
-
-      onClose()
-    } catch (error: any) {
-      console.error('❌ Auth processing error:', error)
-      onError(error.message || 'Authentication processing failed')
-      onClose()
-    } finally {
-      setIsLoading(false)
+      // Show OTP input after opening our brilliant page
+      setShowOtpInput(true)
     }
   }
 
-  const handleClose = () => {
-    // Clean up event listeners
-    window.removeEventListener('message', handlePostMessage)
-    
+  const verifyOtp = async () => {
+    if (!otp || otp.length !== 6) {
+      setError('Please enter a valid 6-digit code')
+      return
+    }
+
+    setVerifyingOtp(true)
     setError('')
-    setIsLoading(false)
-    onClose()
+
+    try {
+      // Check Firebase for auth result with matching OTP
+      let result = await FirebaseDatabaseService.getDocument('kingschat_auth_sessions', sessionId) as any
+      
+      // Fallback: Check localStorage if Firebase is offline
+      if (!result) {
+        try {
+          const fallbackKey = `kingschat_auth_${sessionId}`
+          const fallbackData = localStorage.getItem(fallbackKey)
+          if (fallbackData) {
+            result = JSON.parse(fallbackData)
+            console.log('📱 Using localStorage fallback data')
+          }
+        } catch (localStorageError) {
+          console.warn('⚠️ Failed to read from localStorage:', localStorageError)
+        }
+      }
+      
+      if (result && result.processed && result.success && result.otp === otp) {
+        // OTP matches! Authentication successful
+        console.log('✅ OTP verified successfully')
+        
+        // Extract KingsChat ID from the auth data
+        const kingschatUserId = result.authData?.userProfile?.userId || result.authData?.userProfile?.id
+        
+        if (kingschatUserId) {
+          console.log('🔐 Extracted KingsChat ID:', kingschatUserId)
+          
+          // Update the session with the KingsChat ID for the auth page to use
+          await FirebaseDatabaseService.updateDocument('kingschat_auth_sessions', sessionId, {
+            verified: true,
+            verifiedAt: Date.now(),
+            kingschatUserId: kingschatUserId // Save the KingsChat ID
+          })
+        }
+        
+        onSuccess({
+          accessToken: `kc_token_${result.authData.code}`,
+          refreshToken: `kc_refresh_${result.authData.code}`,
+          expiresIn: 3600,
+          userProfile: result.authData.userProfile,
+          kingschatUserId: kingschatUserId // Pass the KingsChat ID
+        })
+        
+        // Cleanup Firebase session
+        try {
+          await FirebaseDatabaseService.deleteDocument('kingschat_auth_sessions', sessionId)
+        } catch (deleteError) {
+          console.warn('⚠️ Failed to delete Firebase session:', deleteError)
+        }
+        
+        // Cleanup localStorage fallback
+        try {
+          const fallbackKey = `kingschat_auth_${sessionId}`
+          localStorage.removeItem(fallbackKey)
+        } catch (localStorageError) {
+          console.warn('⚠️ Failed to cleanup localStorage:', localStorageError)
+        }
+        
+        onClose()
+      } else if (result && result.processed && !result.success) {
+        setError('Authentication failed. Please try again.')
+      } else if (result && result.otp && result.otp !== otp) {
+        setError('Invalid verification code. Please check and try again.')
+      } else {
+        setError('Authentication not found. Please complete authentication first.')
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error)
+      setError('Failed to verify code. Please try again.')
+    } finally {
+      setVerifyingOtp(false)
+    }
   }
 
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md h-[600px] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <img 
               src="/kingschat.jpeg" 
@@ -157,69 +154,121 @@ export default function KingsChatOAuthModal({
             </div>
           </div>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
+        <div className="p-6 space-y-6">
+          {/* Error State */}
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {isLoading && (
+            <div className="text-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto mb-3" />
               <p className="text-gray-600 text-sm">
-                {authUrl ? 'Processing authentication...' : 'Loading KingsChat login...'}
+                Authenticating with KingsChat...
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Complete authentication in the popup window
               </p>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Error State */}
-        {error && (
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <X className="w-6 h-6 text-red-600" />
+          {/* Auth Button */}
+          {!showOtpInput && !isLoading && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <img 
+                    src="/kingschat.jpeg" 
+                    alt="KingsChat" 
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                </div>
+                <h4 className="font-medium text-gray-900 mb-2">Ready to authenticate</h4>
+                <p className="text-sm text-gray-600 mb-6">
+                  Click below to sign in with your KingsChat account
+                </p>
               </div>
-              <p className="text-red-600 text-sm mb-4">{error}</p>
+              
               <button
-                onClick={() => {
-                  setError('')
-                  generateAuthUrl()
-                }}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+                onClick={startKingsChatAuth}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Try Again
+                <img 
+                  src="/kingschat.jpeg" 
+                  alt="KingsChat" 
+                  className="w-5 h-5 rounded-full object-cover"
+                />
+                Continue with KingsChat
+                <ExternalLink className="w-4 h-4" />
               </button>
+              
+              <div className="text-xs text-gray-500 text-center space-y-1">
+                <p>Secure authentication via KingsChat OAuth</p>
+                <p>Session ID: {sessionId}</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* OAuth Iframe */}
-        {authUrl && !error && (
-          <div className="flex-1 relative">
-            <iframe
-              ref={iframeRef}
-              src={authUrl}
-              className="w-full h-full border-0"
-              onLoad={handleIframeLoad}
-              onError={() => {
-                setError('Failed to load KingsChat login page')
-                setIsLoading(false)
-              }}
-              title="KingsChat OAuth"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
-            />
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
-          <p className="text-xs text-gray-500 text-center">
-            By continuing, you agree to KingsChat's terms of service and privacy policy.
-          </p>
+          {/* OTP Input */}
+          {showOtpInput && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h4 className="font-medium text-gray-900 mb-2">Enter Verification Code</h4>
+                <p className="text-sm text-gray-600 mb-6">
+                  Complete authentication in the new tab, then enter the 6-digit code here
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="000000"
+                  value={otp}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+                    setOtp(value)
+                    setError('')
+                  }}
+                  className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600"
+                  maxLength={6}
+                />
+                
+                <button
+                  onClick={verifyOtp}
+                  disabled={otp.length !== 6 || verifyingOtp}
+                  className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {verifyingOtp && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {verifyingOtp ? 'Verifying...' : 'Verify & Sign In'}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowOtpInput(false)
+                    setOtp('')
+                    setError('')
+                  }}
+                  className="w-full py-2 text-gray-600 text-sm hover:text-gray-800 transition-colors"
+                >
+                  ← Back to authentication
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -116,48 +116,164 @@ export class FirebaseDatabaseService {
     }
   }
 
-  // Find user by KingsChat ID
+  // Update user profile
+  static async updateUserProfile(userId: string, data: any) {
+    try {
+      const docRef = doc(db, 'profiles', userId)
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: new Date()
+      })
+      console.log('✅ User profile updated successfully')
+      return { success: true }
+    } catch (error) {
+      console.error('Error updating user profile:', error)
+      return { error: 'Failed to update profile' }
+    }
+  }
+
+  // Find user by KingsChat ID - Search Firestore + secretly check temp account
   static async findUserByKingsChatId(kingschatId: string): Promise<any | null> {
     try {
-      // Try both field names since there's inconsistency in the codebase
-      let q = query(
+      console.log('🔍 Searching for user with KingsChat ID:', kingschatId)
+      
+      let realAccount = null
+      let tempAccount = null
+      
+      // Method 1: Search Firestore profiles by kingschat_id field
+      const q = query(
         collection(db, 'profiles'),
         where('kingschat_id', '==', kingschatId),
-        limit(1)
+        limit(10) // Get multiple in case there are duplicates
       )
       
-      let querySnapshot = await getDocs(q)
+      const querySnapshot = await getDocs(q)
       
-      // If not found with kingschat_id, try kingschatUserId
-      if (querySnapshot.empty) {
-        q = query(
-          collection(db, 'profiles'),
-          where('kingschatUserId', '==', kingschatId),
-          limit(1)
-        )
-        querySnapshot = await getDocs(q)
+      if (!querySnapshot.empty) {
+        // Check all found accounts and prioritize real accounts
+        for (const doc of querySnapshot.docs) {
+          const userData = { id: doc.id, ...doc.data() } as any
+          const isTemp = userData.email?.includes('@kingschat.temp') || userData.accountType === 'temp'
+          
+          if (!isTemp) {
+            // Found a real account - prioritize this!
+            console.log('✅ Found REAL account in profiles:', userData.email)
+            realAccount = {
+              id: userData.id,
+              email: userData.email,
+              password: userData.password || kingschatId,
+              kingschat_id: userData.kingschat_id || kingschatId,
+              accountType: 'real',
+              ...userData
+            }
+            break // Stop searching, we found a real account
+          } else if (!tempAccount) {
+            // Store temp account as fallback
+            console.log('📝 Found temp account in profiles:', userData.email)
+            tempAccount = {
+              id: userData.id,
+              email: userData.email,
+              password: userData.password || kingschatId,
+              kingschat_id: userData.kingschat_id || kingschatId,
+              accountType: 'temp',
+              ...userData
+            }
+          }
+        }
+        
+        // Return real account if found, otherwise temp account
+        if (realAccount) {
+          console.log('✅ Returning REAL account')
+          return realAccount
+        }
       }
       
-      if (querySnapshot.empty) {
+      // Method 2: Only check temp email if no real account was found
+      if (!realAccount) {
+        console.log('🔍 No real account found, checking for temp account...')
+        const tempEmail = `${kingschatId}@kingschat.temp`
+        
+        try {
+          // Import Firebase Auth service
+          const { FirebaseAuthService } = await import('@/lib/firebase-auth')
+          
+          // Try to sign in with temp email + KingsChat ID as password
+          const tempSignIn = await FirebaseAuthService.signInWithEmailAndPassword(tempEmail, kingschatId)
+          
+          if (!tempSignIn.error && tempSignIn.user) {
+            console.log('✅ Found temp account via auth:', tempEmail)
+            
+            // Get the profile data from Firestore
+            const profileDoc = await this.getUserProfile(tempSignIn.user.uid)
+            
+            // Sign out immediately (this was just a check)
+            await FirebaseAuthService.signOut()
+            
+            // Only return if profile exists in Firestore
+            if (profileDoc) {
+              tempAccount = {
+                ...profileDoc,
+                id: tempSignIn.user.uid,
+                email: tempEmail,
+                password: kingschatId,
+                kingschat_id: kingschatId,
+                accountType: 'temp'
+              }
+            }
+          }
+        } catch (tempAuthError) {
+          console.log('🔍 No temp account found (this is normal)')
+        }
+      }
+      
+      // Return temp account if found and no real account exists
+      if (tempAccount) {
+        console.log('✅ Returning temp account (no real account found)')
+        return tempAccount
+      }
+      
+      // Not found anywhere - new user
+      console.log('❌ No user found with KingsChat ID:', kingschatId, '→ New user')
+      return null
+      
+    } catch (error: any) {
+      console.error('❌ Error finding user by KingsChat ID:', error)
+      
+      // Handle permission errors gracefully - skip to temp account check
+      if (error.code === 'permission-denied' || error.message?.includes('insufficient permissions')) {
+        console.warn('⚠️ Permission denied when searching profiles → Skipping to temp account check')
+        
+        // Skip Firestore search, go directly to temp account check
+        try {
+          console.log('🔍 Trying temp account check due to permission error...')
+          const tempEmail = `${kingschatId}@kingschat.temp`
+          
+          const { FirebaseAuthService } = await import('@/lib/firebase-auth')
+          const tempSignIn = await FirebaseAuthService.signInWithEmailAndPassword(tempEmail, kingschatId)
+          
+          if (!tempSignIn.error && tempSignIn.user) {
+            console.log('✅ Found temp account after permission error:', tempEmail)
+            
+            const profileDoc = await this.getUserProfile(tempSignIn.user.uid)
+            await FirebaseAuthService.signOut()
+            
+            return {
+              id: tempSignIn.user.uid,
+              email: tempEmail,
+              password: kingschatId,
+              kingschat_id: kingschatId,
+              accountType: 'temp',
+              ...profileDoc
+            }
+          }
+        } catch (tempError) {
+          console.log('🔍 No temp account found after permission error')
+        }
+        
         return null
       }
       
-      const doc = querySnapshot.docs[0]
-      const userData = { id: doc.id, ...doc.data() } as any
-      
-      // Ensure we have the required fields for auth
-      const kingschatUserId = userData.kingschat_id || userData.kingschatUserId || kingschatId
-      
-      return {
-        id: userData.id,
-        email: userData.email || `${kingschatUserId}@kingschat.temp`,
-        password: userData.password || kingschatUserId,
-        kingschat_id: kingschatUserId,
-        kingschatUserId: kingschatUserId,
-        ...userData
-      }
-    } catch (error) {
-      console.error('Error finding user by KingsChat ID:', error)
+      // Any other error - treat as new user
       return null
     }
   }
@@ -279,7 +395,8 @@ export class FirebaseDatabaseService {
       })
     } catch (error) {
       console.error(`Error getting collection ${collectionName}:`, error)
-      return []
+      // Re-throw the error so calling code can handle it properly
+      throw error
     }
   }
 
@@ -310,14 +427,24 @@ export class FirebaseDatabaseService {
     }
   }
 
+  static async addDocument(collectionName: string, data: any) {
+    try {
+      const docRef = await addDoc(collection(db, collectionName), data)
+      return { success: true as const, id: docRef.id }
+    } catch (error: any) {
+      console.error(`Error adding document to ${collectionName}:`, error)
+      return { success: false as const, error: error?.message || 'Add failed' }
+    }
+  }
+
   static async updateDocument(collectionName: string, docId: string, data: any) {
     try {
       const docRef = doc(db, collectionName, docId)
       await updateDoc(docRef, data)
-      return { success: true }
-    } catch (error) {
+      return { success: true as const }
+    } catch (error: any) {
       console.error(`Error updating document ${docId}:`, error)
-      throw error
+      return { success: false as const, error: error?.message || 'Update failed' }
     }
   }
 

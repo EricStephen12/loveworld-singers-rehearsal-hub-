@@ -47,6 +47,9 @@ export default function SubmittedSongsPage({ embedded = false }: SubmittedSongsP
 
   const loadSongs = async () => {
     setLoading(true)
+    const startTime = Date.now()
+    const MIN_LOADING_TIME = 2000 // Show loading for at least 2 seconds
+    
     try {
       let data: SongSubmission[]
       if (filter === 'pending') {
@@ -64,7 +67,15 @@ export default function SubmittedSongsPage({ embedded = false }: SubmittedSongsP
     } catch (error) {
       console.error('Error loading songs:', error)
     } finally {
-      setLoading(false)
+      // Ensure minimum loading time to prevent flickering on slow networks
+      const elapsedTime = Date.now() - startTime
+      const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime)
+      
+      if (remainingTime > 0) {
+        setTimeout(() => setLoading(false), remainingTime)
+      } else {
+        setLoading(false)
+      }
     }
   }
 

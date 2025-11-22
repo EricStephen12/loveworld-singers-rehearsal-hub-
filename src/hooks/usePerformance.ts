@@ -85,7 +85,7 @@ export const usePerformance = () => {
     const likelyNextPages = [
       '/pages/rehearsals',
       '/pages/profile',
-      '/pages/praise-night'
+      '/pages/program'
     ];
     prefetchResources(likelyNextPages);
 

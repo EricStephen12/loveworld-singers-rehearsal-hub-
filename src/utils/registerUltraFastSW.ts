@@ -47,7 +47,7 @@ export const registerUltraFastSW = () => {
         '/home',
         '/pages/rehearsals',
         '/pages/profile',
-        '/pages/praise-night'
+        '/pages/program'
       ];
 
       if (navigator.serviceWorker.controller) {

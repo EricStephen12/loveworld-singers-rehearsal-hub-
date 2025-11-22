@@ -17,6 +17,7 @@ import { FirebaseDatabaseService } from '@/lib/firebase-database'
 import { KingsChatAuthService } from '@/lib/kingschat-auth'
 import { AccountLinkingService } from '@/lib/account-linking'
 import AuthGuard from '@/components/AuthGuard'
+import KingsChatOAuthModal from '@/components/KingsChatOAuthModal'
 
 function ProfilePage() {
   const [showQRCode, setShowQRCode] = useState(true)
@@ -62,6 +63,7 @@ function ProfilePage() {
   const [isLinkingKingsChat, setIsLinkingKingsChat] = useState(false)
   const [kingsChatLinked, setKingsChatLinked] = useState(false)
   const [linkingMessage, setLinkingMessage] = useState('')
+  const [showKingsChatModal, setShowKingsChatModal] = useState(false)
   
 
   // Collapsible sections state
@@ -559,7 +561,7 @@ function ProfilePage() {
     // Don't use router.push - signOut already handles redirect
   }
 
-  // Check if KingsChat is linked on mount
+  // Check if KingsChat is linked on mount and when profile changes
   useEffect(() => {
     const checkKingsChatLink = async () => {
       if (user?.uid) {
@@ -568,37 +570,41 @@ function ProfilePage() {
       }
     }
     checkKingsChatLink()
-  }, [user?.uid])
+  }, [user?.uid, currentProfile])
 
   // Link KingsChat account
-  const handleLinkKingsChat = async () => {
+  const handleLinkKingsChat = () => {
+    setLinkingMessage('')
+    setShowKingsChatModal(true)
+  }
+
+  // Handle successful KingsChat linking
+  const handleKingsChatLinkSuccess = async (authData: any) => {
     if (!user?.uid) return
     
     setIsLinkingKingsChat(true)
-    setLinkingMessage('')
     
     try {
-      // Initiate KingsChat OAuth flow
-      const authTokens = await KingsChatAuthService.login()
+      const userProfile = authData.userProfile
+      const kingschatUserId = userProfile.userId || userProfile.id
       
-      if (!authTokens) {
-        setLinkingMessage('KingsChat login was cancelled')
+      if (!kingschatUserId) {
+        setLinkingMessage('❌ Could not extract KingsChat user ID')
         setIsLinkingKingsChat(false)
         return
       }
+
+      // Update profile with KingsChat ID
+      const result = await FirebaseDatabaseService.updateDocument('profiles', user.uid, {
+        kingschat_id: kingschatUserId
+      })
       
-      // Link KingsChat to current Firebase account
-      const result = await AccountLinkingService.linkKingsChatToFirebase(
-        user.uid,
-        authTokens.accessToken
-      )
-      
-      if (result.success) {
+      if (result) {
         setKingsChatLinked(true)
         setLinkingMessage('✅ KingsChat account linked successfully!')
-        await refreshProfile() // Refresh profile to show updated data
+        await refreshProfile()
       } else {
-        setLinkingMessage(`❌ ${result.error}`)
+        setLinkingMessage('❌ Failed to link KingsChat account')
       }
     } catch (error: any) {
       console.error('Failed to link KingsChat:', error)
@@ -842,6 +848,22 @@ function ProfilePage() {
             {/* Edit Button with Animation */}
             <button
               onClick={() => {
+                if (!isEditing) {
+                  // Populate form with current profile data when entering edit mode
+                  setEditForm({
+                    firstName: profileData.first_name || '',
+                    lastName: profileData.last_name || '',
+                    middleName: profileData.middle_name || '',
+                    phoneNumber: profileData.phone_number || '',
+                    gender: profileData.gender || '',
+                    birthday: profileData.birthday || '',
+                    region: profileData.region || '',
+                    zone: profileData.zone || '',
+                    church: profileData.church || '',
+                    designation: profileData.designation || '',
+                    administration: profileData.administration || ''
+                  })
+                }
                 setIsEditing(!isEditing)
                 setSaveMessage('')
               }}
@@ -944,6 +966,44 @@ function ProfilePage() {
                       </p>
                     </div>
                     <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
+                </div>
+              )}
+
+              {/* KingsChat Unlink - Only show if linked */}
+              {kingsChatLinked && (
+                <div className="space-y-2">
+                  {/* Linking Message */}
+                  {linkingMessage && (
+                    <div className={`p-2.5 rounded-lg text-xs ${
+                      linkingMessage.includes('✅') 
+                        ? 'bg-green-50 text-green-700 border border-green-200' 
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {linkingMessage}
+                    </div>
+                  )}
+
+                  {/* Simple Unlink Button */}
+                  <div className="bg-red-50 rounded-lg p-2.5 border border-red-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <img 
+                        src="/kingschat.jpeg" 
+                        alt="KingsChat" 
+                        className="w-6 h-6 rounded-full object-cover"
+                      />
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-900">KingsChat Linked</p>
+                        <p className="text-[10px] text-gray-600">{userProfile.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleUnlinkKingsChat}
+                      disabled={isLinkingKingsChat}
+                      className="w-full px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      {isLinkingKingsChat ? 'Unlinking...' : 'Unlink KingsChat'}
+                    </button>
                   </div>
                 </div>
               )}
@@ -1673,6 +1733,14 @@ function ProfilePage() {
       )}
 
       <SharedDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Menu" items={menuItems} />
+
+      {/* KingsChat OAuth Modal */}
+      <KingsChatOAuthModal
+        isOpen={showKingsChatModal}
+        onClose={() => setShowKingsChatModal(false)}
+        onSuccess={handleKingsChatLinkSuccess}
+        onError={(error) => setLinkingMessage(`❌ ${error}`)}
+      />
     </div>
   )
 }

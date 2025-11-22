@@ -8,7 +8,7 @@ const LazyAdminPage = lazy(() => import('@/app/admin/page'));
 const LazyHomePage = lazy(() => import('@/app/home/page'));
 const LazyAuthPage = lazy(() => import('@/app/auth/page'));
 const LazyProfilePage = lazy(() => import('@/app/pages/profile/page'));
-const LazyPraiseNightPage = lazy(() => import('@/app/pages/praise-night/page'));
+const LazyPraiseNightPage = lazy(() => import('@/app/pages/program/page'));
 const LazyRehearsalsPage = lazy(() => import('@/app/pages/rehearsals/page'));
 // Profile completion page removed
 // Subscription page removed

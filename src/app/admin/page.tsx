@@ -13,7 +13,6 @@ import { uploadBannerImage } from '@/utils/imageUpload';
 import { ToastContainer, Toast } from '../../components/Toast';
 
 // Import admin components
-import AdminAuth, { AdminUser, ADMIN_USERS } from '../../components/admin/AdminAuth';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import PagesSection from '../../components/admin/PagesSection';
 import CategoriesSection from '../../components/admin/CategoriesSection';
@@ -24,11 +23,14 @@ import AdminModals from '../../components/admin/AdminModals';
 import PageCategoriesSection from '../../components/admin/PageCategoriesSection';
 import SubmittedSongsPage from '../pages/admin/submitted-songs/page';
 import AnalyticsPage from '../pages/admin/analytics/page';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAdminStatus } from '@/hooks/useAdminStatus';
+import { AdminService } from '@/lib/admin-service';
 
 export default function AdminPage() {
-  // Admin authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
+  // Use new admin system
+  const { user } = useAuth();
+  const { isAdmin, adminUser, isLoading: adminLoading } = useAdminStatus();
 
   // UI state
   const [activeSection, setActiveSection] = useState('Pages');
@@ -198,26 +200,13 @@ export default function AdminPage() {
     loadPageCategories();
   }, []);
 
-  // Check for existing admin session on component mount
+  // Redirect non-admin users
   useEffect(() => {
-    const savedSession = localStorage.getItem('adminSession');
-    if (savedSession) {
-      try {
-        const sessionData = JSON.parse(savedSession);
-        const admin = ADMIN_USERS.find(u => u.id === sessionData.adminId);
-        if (admin && sessionData.timestamp && (Date.now() - sessionData.timestamp < 24 * 60 * 60 * 1000)) {
-          setCurrentAdmin(admin);
-          setIsAuthenticated(true);
-          console.log('🔐 Admin session restored:', admin.username);
-        } else {
-          localStorage.removeItem('adminSession');
-        }
-      } catch (error) {
-        console.error('Error parsing admin session:', error);
-        localStorage.removeItem('adminSession');
-      }
+    if (!adminLoading && !isAdmin) {
+      console.log('❌ User is not an admin, redirecting to home');
+      window.location.href = '/home';
     }
-  }, []);
+  }, [isAdmin, adminLoading]);
 
   // Get pages from Firebase (includes unassigned for admin)
   const pages = useMemo(() => {
@@ -248,24 +237,9 @@ export default function AdminPage() {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  // Note: Authentication is now handled by the AdminAuth component
-  // But we still need handleAdminLogout for the sidebar
   const handleAdminLogout = () => {
-    if (currentAdmin) {
-      console.log('🔐 Admin logged out:', currentAdmin.username);
-    }
-
-    setCurrentAdmin(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('admin_session');
-
-    addToast({
-      type: 'info',
-      message: 'You have been successfully logged out.'
-    });
-
-    // Force page reload to show login screen
-    window.location.reload();
+    // Just redirect to home - no special admin logout needed
+    window.location.href = '/home';
   };
 
   // Category management functions
@@ -309,8 +283,8 @@ export default function AdminPage() {
         refreshData(); // Refresh all data to ensure UI is updated
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.createCategory(currentAdmin, newCategory.name);
+        if (adminUser) {
+          logAdminAction.createCategory(adminUser, newCategory.name);
         }
       } else {
         throw new Error(result.error || 'Failed to create category');
@@ -384,8 +358,8 @@ export default function AdminPage() {
         refreshData();
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.updateCategory(currentAdmin, `Updated category: ${newPageCategoryName.trim()}`);
+        if (adminUser) {
+          logAdminAction.updateCategory(adminUser, `Updated category: ${newPageCategoryName.trim()}`);
         }
       } else {
         throw new Error('Failed to update category');
@@ -441,8 +415,8 @@ export default function AdminPage() {
         refreshData();
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.deleteCategory(currentAdmin, `Deleted category: ${categoryToDelete.name}`);
+        if (adminUser) {
+          logAdminAction.deleteCategory(adminUser, `Deleted category: ${categoryToDelete.name}`);
         }
       } else {
         throw new Error('Failed to delete category');
@@ -502,8 +476,8 @@ export default function AdminPage() {
         refreshData();
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.createCategory(currentAdmin, newPageCategoryName.trim());
+        if (adminUser) {
+          logAdminAction.createCategory(adminUser, newPageCategoryName.trim());
         }
       } else {
         throw new Error(result.error || 'Failed to create page category');
@@ -563,8 +537,8 @@ export default function AdminPage() {
         refreshData();
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.updateCategory(currentAdmin, `Updated page category: ${newPageCategoryName.trim()}`);
+        if (adminUser) {
+          logAdminAction.updateCategory(adminUser, `Updated page category: ${newPageCategoryName.trim()}`);
         }
       } else {
         throw new Error('Failed to update page category');
@@ -607,8 +581,8 @@ export default function AdminPage() {
         refreshData();
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.deleteCategory(currentAdmin, `Deleted page category: ${pageCategoryToDelete.name}`);
+        if (adminUser) {
+          logAdminAction.deleteCategory(adminUser, `Deleted page category: ${pageCategoryToDelete.name}`);
         }
       } else {
         throw new Error('Failed to delete page category');
@@ -847,8 +821,8 @@ export default function AdminPage() {
         refreshData();
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.deletePage(currentAdmin, `Deleted page: ${pageToDelete.name}`);
+        if (adminUser) {
+          logAdminAction.deletePage(adminUser, `Deleted page: ${pageToDelete.name}`);
         }
       } else {
         throw new Error('Failed to delete page');
@@ -898,8 +872,8 @@ export default function AdminPage() {
         refreshData();
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.updateSong(currentAdmin, `Updated song status: ${song.title} -> ${newStatus}`);
+        if (adminUser) {
+          logAdminAction.updateSong(adminUser, `Updated song status: ${song.title} -> ${newStatus}`);
         }
       } else {
         throw new Error(result.error || 'Failed to update song status');
@@ -934,8 +908,8 @@ export default function AdminPage() {
         refreshData();
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.updateSong(currentAdmin, `Set song active status: ${song.title} -> ${newActiveStatus ? 'ACTIVE' : 'INACTIVE'}`);
+        if (adminUser) {
+          logAdminAction.updateSong(adminUser, `Set song active status: ${song.title} -> ${newActiveStatus ? 'ACTIVE' : 'INACTIVE'}`);
         }
       } else {
         throw new Error(result.error || 'Failed to update song active status');
@@ -972,8 +946,8 @@ export default function AdminPage() {
           });
 
           // Log admin action
-          if (currentAdmin) {
-            logAdminAction.updateSong(currentAdmin, `Updated song: ${songData.title}`);
+          if (adminUser) {
+            logAdminAction.updateSong(adminUser, `Updated song: ${songData.title}`);
           }
         } else {
           console.error('❌ [FRESH] Song update failed:', result.error);
@@ -1002,8 +976,8 @@ export default function AdminPage() {
           });
 
           // Log admin action
-          if (currentAdmin) {
-            logAdminAction.addSong(currentAdmin, songData.title, songData.category);
+          if (adminUser) {
+            logAdminAction.addSong(adminUser, songData.title, songData.category);
           }
         } else {
           console.error('❌ [FRESH] Song creation failed:', result.error);
@@ -1061,8 +1035,8 @@ export default function AdminPage() {
         refreshData();
 
         // Log admin action
-        if (currentAdmin) {
-          logAdminAction.deleteSong(currentAdmin, songToDelete.title);
+        if (adminUser) {
+          logAdminAction.deleteSong(adminUser, songToDelete.title);
         }
       } else {
         throw new Error(deleteResult.error || 'Failed to delete song');
@@ -1133,15 +1107,36 @@ export default function AdminPage() {
     );
   }
 
-  // Show admin login form if not authenticated
-  if (!isAuthenticated) {
+  // Show loading while checking admin status
+  if (adminLoading) {
     return (
-      <AdminAuth
-        isAuthenticated={isAuthenticated}
-        setIsAuthenticated={setIsAuthenticated}
-        currentAdmin={currentAdmin}
-        setCurrentAdmin={setCurrentAdmin}
-      />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Checking admin access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if not admin
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="w-8 h-8 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+          <p className="text-slate-600 mb-4">You don't have admin privileges to access this page.</p>
+          <button
+            onClick={() => window.location.href = '/home'}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -1303,7 +1298,7 @@ export default function AdminPage() {
             <SubmittedSongsPage embedded={true} />
           </div>
         )}
-        {activeSection === 'Members' && <MembersSection />}
+        {activeSection === 'Members' && <MembersSection adminUser={adminUser} addToast={addToast} />}
         {activeSection === 'Media' && <MediaSection />}
         {activeSection === 'Notifications' && <SimpleNotificationsSection />}
         {activeSection === 'Analytics' && (

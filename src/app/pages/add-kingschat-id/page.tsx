@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
+import KingsChatOAuthModal from '@/components/KingsChatOAuthModal'
 
 export default function AddKingsChatIdPage() {
   const router = useRouter()
@@ -13,6 +14,8 @@ export default function AddKingsChatIdPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [showKingsChatModal, setShowKingsChatModal] = useState(false)
+  const [useOAuthMethod, setUseOAuthMethod] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,6 +64,64 @@ export default function AddKingsChatIdPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleOAuthLinking = () => {
+    setError('')
+    setShowKingsChatModal(true)
+  }
+
+  const handleKingsChatSuccess = async (authData: any) => {
+    setIsSubmitting(true)
+    setShowKingsChatModal(false)
+    
+    try {
+      if (!user?.uid) {
+        setError('You must be logged in to link KingsChat')
+        return
+      }
+
+      const userProfile = authData.userProfile
+      const kingschatUserId = userProfile.userId || userProfile.id
+      
+      if (!kingschatUserId) {
+        setError('Could not extract KingsChat user ID')
+        return
+      }
+
+      // Check if this KingsChat ID is already used by another account
+      const existingUser = await FirebaseDatabaseService.findUserByKingsChatId(kingschatUserId)
+      
+      if (existingUser && existingUser.id !== user.uid) {
+        setError('This KingsChat account is already linked to another user')
+        return
+      }
+
+      // Update user profile with KingsChat ID
+      await FirebaseDatabaseService.updateDocument('profiles', user.uid, {
+        kingschat_id: kingschatUserId,
+        kingschatUserId: kingschatUserId,
+        updated_at: new Date().toISOString()
+      })
+
+      setSuccess(true)
+      await refreshProfile()
+      
+      setTimeout(() => {
+        router.push('/pages/profile')
+      }, 2000)
+      
+    } catch (error: any) {
+      console.error('OAuth linking error:', error)
+      setError('Failed to link KingsChat account. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleKingsChatError = (error: string) => {
+    setError(error)
+    setShowKingsChatModal(false)
   }
 
   // Check if user already has KingsChat ID
@@ -151,46 +212,122 @@ export default function AddKingsChatIdPage() {
               </div>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Your KingsChat ID
-                </label>
-                <input
-                  type="text"
-                  value={kingschatId}
-                  onChange={(e) => setKingschatId(e.target.value)}
-                  placeholder="Enter your KingsChat ID"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600"
-                  disabled={isSubmitting}
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  You can find your KingsChat ID in your KingsChat profile settings
-                </p>
+            {/* Method Selection */}
+            <div className="mb-6">
+              <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                <button
+                  onClick={() => setUseOAuthMethod(false)}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    !useOAuthMethod 
+                      ? 'bg-white text-purple-600 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Manual Entry
+                </button>
+                <button
+                  onClick={() => setUseOAuthMethod(true)}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    useOAuthMethod 
+                      ? 'bg-white text-purple-600 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Auto-Link
+                </button>
               </div>
+            </div>
 
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{error}</p>
+            {/* Manual Form */}
+            {!useOAuthMethod && (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Your KingsChat ID
+                  </label>
+                  <input
+                    type="text"
+                    value={kingschatId}
+                    onChange={(e) => setKingschatId(e.target.value)}
+                    placeholder="Enter your KingsChat ID"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600"
+                    disabled={isSubmitting}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    You can find your KingsChat ID in your KingsChat profile settings
+                  </p>
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={isSubmitting || !kingschatId.trim()}
-                className="w-full py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Adding KingsChat ID...
-                  </>
-                ) : (
-                  'Add KingsChat ID'
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{error}</p>
+                  </div>
                 )}
-              </button>
-            </form>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !kingschatId.trim()}
+                  className="w-full py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Adding KingsChat ID...
+                    </>
+                  ) : (
+                    'Add KingsChat ID'
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* OAuth Method */}
+            {useOAuthMethod && (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <img 
+                      src="/kingschat.jpeg" 
+                      alt="KingsChat" 
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Automatic Linking</h4>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Sign in with your KingsChat account to automatically link it with your profile
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{error}</p>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleOAuthLinking}
+                  disabled={isSubmitting}
+                  className="w-full py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Linking Account...
+                    </>
+                  ) : (
+                    <>
+                      <img 
+                        src="/kingschat.jpeg" 
+                        alt="KingsChat" 
+                        className="w-5 h-5 rounded-full object-cover"
+                      />
+                      Link with KingsChat
+                      <ExternalLink className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
 
             {/* Help Text */}
             <div className="mt-6 pt-6 border-t border-gray-200">
@@ -209,6 +346,14 @@ export default function AddKingsChatIdPage() {
           </div>
         )}
       </div>
+
+      {/* KingsChat OAuth Modal */}
+      <KingsChatOAuthModal
+        isOpen={showKingsChatModal}
+        onClose={() => setShowKingsChatModal(false)}
+        onSuccess={handleKingsChatSuccess}
+        onError={handleKingsChatError}
+      />
     </div>
   )
 }

@@ -157,7 +157,7 @@ class PushNotificationService {
       tag: 'rehearsal-reminder',
       data: {
         type: 'rehearsal',
-        url: '/pages/praise-night',
+        url: '/pages/program',
         rehearsalData
       },
       requireInteraction: true

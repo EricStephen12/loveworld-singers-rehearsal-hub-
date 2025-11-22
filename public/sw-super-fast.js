@@ -13,7 +13,7 @@ const CACHE_PATTERNS = [
   /^\/home/,
   /^\/pages\/rehearsals/,
   /^\/pages\/profile/,
-  /^\/pages\/praise-night/,
+  /^\/pages\/program/,
   /^\/admin/,
   /^\/auth/,
   
@@ -34,7 +34,7 @@ const CRITICAL_RESOURCES = [
   '/home',
   '/pages/rehearsals',
   '/pages/profile',
-  '/pages/praise-night',
+  '/pages/program',
   '/logo.png',
   '/lmm.png',
   '/manifest.json'

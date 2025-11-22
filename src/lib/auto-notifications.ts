@@ -61,7 +61,7 @@ class AutoNotificationService {
       type: 'success',
       category: 'praise_night',
       priority: 'high',
-      action_url: `/pages/praise-nights/${praiseNightId}`,
+      action_url: `/pages/program/${praiseNightId}`,
       target_audience: 'all'
     }, senderId, 'Admin');
   }
@@ -76,7 +76,7 @@ class AutoNotificationService {
       type: 'info',
       category: 'praise_night',
       priority: 'medium',
-      action_url: `/pages/praise-nights/${praiseNightId}`,
+      action_url: `/pages/program/${praiseNightId}`,
       target_audience: 'all'
     }, senderId, 'Admin');
   }

@@ -20,8 +20,7 @@ import {
   Pause,
   Check,
   CheckCircle,
-  RefreshCw,
-  Settings
+  RefreshCw
 } from 'lucide-react';
 import { uploadToCloudinary, deleteFromCloudinary, getFileType } from '@/lib/cloudinary-storage';
 import {
@@ -31,7 +30,6 @@ import {
   CloudinaryMediaFile
 } from '@/lib/cloudinary-media-service';
 import { Toast } from './Toast';
-import { runMediaDiagnostics, printDiagnostics } from '@/utils/media-diagnostics';
 
 interface MediaFile {
   id: string;
@@ -72,7 +70,6 @@ export default function MediaManager({
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
-  const [runningDiagnostics, setRunningDiagnostics] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
@@ -378,46 +375,7 @@ export default function MediaManager({
     });
   };
 
-  const handleRunDiagnostics = async () => {
-    setRunningDiagnostics(true);
-    addToast({
-      type: 'info',
-      message: 'Running diagnostics... Check console for results'
-    });
 
-    try {
-      const results = await runMediaDiagnostics();
-      printDiagnostics(results);
-
-      const failed = results.filter(r => r.status === 'fail').length;
-      const warnings = results.filter(r => r.status === 'warning').length;
-
-      if (failed > 0) {
-        addToast({
-          type: 'error',
-          message: `Diagnostics complete: ${failed} test(s) failed. Check console for details.`
-        });
-      } else if (warnings > 0) {
-        addToast({
-          type: 'warning',
-          message: `Diagnostics complete: ${warnings} warning(s). Check console for details.`
-        });
-      } else {
-        addToast({
-          type: 'success',
-          message: 'All diagnostics passed! ✅'
-        });
-      }
-    } catch (error) {
-      console.error('Diagnostics error:', error);
-      addToast({
-        type: 'error',
-        message: 'Failed to run diagnostics'
-      });
-    } finally {
-      setRunningDiagnostics(false);
-    }
-  };
 
   const handleAudioPlay = async (file: MediaFile) => {
     if (playingAudioId === file.id) {
@@ -541,15 +499,6 @@ export default function MediaManager({
           <div className="flex items-center gap-2">
             {!selectionMode && (
               <>
-                <button
-                  onClick={handleRunDiagnostics}
-                  disabled={runningDiagnostics}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 text-sm"
-                  title="Run system diagnostics"
-                >
-                  <Settings className={`w-4 h-4 ${runningDiagnostics ? 'animate-spin' : ''}`} />
-                  Diagnose
-                </button>
                 <button
                   onClick={() => loadFilesFromDatabase(true)}
                   disabled={loading}

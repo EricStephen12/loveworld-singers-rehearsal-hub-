@@ -332,7 +332,15 @@ class AnalyticsTracker {
     
     // Calculate metrics
     const totalVisits = filteredSessions.length;
-    const uniqueVisitors = new Set(filteredSessions.map(s => s.sessionId)).size;
+    
+    // Count unique visitors by userId if available, otherwise by a combination of browser fingerprint
+    const uniqueVisitors = new Set(
+      filteredSessions.map(s => {
+        // If userId exists, use it; otherwise create a fingerprint from deviceType + browser
+        return s.userId || `${s.deviceType}_${s.browser}_${s.country || 'unknown'}`;
+      })
+    ).size;
+    
     const pageViews = filteredEvents.filter(e => e.type === 'page_view').length;
     
     const totalDuration = filteredSessions.reduce((sum, session) => sum + (session.duration || 0), 0);

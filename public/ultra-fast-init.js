@@ -26,7 +26,7 @@
     '/home',
     '/pages/rehearsals',
     '/pages/profile',
-    '/pages/praise-night'
+    '/pages/program'
   ];
   
   likelyPages.forEach(page => {

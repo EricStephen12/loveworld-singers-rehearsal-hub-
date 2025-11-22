@@ -1,5 +1,6 @@
 // Admin Activity Logger
 // Tracks all admin actions for accountability and debugging
+import { AdminUser } from './admin-service';
 
 export interface AdminActivity {
   id: string;
@@ -132,36 +133,46 @@ class AdminActivityLogger {
   }
 }
 
+// Helper to extract admin info from AdminUser
+const getAdminInfo = (admin: AdminUser) => ({
+  id: admin.id,
+  username: admin.email,
+  fullName: `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || admin.email
+});
+
 // Helper functions for common actions
 export const logAdminAction = {
   // Page actions
-  createPage: (admin: { id: string; username: string; fullName: string }, pageName: string) => {
+  createPage: (admin: AdminUser, pageName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'CREATE_PAGE',
       `Created page: ${pageName}`,
       'Pages'
     );
   },
 
-  updatePage: (admin: { id: string; username: string; fullName: string }, pageName: string) => {
+  updatePage: (admin: AdminUser, pageName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'UPDATE_PAGE',
       `Updated page: ${pageName}`,
       'Pages'
     );
   },
 
-  deletePage: (admin: { id: string; username: string; fullName: string }, pageName: string) => {
+  deletePage: (admin: AdminUser, pageName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'DELETE_PAGE',
       `Deleted page: ${pageName}`,
       'Pages'
@@ -169,33 +180,36 @@ export const logAdminAction = {
   },
 
   // Category actions
-  createCategory: (admin: { id: string; username: string; fullName: string }, categoryName: string) => {
+  createCategory: (admin: AdminUser, categoryName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'CREATE_CATEGORY',
       `Created category: ${categoryName}`,
       'Categories'
     );
   },
 
-  updateCategory: (admin: { id: string; username: string; fullName: string }, categoryName: string) => {
+  updateCategory: (admin: AdminUser, categoryName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'UPDATE_CATEGORY',
       `Updated category: ${categoryName}`,
       'Categories'
     );
   },
 
-  deleteCategory: (admin: { id: string; username: string; fullName: string }, categoryName: string) => {
+  deleteCategory: (admin: AdminUser, categoryName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'DELETE_CATEGORY',
       `Deleted category: ${categoryName}`,
       'Categories'
@@ -203,33 +217,36 @@ export const logAdminAction = {
   },
 
   // Song actions
-  addSong: (admin: { id: string; username: string; fullName: string }, songTitle: string, category: string) => {
+  addSong: (admin: AdminUser, songTitle: string, category: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'ADD_SONG',
       `Added song: ${songTitle} to ${category}`,
       'Songs'
     );
   },
 
-  updateSong: (admin: { id: string; username: string; fullName: string }, songTitle: string) => {
+  updateSong: (admin: AdminUser, songTitle: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'UPDATE_SONG',
       `Updated song: ${songTitle}`,
       'Songs'
     );
   },
 
-  deleteSong: (admin: { id: string; username: string; fullName: string }, songTitle: string) => {
+  deleteSong: (admin: AdminUser, songTitle: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'DELETE_SONG',
       `Deleted song: ${songTitle}`,
       'Songs'
@@ -237,22 +254,24 @@ export const logAdminAction = {
   },
 
   // Media actions
-  uploadMedia: (admin: { id: string; username: string; fullName: string }, fileName: string) => {
+  uploadMedia: (admin: AdminUser, fileName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'UPLOAD_MEDIA',
       `Uploaded media: ${fileName}`,
       'Media'
     );
   },
 
-  deleteMedia: (admin: { id: string; username: string; fullName: string }, fileName: string) => {
+  deleteMedia: (admin: AdminUser, fileName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'DELETE_MEDIA',
       `Deleted media: ${fileName}`,
       'Media'
@@ -260,22 +279,24 @@ export const logAdminAction = {
   },
 
   // User actions
-  updateUser: (admin: { id: string; username: string; fullName: string }, userName: string) => {
+  updateUser: (admin: AdminUser, userName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'UPDATE_USER',
       `Updated user: ${userName}`,
       'Users'
     );
   },
 
-  deleteUser: (admin: { id: string; username: string; fullName: string }, userName: string) => {
+  deleteUser: (admin: AdminUser, userName: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'DELETE_USER',
       `Deleted user: ${userName}`,
       'Users'
@@ -283,11 +304,12 @@ export const logAdminAction = {
   },
 
   // Support actions
-  replySupport: (admin: { id: string; username: string; fullName: string }, messageId: string) => {
+  replySupport: (admin: AdminUser, messageId: string) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'REPLY_SUPPORT',
       `Replied to support message: ${messageId}`,
       'Support'
@@ -295,22 +317,24 @@ export const logAdminAction = {
   },
 
   // Login/Logout
-  login: (admin: { id: string; username: string; fullName: string }) => {
+  login: (admin: AdminUser) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'LOGIN',
       `Logged in to admin panel`,
       'Authentication'
     );
   },
 
-  logout: (admin: { id: string; username: string; fullName: string }) => {
+  logout: (admin: AdminUser) => {
+    const info = getAdminInfo(admin);
     AdminActivityLogger.log(
-      admin.id,
-      admin.username,
-      admin.fullName,
+      info.id,
+      info.username,
+      info.fullName,
       'LOGOUT',
       `Logged out from admin panel`,
       'Authentication'

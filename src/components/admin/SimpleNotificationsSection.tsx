@@ -21,9 +21,21 @@ export default function SimpleNotificationsSection() {
 
   const loadMessages = async () => {
     setLoading(true);
+    const startTime = Date.now();
+    const MIN_LOADING_TIME = 2000; // Show loading for at least 2 seconds
+    
     const msgs = await getAllMessages();
     setMessages(msgs);
-    setLoading(false);
+    
+    // Ensure minimum loading time to prevent flickering on slow networks
+    const elapsedTime = Date.now() - startTime;
+    const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
+    
+    if (remainingTime > 0) {
+      setTimeout(() => setLoading(false), remainingTime);
+    } else {
+      setLoading(false);
+    }
   };
 
   const handleSendMessage = async () => {

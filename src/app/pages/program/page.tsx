@@ -72,6 +72,7 @@ function PraiseNightPageContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedPageCategory, setSelectedPageCategory] = useState<string | null>(null);
   const [pageCategories, setPageCategories] = useState<any[]>([]);
+  const [pageCategoriesLoading, setPageCategoriesLoading] = useState(true);
   
   // Load songs on demand like admin does
   const [allSongsFromFirebase, setAllSongsFromFirebase] = useState<PraiseNightSong[]>([]);
@@ -80,6 +81,7 @@ function PraiseNightPageContent() {
   // Load page categories
   useEffect(() => {
     const loadPageCategories = async () => {
+      setPageCategoriesLoading(true);
       try {
         const { FirebaseDatabaseService } = await import('@/lib/firebase-database');
         const categories = await FirebaseDatabaseService.getPageCategories();
@@ -87,6 +89,8 @@ function PraiseNightPageContent() {
         setPageCategories(categories);
       } catch (error) {
         console.error('❌ Error loading page categories:', error);
+      } finally {
+        setPageCategoriesLoading(false);
       }
     };
     loadPageCategories();
@@ -481,6 +485,14 @@ function PraiseNightPageContent() {
   const handleCloseSongDetail = () => {
     setIsSongDetailOpen(false);
     setSelectedSong(null);
+
+    // Remove song parameter from URL if it exists (from search navigation)
+    if (songParam) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('song');
+      window.history.replaceState({}, '', url.toString());
+      console.log('🧹 Removed song parameter from URL');
+    }
 
     // Dispatch event to show mini player (if song is playing)
     window.dispatchEvent(new CustomEvent('songDetailClose'));
@@ -1315,8 +1327,31 @@ function PraiseNightPageContent() {
         {/* Archive Cards Grid - Special layout for archive category */}
         {categoryFilter === 'archive' && (
           <div className="mb-6">
+            {/* Show loading state while page categories are loading */}
+            {pageCategoriesLoading && !selectedPageCategory && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Browse by Category</h3>
+                  <span className="text-sm text-slate-500">Loading...</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-white border-2 border-slate-200 rounded-xl p-6 animate-pulse"
+                    >
+                      <div className="w-full h-40 bg-slate-200 rounded-lg mb-4"></div>
+                      <div className="h-6 bg-slate-200 rounded mb-2"></div>
+                      <div className="h-4 bg-slate-200 rounded mb-3 w-3/4"></div>
+                      <div className="h-6 bg-slate-200 rounded w-20"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Show page categories if in archive and no category selected */}
-            {categoryFilter === 'archive' && !selectedPageCategory && pageCategories.length > 0 && (
+            {!pageCategoriesLoading && categoryFilter === 'archive' && !selectedPageCategory && pageCategories.length > 0 && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-slate-900">Browse by Category</h3>

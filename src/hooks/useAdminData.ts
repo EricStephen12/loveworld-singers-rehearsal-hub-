@@ -172,6 +172,9 @@ export function useAdminData(): AdminData {
   const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
+    const startLoadTime = Date.now();
+    const MIN_LOADING_TIME = 2000; // Show loading for at least 2 seconds
+    
     try {
       setError(null);
       
@@ -202,7 +205,15 @@ export function useAdminData(): AdminData {
       console.error('❌ Admin: Failed to load data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
-      setLoading(false);
+      // Ensure minimum loading time to prevent flickering on slow networks
+      const elapsedTime = Date.now() - startLoadTime;
+      const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
+      
+      if (remainingTime > 0) {
+        setTimeout(() => setLoading(false), remainingTime);
+      } else {
+        setLoading(false);
+      }
     }
   };
 

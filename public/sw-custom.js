@@ -6,7 +6,7 @@ const DATA_CACHE_NAME = 'lwsrh-data-cache-v1';
 const STATIC_CACHE_URLS = [
   '/',
   '/home',
-  '/pages/praise-night',
+  '/pages/program',
   '/pages/rehearsals',
   '/pages/profile',
   '/manifest.json',

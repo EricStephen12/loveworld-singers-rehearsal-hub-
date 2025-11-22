@@ -34,7 +34,7 @@ export function useGlobalSearch() {
           title: page.name,
           subtitle: 'Praise Night Event',
           description: `${page.location} • ${page.date}`,
-          url: `/pages/praise-night?page=${page.id}`,
+          url: `/pages/program?page=${page.id}`,
           pageId: page.id
         });
       }
@@ -67,7 +67,7 @@ export function useGlobalSearch() {
             title: song.title,
             subtitle: matchReason,
             description: `${page.name} • ${song.category} • ${song.status}`,
-            url: `/pages/praise-night?page=${page.id}&song=${encodeURIComponent(song.title)}`,
+            url: `/pages/program?page=${page.id}&song=${encodeURIComponent(song.title)}`,
             pageId: page.id,
             category: song.category,
             status: song.status
@@ -86,7 +86,7 @@ export function useGlobalSearch() {
             title: category,
             subtitle: 'Song Category',
             description: `${page.name} • ${songsInCategory.length} songs`,
-            url: `/pages/praise-night?page=${page.id}&category=${encodeURIComponent(category)}`,
+            url: `/pages/program?page=${page.id}&category=${encodeURIComponent(category)}`,
             pageId: page.id,
             category: category
           });

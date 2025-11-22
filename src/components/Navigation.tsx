@@ -11,7 +11,7 @@ export default function Navigation() {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
-    { href: '/pages/praise-night', label: 'Praise Night', icon: Music },
+    { href: '/pages/program', label: 'Praise Night', icon: Music },
     { href: '/pages/admin', label: 'Admin', icon: Settings },
   ]
 

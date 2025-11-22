@@ -14,7 +14,7 @@ export default function InstantNavigation() {
       '/home',
       '/pages/rehearsals',
       '/pages/profile',
-      '/pages/praise-night',
+      '/pages/program',
       '/admin',
       '/auth'
     ];

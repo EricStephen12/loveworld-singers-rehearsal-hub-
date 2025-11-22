@@ -91,7 +91,7 @@ export default function RehearsalsPage() {
       title: 'Ongoing Rehearsals',
       description: 'Join active rehearsal sessions',
       icon: Users,
-      href: '/pages/praise-night?category=ongoing',
+      href: '/pages/program?category=ongoing',
       gradient: 'from-emerald-600 via-green-600 to-lime-600',
       iconBg: 'bg-emerald-100',
       iconColor: 'text-emerald-600'
@@ -101,7 +101,7 @@ export default function RehearsalsPage() {
       title: 'Vocal Warm-ups',
       description: 'Practice vocal exercises and breathing techniques',
       icon: Music,
-      href: '/pages/praise-night?category=unassigned',
+      href: '/pages/program?category=unassigned',
       gradient: 'from-purple-600 via-indigo-600 to-blue-600',
       iconBg: 'bg-purple-100',
       iconColor: 'text-purple-600'
@@ -111,7 +111,7 @@ export default function RehearsalsPage() {
       title: 'Pre-Rehearsals',
       description: 'Prepare for upcoming rehearsal sessions',
       icon: Calendar,
-      href: '/pages/praise-night?category=pre-rehearsal',
+      href: '/pages/program?category=pre-rehearsal',
       gradient: 'from-blue-600 via-cyan-600 to-teal-600',
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600'
@@ -141,7 +141,7 @@ export default function RehearsalsPage() {
       title: 'Archives',
       description: 'Access past rehearsal recordings and materials',
       icon: MapPin,
-      href: '/pages/praise-night?category=archive',
+      href: '/pages/program?category=archive',
       gradient: 'from-rose-600 via-pink-600 to-purple-600',
       iconBg: 'bg-rose-100',
       iconColor: 'text-rose-600'

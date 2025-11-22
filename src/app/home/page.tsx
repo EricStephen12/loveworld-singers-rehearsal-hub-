@@ -10,40 +10,14 @@ import { useHomeGlobalSearch, HomeSearchResult } from '@/hooks/useHomeGlobalSear
 import { useAuth } from '@/contexts/AuthContext'
 import AuthGuard from '@/components/AuthGuard'
 import { handleAppRefresh } from '@/utils/refresh-utils'
+import { useAdminStatus } from '@/hooks/useAdminStatus'
 
-// Banner component for old users without KingsChat ID
-function KingsChatIdBanner() {
-  const router = useRouter()
-  const { profile } = useAuth()
-  const [isDismissed, setIsDismissed] = useState(false)
 
-  // Check if user has KingsChat ID
-  const hasKingsChatId = (profile as any)?.kingschat_id
-  
-  // Check if banner was dismissed (stored in localStorage)
-  useEffect(() => {
-    const dismissed = localStorage.getItem('kingschatBannerDismissed')
-    if (dismissed === 'true') {
-      setIsDismissed(true)
-    }
-  }, [])
-
-  const handleDismiss = () => {
-    setIsDismissed(true)
-    localStorage.setItem('kingschatBannerDismissed', 'true')
-  }
-
-  // Don't show if user has KingsChat ID or banner is dismissed
-  if (hasKingsChatId || isDismissed || !profile) {
-    return null
-  }
-
-  
-}
 
 function HomePageContent() {
   const router = useRouter()
   const { signOut } = useAuth()
+  const { isAdmin, adminUser, isLoading: adminLoading } = useAdminStatus()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)  
   const searchInputRef = useRef<HTMLInputElement | null>(null)
@@ -140,7 +114,8 @@ function HomePageContent() {
     return iconMap[iconName] || Search;
   }
 
-  const features = [
+  // Base features available to all users
+  const baseFeatures = [
     {
       icon: Calendar,
       title: 'Rehearsals',
@@ -196,6 +171,18 @@ function HomePageContent() {
       badge: null,
     },
   ]
+
+  // Add Admin feature if user is an admin
+  const features = isAdmin ? [
+    ...baseFeatures.slice(0, 2), // Rehearsals, Profile
+    {
+      icon: Settings,
+      title: 'Admin',
+      href: '/admin',
+      badge: null,
+    },
+    ...baseFeatures.slice(2) // Rest of the features
+  ] : baseFeatures
 
   const recentItems = [
     {
@@ -418,8 +405,7 @@ function HomePageContent() {
             </div>
           </div>
 
-          {/* KingsChat ID Banner for Old Users */}
-          <KingsChatIdBanner />
+
 
           {/* Main Title */}
           <div className="text-center py-6">

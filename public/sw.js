@@ -11,7 +11,7 @@ const STATIC_FILES = [
   '/home',
   '/pages/groups',
   '/pages/chat-group',
-  '/pages/praise-night',
+  '/pages/program',
   '/pages/notifications',
   '/profile-completion',
   '/manifest.json'

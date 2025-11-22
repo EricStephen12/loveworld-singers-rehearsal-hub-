@@ -63,7 +63,7 @@ export function useHomeGlobalSearch() {
           title: page.name,
           subtitle: 'Praise Night Event',
           description: `${page.location} • ${page.date}`,
-          url: `/pages/praise-night?page=${page.id}`,
+          url: `/pages/program?page=${page.id}`,
           pageId: page.id,
           icon: 'Calendar'
         });
@@ -105,7 +105,7 @@ export function useHomeGlobalSearch() {
             title: song.title,
             subtitle: matchReason,
             description: `${songPage?.name || 'Unknown Page'} • ${song.category} • ${song.status}`,
-            url: `/pages/praise-night?page=${songPage?.id || 'unknown'}&song=${encodeURIComponent(song.title)}`,
+            url: `/pages/program?page=${songPage?.id || 'unknown'}&song=${encodeURIComponent(song.title)}`,
             pageId: songPage?.id || 'unknown',
             category: song.category,
             status: song.status,
@@ -125,7 +125,7 @@ export function useHomeGlobalSearch() {
           title: category,
           subtitle: 'Song Category',
           description: `${songsInCategory.length} songs`,
-          url: `/pages/praise-night?category=${encodeURIComponent(category)}`,
+          url: `/pages/program?category=${encodeURIComponent(category)}`,
           category: category,
           icon: 'Flag'
         });

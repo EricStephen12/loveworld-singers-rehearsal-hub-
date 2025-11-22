@@ -143,9 +143,10 @@ export class AccountLinkingService {
         return { success: false, error: 'User profile not found' }
       }
 
-      // Remove KingsChat data from profile
+      // Remove KingsChat data from profile (both field name formats)
       await FirebaseDatabaseService.updateDocument('profiles', firebaseUserId, {
-        kingschatUserId: null,
+        kingschat_id: null, // Remove underscore format
+        kingschatUserId: null, // Remove camelCase format
         kingschatEmail: null,
         kingschatLinkedAt: null,
         authProviders: ['email'], // Keep only email
@@ -224,8 +225,9 @@ export class AccountLinkingService {
    */
   static async isKingsChatLinked(firebaseUserId: string): Promise<boolean> {
     try {
-      const profile = await FirebaseDatabaseService.getDocument('profiles', firebaseUserId) as UserProfile | null
-      return !!(profile?.kingschatUserId)
+      const profile = await FirebaseDatabaseService.getDocument('profiles', firebaseUserId) as any
+      // Check both field name formats
+      return !!(profile?.kingschat_id || profile?.kingschatUserId)
     } catch (error) {
       console.error('❌ Failed to check KingsChat link status:', error)
       return false

@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
 import { FirebaseAuthService } from '@/lib/firebase-auth'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
 import { KingsChatAuthService } from '@/lib/kingschat-auth'
 import { AccountLinkingService } from '@/lib/account-linking'
 import AuthCheck from '@/components/AuthCheck'
 import KingsChatOAuthModal from '@/components/KingsChatOAuthModal'
+import KingsChatLinkingModal from '@/components/KingsChatLinkingModal'
+import KingsChatMigrationModal from '@/components/KingsChatMigrationModal'
 // Removed Supabase import - using Firebase now
 
 function AuthPageContent() {
@@ -24,6 +26,11 @@ function AuthPageContent() {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false)
   const [showKingsChatModal, setShowKingsChatModal] = useState(false)
+  const [showKingsChatLinkingModal, setShowKingsChatLinkingModal] = useState(false)
+  const [kingschatLinkingData, setKingschatLinkingData] = useState<{id: string, userData: any} | null>(null)
+  const [showKingsChatMigrationModal, setShowKingsChatMigrationModal] = useState(false)
+  const [kingschatMigrationData, setKingschatMigrationData] = useState<{id: string, userData: any, tempAccount: any} | null>(null)
+  const [useRedirectAuth, setUseRedirectAuth] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -36,18 +43,277 @@ function AuthPageContent() {
   // NO AUTH CHECK - Let AuthContext handle redirects
   // This prevents loops completely
 
-  // Check for URL error parameters on mount
+  // Check for URL error parameters and start auth monitoring on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const urlError = urlParams.get('error')
     const urlMessage = urlParams.get('message')
+    const convertFlag = urlParams.get('convert')
+    const signupFlag = urlParams.get('signup')
+    const kingschatIdParam = urlParams.get('kingschatId')
 
     if (urlError && urlMessage) {
       setError(urlMessage)
       // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname)
     }
+
+    // Handle temp account conversion
+    if (convertFlag === 'temp' && kingschatIdParam) {
+      setIsLogin(false) // Switch to signup mode
+      setSuccess('Please create your full account with a real email address')
+      
+      // Pre-fill KingsChat ID
+      setFormData(prev => ({
+        ...prev,
+        kingschatId: kingschatIdParam
+      }))
+      
+      // Try to get stored user data
+      const storedUserData = localStorage.getItem('kingschatUserData')
+      if (storedUserData) {
+        try {
+          const userData = JSON.parse(storedUserData)
+          setFormData(prev => ({
+            ...prev,
+            firstName: userData.firstName || '',
+            lastName: userData.lastName || '',
+            email: userData.email || ''
+          }))
+        } catch (e) {
+          console.warn('Failed to parse stored user data')
+        }
+      }
+    }
+
+    // Handle new user signup from KingsChat
+    if (signupFlag === 'kingschat' && kingschatIdParam) {
+      setIsLogin(false) // Switch to signup mode
+      setSuccess('Please complete your account creation')
+      
+      // Pre-fill KingsChat ID
+      setFormData(prev => ({
+        ...prev,
+        kingschatId: kingschatIdParam
+      }))
+      
+      // Try to get stored user data
+      const storedUserData = localStorage.getItem('kingschatUserData')
+      if (storedUserData) {
+        try {
+          const userData = JSON.parse(storedUserData)
+          setFormData(prev => ({
+            ...prev,
+            firstName: userData.firstName || '',
+            lastName: userData.lastName || '',
+            email: userData.email || ''
+          }))
+        } catch (e) {
+          console.warn('Failed to parse stored user data')
+        }
+      }
+    }
+
+    // Check if user just returned from KingsChat auth
+    checkForCompletedAuth()
+    
+    // Start continuous monitoring for auth completion
+    startAuthMonitoring()
   }, [])
+
+  const startAuthMonitoring = () => {
+    // Check every 3 seconds for completed auth
+    const authCheckInterval = setInterval(async () => {
+      const returnData = localStorage.getItem('kingschat_auth_return')
+      if (!returnData) return
+
+      try {
+        const { sessionId, timestamp } = JSON.parse(returnData)
+        
+        // Stop checking after 10 minutes
+        if (Date.now() - timestamp > 600000) {
+          localStorage.removeItem('kingschat_auth_return')
+          clearInterval(authCheckInterval)
+          return
+        }
+
+        // Check Firebase for auth result
+        const result = await FirebaseDatabaseService.getDocument('kingschat_auth_sessions', sessionId) as any
+        
+        if (result && result.processed) {
+          clearInterval(authCheckInterval)
+          await processCompletedAuth(result, sessionId)
+        }
+      } catch (error) {
+        console.error('Auth monitoring error:', error)
+      }
+    }, 3000)
+
+    // Cleanup interval after 10 minutes
+    setTimeout(() => {
+      clearInterval(authCheckInterval)
+    }, 600000)
+  }
+
+  const checkForCompletedAuth = async () => {
+    try {
+      const returnData = localStorage.getItem('kingschat_auth_return')
+      if (!returnData) return
+
+      const { sessionId, timestamp } = JSON.parse(returnData)
+      
+      // Check if auth was completed (within last 10 minutes)
+      if (Date.now() - timestamp > 600000) {
+        localStorage.removeItem('kingschat_auth_return')
+        return
+      }
+
+      // Check Firebase for auth result
+      const result = await FirebaseDatabaseService.getDocument('kingschat_auth_sessions', sessionId) as any
+      
+      if (result && result.processed) {
+        await processCompletedAuth(result, sessionId)
+      }
+    } catch (error) {
+      console.error('Error checking completed auth:', error)
+    }
+  }
+
+  const processCompletedAuth = async (result: any, sessionId: string) => {
+    try {
+      if (result.success) {
+        // Authentication was successful!
+        console.log('✅ Found completed KingsChat authentication')
+        
+        setSuccess('KingsChat authentication successful! Checking your account...')
+        
+        // Process the auth data
+        if (result.authData && result.authData.userProfile) {
+          const userProfile = result.authData.userProfile
+          const kingschatUserId = userProfile.userId || userProfile.id || result.kingschatUserId
+          
+          console.log('🔐 Processing KingsChat User ID:', kingschatUserId)
+          
+          if (!kingschatUserId) {
+            setError('Could not extract KingsChat ID from authentication data')
+            return
+          }
+          
+          // Search for existing user with this KingsChat ID (enhanced search)
+          const existingUser = await FirebaseDatabaseService.findUserByKingsChatId(kingschatUserId)
+          
+          if (existingUser) {
+            // Found existing account
+            console.log('✅ Found existing account:', existingUser.email, 'Type:', existingUser.accountType)
+            
+            if (existingUser.accountType === 'temp') {
+              setSuccess('Found your temp account! Converting to full account...')
+              
+              // Redirect to signup form to convert temp account to real account
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('convertTempAccount', 'true')
+                localStorage.setItem('tempAccountData', JSON.stringify(existingUser))
+                localStorage.setItem('kingschatUserId', kingschatUserId)
+                localStorage.setItem('kingschatUserData', JSON.stringify(userProfile))
+              }
+              
+              // Cleanup
+              localStorage.removeItem('kingschat_auth_return')
+              await FirebaseDatabaseService.deleteDocument('kingschat_auth_sessions', sessionId)
+              
+              setTimeout(() => {
+                // Redirect to signup form with conversion flag
+                router.push(`/auth?convert=temp&kingschatId=${kingschatUserId}`)
+              }, 1500)
+              
+            } else {
+              // Real account - sign them in
+              setSuccess('Welcome back! Signing you in...')
+              
+              try {
+                let signInEmail = existingUser.email
+                let signInPassword = existingUser.password || kingschatUserId
+                
+                // Handle temp email accounts (legacy)
+                if (signInEmail.includes('@kingschat.temp')) {
+                  signInPassword = kingschatUserId
+                }
+                
+                const signInResult = await FirebaseAuthService.signInWithEmailAndPassword(
+                  signInEmail,
+                  signInPassword
+                )
+                
+                if (signInResult.error) {
+                  // Try alternative sign-in
+                  const fallbackSignIn = await FirebaseAuthService.signInWithEmailAndPassword(
+                    signInEmail,
+                    kingschatUserId
+                  )
+                  
+                  if (fallbackSignIn.error) {
+                    console.error('❌ Sign-in failed:', fallbackSignIn.error)
+                    setError('Found your account but could not sign you in. Please try regular login.')
+                    return
+                  }
+                }
+                
+                console.log('✅ Successfully signed in existing user')
+                
+                // Set authentication flags
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('userAuthenticated', 'true')
+                  localStorage.setItem('hasCompletedProfile', 'true')
+                  localStorage.setItem('authProvider', 'kingschat')
+                  localStorage.setItem('bypassLogin', 'true')
+                }
+                
+                // Cleanup
+                localStorage.removeItem('kingschat_auth_return')
+                await FirebaseDatabaseService.deleteDocument('kingschat_auth_sessions', sessionId)
+                
+                setTimeout(() => {
+                  router.push('/home')
+                }, 1500)
+                
+              } catch (signInError) {
+                console.error('❌ Sign-in error:', signInError)
+                setError('Could not sign you in. Please try regular login.')
+              }
+            }
+          } else {
+            // New user - redirect to signup form
+            console.log('🆕 No existing account found - new user signup')
+            setSuccess('New user detected! Redirecting to signup...')
+            
+            // Store KingsChat data for signup form
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('kingschatProfileSetup', 'true')
+              localStorage.setItem('kingschatUserId', kingschatUserId)
+              localStorage.setItem('kingschatUserData', JSON.stringify(userProfile))
+            }
+            
+            // Cleanup
+            localStorage.removeItem('kingschat_auth_return')
+            await FirebaseDatabaseService.deleteDocument('kingschat_auth_sessions', sessionId)
+            
+            setTimeout(() => {
+              // Redirect to signup form with KingsChat data
+              router.push(`/auth?signup=kingschat&kingschatId=${kingschatUserId}`)
+            }, 1500)
+          }
+        }
+      } else {
+        // Authentication failed
+        setError(result.message || 'KingsChat authentication failed')
+        localStorage.removeItem('kingschat_auth_return')
+        await FirebaseDatabaseService.deleteDocument('kingschat_auth_sessions', sessionId)
+      }
+    } catch (error) {
+      console.error('Error processing completed auth:', error)
+      setError('Failed to process authentication result')
+    }
+  }
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,28 +341,100 @@ function AuthPageContent() {
           return
         }
 
-        setSuccess('Creating your account...')
+        // Check if this is a temp account conversion
+        const isConvertingTempAccount = localStorage.getItem('convertTempAccount') === 'true'
+        const tempAccountData = localStorage.getItem('tempAccountData')
         
-        // Sign up with Firebase and create profile in one step
-        const result = await FirebaseAuthService.createUserWithEmailAndPassword(
-          formData.email,
-          formData.password,
-          {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            kingschat_id: formData.kingschatId || undefined
+        if (isConvertingTempAccount && tempAccountData) {
+          setSuccess('Converting your temp account to full account...')
+          
+          try {
+            const tempAccount = JSON.parse(tempAccountData)
+            
+            // Create new account with real email
+            const result = await FirebaseAuthService.createUserWithEmailAndPassword(
+              formData.email,
+              formData.password,
+              {
+                // Preserve any other data from temp account (excluding fields we want to override)
+                ...Object.fromEntries(
+                  Object.entries(tempAccount).filter(([key]) => 
+                    !['email', 'first_name', 'last_name', 'accountType'].includes(key)
+                  )
+                ),
+                // Override with new data
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                email: formData.email,
+                kingschat_id: formData.kingschatId,
+                accountType: 'real'
+              }
+            )
+            
+            if (result.error) {
+              setError(result.error)
+              setIsLoading(false)
+              setIsCheckingAccount(false)
+              return
+            }
+            
+            // TODO: Delete the old temp account if needed
+            // This would require admin privileges or a cloud function
+            
+            setSuccess('Account converted successfully! Welcome!')
+            
+            // Cleanup conversion flags
+            localStorage.removeItem('convertTempAccount')
+            localStorage.removeItem('tempAccountData')
+            localStorage.removeItem('kingschatUserId')
+            localStorage.removeItem('kingschatUserData')
+            
+          } catch (conversionError) {
+            console.error('Temp account conversion error:', conversionError)
+            setError('Failed to convert temp account. Please try again.')
+            setIsLoading(false)
+            setIsCheckingAccount(false)
+            return
           }
-        )
-        
-        if (result.error) {
-          setError(result.error)
-          setIsLoading(false)
-          setIsCheckingAccount(false)
-          return
-        }
+        } else {
+          // Regular signup
+          setSuccess('Creating your account...')
+          
+          // Validate KingsChat ID if provided
+          if (formData.kingschatId) {
+            console.log('🔍 Checking if KingsChat ID is already in use...')
+            const existingUser = await FirebaseDatabaseService.findUserByKingsChatId(formData.kingschatId)
+            
+            if (existingUser) {
+              setError('This KingsChat ID is already linked to another account. Please use a different ID or sign in to your existing account.')
+              setIsLoading(false)
+              setIsCheckingAccount(false)
+              return
+            }
+          }
+          
+          // Sign up with Firebase and create profile in one step
+          const result = await FirebaseAuthService.createUserWithEmailAndPassword(
+            formData.email,
+            formData.password,
+            {
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+              email: formData.email,
+              kingschat_id: formData.kingschatId || undefined,
+              accountType: 'real'
+            }
+          )
+          
+          if (result.error) {
+            setError(result.error)
+            setIsLoading(false)
+            setIsCheckingAccount(false)
+            return
+          }
 
-        setSuccess('Account created! Setting up your profile...')
+          setSuccess('Account created! Setting up your profile...')
+        }
         
         setSuccess('Account created successfully! Redirecting...')
         
@@ -106,7 +444,13 @@ function AuthPageContent() {
           localStorage.setItem('lastAuthTime', Date.now().toString())
           localStorage.setItem('bypassLogin', 'true')
           localStorage.setItem('hasCompletedProfile', 'true') // Profile is complete with basic info
+          localStorage.setItem('authProvider', formData.kingschatId ? 'kingschat' : 'email')
         }
+        
+        // Cleanup any KingsChat signup data
+        localStorage.removeItem('kingschatProfileSetup')
+        localStorage.removeItem('kingschatUserId')
+        localStorage.removeItem('kingschatUserData')
         
         // Go directly to home - no profile completion needed
         console.log('✅ Account created, redirecting to home...')
@@ -219,7 +563,7 @@ function AuthPageContent() {
         email: prev.email || userProfile.email || ''
       }))
       
-      setSuccess('KingsChat account connected! Your ID has been added to the form.')
+      setSuccess('KingsChat account connected! It will be linked to your new account.')
     } else {
       setError('Could not retrieve KingsChat user information')
     }
@@ -228,6 +572,72 @@ function AuthPageContent() {
   const handleKingsChatModalError = (error: string) => {
     console.error('❌ KingsChat OAuth error:', error)
     setError(`KingsChat authentication failed: ${error}`)
+  }
+
+  const handleKingsChatLinkingSuccess = () => {
+    console.log('✅ KingsChat ID linked successfully')
+    setSuccess('KingsChat account linked! You can now use KingsChat to sign in.')
+    setShowKingsChatLinkingModal(false)
+    setKingschatLinkingData(null)
+    
+    // Optionally redirect to home or refresh the page
+    setTimeout(() => {
+      router.push('/home')
+    }, 2000)
+  }
+
+  const handleCreateAccountFromLinking = () => {
+    console.log('🆕 User chose to create new account from linking modal')
+    
+    // Switch to signup mode
+    setIsLogin(false)
+    setSuccess('Please complete your account creation')
+    
+    // Pre-fill the form with KingsChat data if available
+    if (kingschatLinkingData) {
+      const userData = kingschatLinkingData.userData
+      setFormData(prev => ({
+        ...prev,
+        kingschatId: kingschatLinkingData.id,
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        email: userData.email || ''
+      }))
+    }
+    
+    // Close modal and clear data
+    setShowKingsChatLinkingModal(false)
+    setKingschatLinkingData(null)
+  }
+
+  const handleMigrateTempAccount = (tempAccountData: any) => {
+    console.log('🔄 Temp account migration triggered')
+    
+    // Store data for migration modal
+    if (kingschatLinkingData) {
+      setKingschatMigrationData({
+        id: kingschatLinkingData.id,
+        userData: kingschatLinkingData.userData,
+        tempAccount: tempAccountData
+      })
+    }
+    
+    // Close linking modal and show migration modal
+    setShowKingsChatLinkingModal(false)
+    setKingschatLinkingData(null)
+    setShowKingsChatMigrationModal(true)
+  }
+
+  const handleMigrationSuccess = () => {
+    console.log('✅ Account migration completed successfully')
+    setSuccess('Account upgraded successfully! Welcome to your new account!')
+    setShowKingsChatMigrationModal(false)
+    setKingschatMigrationData(null)
+    
+    // Redirect to home
+    setTimeout(() => {
+      router.push('/home')
+    }, 2000)
   }
 
   const handleSocialLogin = (provider: string, e?: React.MouseEvent) => {
@@ -250,10 +660,10 @@ function AuthPageContent() {
     setIsCheckingAccount(true)
     
     try {
-      setSuccess('KingsChat login successful! Setting up your account...')
+      setSuccess('KingsChat authentication successful! Checking your account...')
       
       const userProfile = authData.userProfile
-      const kingschatUserId = userProfile.userId || userProfile.id
+      const kingschatUserId = userProfile.userId || userProfile.id || authData.kingschatUserId
       
       if (!kingschatUserId) {
         setError('Could not extract user ID from KingsChat profile')
@@ -262,79 +672,128 @@ function AuthPageContent() {
         return
       }
       
-      console.log('🔐 KingsChat UID:', kingschatUserId)
+      console.log('🔐 KingsChat User ID:', kingschatUserId)
       
-      // Search for existing user with this KingsChat ID
-      console.log('🔍 Searching for existing user with KingsChat ID:', kingschatUserId)
+      // Search for existing user with this KingsChat ID (enhanced search)
+      console.log('🔍 Searching for existing account with KingsChat ID:', kingschatUserId)
       
       const existingUser = await FirebaseDatabaseService.findUserByKingsChatId(kingschatUserId)
       
       if (existingUser) {
-        // User exists - sign them in with their regular email/password
-        console.log('✅ Found existing user:', existingUser.email)
-        setSuccess('Account found! Signing you in...')
+        // Found existing account
+        console.log('✅ Found existing account:', existingUser.email, 'Type:', existingUser.accountType)
         
-        // Sign in with their regular Firebase account
-        const signInResult = await FirebaseAuthService.signInWithEmailAndPassword(
-          existingUser.email,
-          existingUser.password || kingschatUserId // Use stored password or fallback to kingschat ID
+        // Check if it's a temp account that needs upgrading
+        const isTempAccount = (
+          existingUser.accountType === 'temp' || 
+          existingUser.email?.includes('@kingschat.temp')
         )
         
-        if (signInResult.error) {
-          // If regular password fails, try with kingschat ID as password
-          const fallbackSignIn = await FirebaseAuthService.signInWithEmailAndPassword(
-            existingUser.email,
-            kingschatUserId
-          )
+        // Check if it's a real account (has real email and not temp)
+        const isRealAccount = (
+          existingUser.accountType === 'real' ||
+          (existingUser.email && !existingUser.email.includes('@kingschat.temp'))
+        )
+        
+        if (isTempAccount && !isRealAccount) {
+          // Temp account found - show migration modal
+          setSuccess('Found your account! Let\'s upgrade it with a real email address...')
           
-          if (fallbackSignIn.error) {
-            setError('Found your account but could not sign you in. Please use regular login.')
-            setIsLoading(false)
-            setIsCheckingAccount(false)
-            return
+          // Store data for migration modal
+          setKingschatMigrationData({
+            id: kingschatUserId,
+            userData: userProfile,
+            tempAccount: existingUser
+          })
+          
+          setTimeout(() => {
+            // Show migration modal
+            setShowKingsChatMigrationModal(true)
+            setSuccess('')
+          }, 1500)
+          
+        } else {
+          // Real account - sign them in
+          setSuccess('Welcome back! Signing you in...')
+          
+          try {
+            let signInEmail = existingUser.email
+            let signInPassword = existingUser.password || kingschatUserId
+            
+            // Handle temp email accounts (legacy)
+            if (signInEmail.includes('@kingschat.temp')) {
+              console.log('📧 Legacy temp email account detected, using KingsChat ID as password')
+              signInPassword = kingschatUserId
+            }
+            
+            // Sign in with Firebase
+            const signInResult = await FirebaseAuthService.signInWithEmailAndPassword(
+              signInEmail,
+              signInPassword
+            )
+            
+            if (signInResult.error) {
+              console.log('⚠️ First sign-in attempt failed, trying alternative method')
+              
+              // Try alternative sign-in methods
+              const fallbackSignIn = await FirebaseAuthService.signInWithEmailAndPassword(
+                signInEmail,
+                kingschatUserId // Use KingsChat ID as password
+              )
+              
+              if (fallbackSignIn.error) {
+                console.error('❌ All sign-in methods failed:', fallbackSignIn.error)
+                setError('Found your account but could not sign you in. Please try regular email/password login.')
+                setIsLoading(false)
+                setIsCheckingAccount(false)
+                return
+              }
+            }
+            
+            console.log('✅ Successfully signed in existing user')
+            
+            // Set authentication flags
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('userAuthenticated', 'true')
+              localStorage.setItem('hasCompletedProfile', 'true')
+              localStorage.setItem('authProvider', 'kingschat')
+              localStorage.setItem('bypassLogin', 'true')
+            }
+            
+            setSuccess('Welcome back! Redirecting to home...')
+            
+            setTimeout(() => {
+              router.push('/home')
+            }, 1500)
+          } catch (signInError) {
+            console.error('❌ Sign-in error:', signInError)
+            setError('Could not sign you in. Please try regular login.')
           }
         }
         
-        console.log('✅ Existing user signed in successfully')
-        
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('userAuthenticated', 'true')
-          localStorage.setItem('hasCompletedProfile', 'true')
-          localStorage.setItem('authProvider', 'kingschat')
-          localStorage.setItem('bypassLogin', 'true')
-        }
-        
-        setSuccess('Welcome back! Redirecting...')
-        
-        setTimeout(() => {
-          router.push('/home')
-        }, 1000)
-        
-        setIsLoading(false)
-        setIsCheckingAccount(false)
-        return
       } else {
-        // No existing user found = New user
-        console.log('🆕 New user - redirecting to profile completion')
+        // No existing account found - could be new user OR existing user without KingsChat ID
+        console.log('🆕 No existing account found with KingsChat ID')
         
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('kingschatProfileSetup', 'true')
-          localStorage.setItem('kingschatUserId', kingschatUserId)
-        }
+        setSuccess('No KingsChat account found. Checking options...')
         
-        setSuccess('Redirecting to complete your profile...')
+        // Store KingsChat data for linking or signup
+        setKingschatLinkingData({
+          id: kingschatUserId,
+          userData: userProfile
+        })
         
         setTimeout(() => {
-          router.push(`/pages/profile-complete?from=kingschat&kingschatUserId=${kingschatUserId}`)
-        }, 1000)
-        
-        setIsLoading(false)
-        setIsCheckingAccount(false)
-        return
+          // Show linking modal to let user choose: link existing account or create new
+          setShowKingsChatLinkingModal(true)
+          setSuccess('')
+        }, 1500)
       }
+      
     } catch (error: any) {
-      console.error('Social login error:', error)
-      setError('Unable to sign in with KingsChat. Please check your internet connection and try again.')
+      console.error('❌ KingsChat authentication error:', error)
+      setError('Unable to process KingsChat authentication. Please check your connection and try again.')
+    } finally {
       setIsLoading(false)
       setIsCheckingAccount(false)
     }
@@ -461,29 +920,54 @@ function AuthPageContent() {
                     />
                   </div>
                   
-                  {/* KingsChat ID Field with Connect Button */}
+                  {/* KingsChat Account Field with Connect Button */}
                   <div className="relative">
-                    <input
-                      type="text"
-                      name="kingschatId"
-                      placeholder="KingsChat ID (Optional)"
-                      value={formData.kingschatId}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm pr-20"
-                      readOnly={!!formData.kingschatId}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleKingsChatConnect}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-1"
-                    >
-                      <img 
-                        src="/kingschat.jpeg" 
-                        alt="KingsChat" 
-                        className="w-3 h-3 rounded-full object-cover"
-                      />
-                      {formData.kingschatId ? 'Connected' : 'Connect'}
-                    </button>
+                    {formData.kingschatId ? (
+                      // Connected state - show green success box with unlink option
+                      <div className="w-full px-4 py-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-green-800">KingsChat Connected</p>
+                          <p className="text-xs text-green-600">Your account will be linked</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setFormData(prev => ({ ...prev, kingschatId: '' }))
+                            setSuccess('')
+                          }}
+                          className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          Unlink
+                        </button>
+                      </div>
+                    ) : (
+                      // Not connected state - show connect input
+                      <div className="relative">
+                        <input
+                          type="text"
+                          name="kingschatId"
+                          placeholder="KingsChat Account (Optional)"
+                          value=""
+                          readOnly
+                          className="w-full px-4 py-4 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm pr-20"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleKingsChatConnect}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-1"
+                        >
+                          <img 
+                            src="/kingschat.jpeg" 
+                            alt="KingsChat" 
+                            className="w-3 h-3 rounded-full object-cover"
+                          />
+                          Connect
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -700,6 +1184,37 @@ function AuthPageContent() {
         onSuccess={isLogin ? handleKingsChatLoginSuccess : handleKingsChatModalSuccess}
         onError={isLogin ? (error) => setError(error) : handleKingsChatModalError}
       />
+
+      {/* KingsChat Account Linking Modal */}
+      {kingschatLinkingData && (
+        <KingsChatLinkingModal
+          isOpen={showKingsChatLinkingModal}
+          onClose={() => {
+            setShowKingsChatLinkingModal(false)
+            setKingschatLinkingData(null)
+          }}
+          onSuccess={handleKingsChatLinkingSuccess}
+          onCreateAccount={handleCreateAccountFromLinking}
+          onMigrateTempAccount={handleMigrateTempAccount}
+          kingschatId={kingschatLinkingData.id}
+          kingschatUserData={kingschatLinkingData.userData}
+        />
+      )}
+
+      {/* KingsChat Account Migration Modal */}
+      {kingschatMigrationData && (
+        <KingsChatMigrationModal
+          isOpen={showKingsChatMigrationModal}
+          onClose={() => {
+            setShowKingsChatMigrationModal(false)
+            setKingschatMigrationData(null)
+          }}
+          onSuccess={handleMigrationSuccess}
+          kingschatId={kingschatMigrationData.id}
+          kingschatUserData={kingschatMigrationData.userData}
+          tempAccountData={kingschatMigrationData.tempAccount}
+        />
+      )}
     </div>
   )
 }

@@ -39,6 +39,7 @@ interface Member {
 export default function Members() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -47,13 +48,27 @@ export default function Members() {
   // Load members from Firebase
   const loadMembers = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
       console.log('🔄 Loading members from Firebase...');
+      
+      // Check network connectivity first
+      if (!navigator.onLine) {
+        throw new Error('No internet connection. Please check your network and try again.');
+      }
       
       // Get all profiles from Firebase
       const profiles = await FirebaseDatabaseService.getCollection('profiles');
       
-      if (profiles) {
+      console.log('📊 Profiles loaded from Firebase:', {
+        count: profiles?.length || 0,
+        hasProfiles: !!profiles,
+        isArray: Array.isArray(profiles),
+        firstProfile: profiles?.[0] || null
+      });
+      
+      if (profiles && profiles.length > 0) {
         // Transform profiles to members format
         const membersData = profiles.map((profile: any) => ({
           id: profile.id,
@@ -72,10 +87,32 @@ export default function Members() {
         }));
         
         setMembers(membersData);
+        setError(null);
         console.log(`✅ Loaded ${membersData.length} members`);
+      } else {
+        // No members found in database
+        setMembers([]);
+        console.log('ℹ️ No members found in database');
       }
     } catch (error) {
       console.error('❌ Error loading members:', error);
+      
+      // Set user-friendly error message
+      if (!navigator.onLine) {
+        setError('No internet connection. Please check your network and try again.');
+      } else if (error instanceof Error) {
+        if (error.message.includes('permission') || error.message.includes('auth')) {
+          setError('Permission denied. Please contact your administrator.');
+        } else if (error.message.includes('timeout') || error.message.includes('network')) {
+          setError('Network timeout. Please check your connection and try again.');
+        } else {
+          setError(`Failed to load members: ${error.message}`);
+        }
+      } else {
+        setError('Failed to load members. Please try again later.');
+      }
+      
+      setMembers([]);
     } finally {
       setLoading(false);
     }
@@ -226,14 +263,42 @@ export default function Members() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
             <span className="ml-3 text-gray-600">Loading members...</span>
           </div>
+        ) : error ? (
+          <div className="text-center py-12 px-6">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+              <X className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to Load Members</h3>
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={loadMembers}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Try Again
+            </button>
+          </div>
+        ) : members.length === 0 && filteredMembers.length === 0 ? (
+          <div className="text-center py-12 px-6">
+            <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Members Yet</h3>
+            <p className="text-gray-500 mb-4">
+              The members database is empty. Members will appear here once users sign up and complete their profiles.
+            </p>
+            <button
+              onClick={loadMembers}
+              className="inline-flex items-center gap-2 px-4 py-2 text-purple-600 border border-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Check Again
+            </button>
+          </div>
         ) : filteredMembers.length === 0 ? (
           <div className="text-center py-12">
             <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-gray-500">No members found</p>
-            <p className="text-sm text-gray-400">
-              {searchTerm || filterRole !== 'all' || filterStatus !== 'all' 
-                ? 'Try adjusting your search or filters' 
-                : 'No members have been added yet'}
+            <p className="text-gray-500">No members match your filters</p>
+            <p className="text-sm text-gray-400 mb-4">
+              Try adjusting your search or filters
             </p>
           </div>
         ) : (

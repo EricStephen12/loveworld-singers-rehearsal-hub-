@@ -12,29 +12,10 @@ export async function GET(request: NextRequest) {
     }
 
     const accessToken = authorization.replace('Bearer ', '')
-    console.log('🔄 Fetching user profile with token...')
+    console.log('🔄 Fetching user profile from KingsChat API...')
 
-    // Use the access token as the KingsChat ID (just like in signup)
-    // The token itself becomes the unique identifier
-    const kingschatId = accessToken
-    
-    const profile = {
-      userId: kingschatId,
-      id: kingschatId,
-      email: 'user@kingschat.com', // This can be filled later if needed
-      firstName: 'KingsChat',
-      lastName: 'User',
-      name: 'KingsChat User',
-      profilePicture: '/kingschat.jpeg',
-      verified: true
-    }
-
-    console.log('✅ Profile created using token as KingsChat ID')
-    return NextResponse.json(profile)
-
-    /* 
-    // Uncomment this when you have the correct KingsChat API endpoints
-    const profileResponse = await fetch('https://kingschat.online/api/v1/user/profile', {
+    // Real KingsChat API call to get user profile
+    const profileResponse = await fetch('https://kingschat.online/api/v1/user/me', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -44,17 +25,25 @@ export async function GET(request: NextRequest) {
 
     if (!profileResponse.ok) {
       const errorText = await profileResponse.text()
-      console.error('❌ Profile fetch failed:', errorText)
+      console.error('❌ Profile fetch failed:', profileResponse.status, errorText)
+      
+      let errorMessage = 'Failed to fetch user profile'
+      try {
+        const errorJson = JSON.parse(errorText)
+        errorMessage = errorJson.message || errorJson.error || errorMessage
+      } catch {
+        errorMessage = errorText || errorMessage
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to fetch user profile' },
-        { status: 400 }
+        { error: errorMessage },
+        { status: profileResponse.status }
       )
     }
 
     const profileData = await profileResponse.json()
     console.log('✅ Profile fetch successful')
     return NextResponse.json(profileData)
-    */
   } catch (error: any) {
     console.error('❌ Profile fetch error:', error)
     return NextResponse.json(
