@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Loader2, CheckCircle, XCircle, ArrowLeft } from 'lucide-react'
 import { FirebaseDatabaseService } from '@/lib/firebase-database'
 
-export default function KingsChatLoginPage() {
+function KingsChatLoginContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'authenticating' | 'success' | 'error'>('loading')
@@ -98,5 +98,28 @@ export default function KingsChatLoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function KingsChatLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+          <div className="flex items-center justify-center mb-6">
+            <img 
+              src="/kingschat.jpeg" 
+              alt="KingsChat" 
+              className="w-16 h-16 rounded-full object-cover"
+            />
+          </div>
+          <Loader2 className="w-16 h-16 text-purple-600 animate-spin mx-auto mb-6" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h2>
+          <p className="text-gray-600">Preparing KingsChat authentication</p>
+        </div>
+      </div>
+    }>
+      <KingsChatLoginContent />
+    </Suspense>
   )
 }
